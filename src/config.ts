@@ -48,12 +48,16 @@ export const CONFIG = {
   WALLPAPER_AMBIENT: 0.75, // how dark shadowed slopes get (1 = no shadow)
   WALLPAPER_SHEEN: 0.1, // satin highlight
 
-  // Embroidery (framed cross-stitch on the wallpaper)
-  EMBROIDERY_WIDTH: 0.92, // outer frame width
-  EMBROIDERY_TEXT_SIZE: 0.102, // lettering height
-  EMBROIDERY_STITCH_SIZE: 0.012, // one cross-stitch; unused until mcn-xsf
-  EMBROIDERY_FLORAL_SIZE: 0.08, // corner florals
+  // Embroidery (framed cross-stitch on the wallpaper). Hand-charted: stitch size scales the piece.
+  EMBROIDERY_STITCH_SIZE: 0.0132, // one cross-stitch, in tiles
+  EMBROIDERY_FRAME: 0.05, // moulding width
   EMBROIDERY_TILT_DEG: 3, // clockwise
+  EMBROIDERY_SHADOW: 0.012, // cast-shadow distance, away from WALLPAPER_LIGHT_DEG
+  EMBROIDERY_CLOTH: '#f6f3ea',
+  EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
+  EMBROIDERY_PETAL: '#e8a283', // peach
+  EMBROIDERY_LEAF: '#3f9c94', // teal
+  EMBROIDERY_WOOD: '#5a3a24',
 
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,

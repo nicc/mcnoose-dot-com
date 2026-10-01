@@ -37,38 +37,23 @@ body {
   background: var(--wallpaper-color);
 }
 
-/* Fixed at its first-render position (--frame-x), not re-centred on resize */
-.frame {
+/* Fixed at its first-render position (--frame-x/y), not re-centred on resize. The shadow
+   wrapper isn't rotated, so its drop-shadow falls in screen space, away from the light. */
+.frame-shadow {
   position: absolute;
   top: var(--frame-y);
   left: var(--frame-x);
-  display: grid;
-  place-items: center;
-  width: var(--frame-w);
-  aspect-ratio: 4 / 3;
-  transform: translate(-50%, -50%) rotate(var(--frame-tilt));
-  background: #f7f5ef;
-  border: calc(var(--frame-w) * 0.06) solid #6e4b2e;
-  box-shadow: 0 calc(var(--frame-w) * 0.02) calc(var(--frame-w) * 0.04) rgb(0 0 0 / 0.2);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(var(--frame-shadow-x) var(--frame-shadow-y) var(--frame-shadow-blur) rgb(0 0 0 / 0.35));
 }
 
-.stitch {
-  display: grid;
-  justify-items: center;
-  color: #2f4f8f;
-  font-size: var(--stitch-text);
-  line-height: 1.1;
+.frame {
+  transform: rotate(var(--frame-tilt));
 }
 
-.floral {
-  position: absolute;
-  width: var(--accent-size);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #e8a98a 0 30%, #3f9c94 31% 60%, transparent 61%);
+.embroidery {
+  display: block;
 }
-.floral-tl { top: 6%; left: 5%; }
-.floral-br { bottom: 6%; right: 5%; }
 
 /* Bull-nose row: position: absolute tiles, joints placed by computeStrip */
 .bullnose {

@@ -3,6 +3,7 @@ import type { Config } from './config';
 import { computeStrip, rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
+import { embroidery, SAMPLER_LINES } from './embroidery';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -41,10 +42,11 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
   );
 }
 
-function header(): HTMLElement {
-  const name = el('div', 'stitch', [el('span', '', [document.createTextNode('Snickers')]), el('span', '', [document.createTextNode('McNoose')])]);
-  const frame = el('figure', 'frame', [el('i', 'floral floral-tl'), name, el('i', 'floral floral-br')]);
-  return el('header', 'wallpaper', [frame]);
+// The site title is the embroidery; the h1 carries it for screen readers and search.
+function header(c: Config, tile: number): HTMLElement {
+  const title = el('h1', 'sr-only', [document.createTextNode(SAMPLER_LINES.join(' '))]);
+  const frame = el('figure', 'frame', [embroidery(c, tile).canvas]);
+  return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame])]);
 }
 
 function bullnose(c: Config, vp: Viewport, a: Anchor): HTMLElement {
@@ -170,6 +172,12 @@ export interface Frame {
   peekRight: number;
 }
 
+// Cast shadow falls away from the wallpaper's light, in screen space (the shadow wrapper isn't rotated).
+function frameShadow(c: Config, tile: number): Record<string, string> {
+  const a = (c.WALLPAPER_LIGHT_DEG * Math.PI) / 180, d = c.EMBROIDERY_SHADOW * tile;
+  return { '--frame-shadow-x': `${-Math.cos(a) * d}px`, '--frame-shadow-y': `${Math.sin(a) * d}px`, '--frame-shadow-blur': `${d * 1.5}px` };
+}
+
 let generation = 0;
 
 export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[]): Frame {
@@ -186,11 +194,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--frame-x': `${a.centreX}px`,
     '--frame-y': `${topExtra + (c.HEADER_HEIGHT * a.tile) / 2}px`,
     '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
-    '--frame-w': `${c.EMBROIDERY_WIDTH * a.tile}px`,
-    '--stitch-text': `${c.EMBROIDERY_TEXT_SIZE * a.tile}px`,
-    '--stitch-size': `${c.EMBROIDERY_STITCH_SIZE * a.tile}px`,
-    '--accent-size': `${c.EMBROIDERY_FLORAL_SIZE * a.tile}px`,
     '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
+    ...frameShadow(c, a.tile),
     '--bn-h': `${c.BULLNOSE_HEIGHT * a.tile}px`,
     '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
@@ -208,7 +213,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
-  const top = header();
+  const top = header(c, a.tile);
   hangWallpaper(top, c, a, topExtra, pending);
   root.replaceChildren(top, bullnose(c, vp, a), grid(c, a, cols, projects, pending), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.

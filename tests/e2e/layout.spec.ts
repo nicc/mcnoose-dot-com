@@ -230,3 +230,15 @@ test('wallpaper is the build-time baked tile, applied with no runtime render', a
   const bg = await page.$eval('.wallpaper', (el) => getComputedStyle(el).backgroundImage);
   expect(bg).toMatch(/^url\("data:image\/webp;base64,/);
 });
+
+test('the embroidery is drawn and the site title is an accessible h1', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Snickers McNoose');
+  const inked = await page.$eval('canvas.embroidery', (c) => {
+    const px = (c as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, (c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height).data;
+    let blue = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i + 2] > px[i] + 40) blue++; // thread pixels
+    return blue;
+  });
+  expect(inked).toBeGreaterThan(500);
+});
