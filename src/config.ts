@@ -78,8 +78,8 @@ export const CONFIG = {
   EMBROIDERY_WOOD_GRIME: 0.25, // dirt in hollows and corner joints
   EMBROIDERY_WOOD_PATCHES: 0.5, // how unevenly wear and grime vary along each board
   // Glass over the cloth
-  EMBROIDERY_GLASS_TINT: 0.3, // slight green colour cast
-  EMBROIDERY_GLASS_REFLECTION: 0.6, // crisp window reflection
+  EMBROIDERY_GLASS_TINT: 0.45, // slight green colour cast
+  EMBROIDERY_GLASS_REFLECTION: 0.24, // crisp window reflection
   EMBROIDERY_GLASS_PARALLAX: 0.2, // how far the reflection slides as you scroll (0 = still, ~0.7 = physical)
   EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
