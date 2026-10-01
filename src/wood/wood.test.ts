@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { frameProfile, shadeBoard, type Finish } from './board';
-import { grainMaps, type GrainStyle } from './grain';
+import { weather } from './wear';
+import { grainMaps, type GrainMaps, type GrainStyle } from './grain';
 import { fbm, noise } from './noise';
 
 const oak: GrainStyle = { early: [120, 85, 55], late: [50, 30, 18], ringPx: 4, figure: 0.6, pores: 0.6, drift: 0.3, seed: 3 };
@@ -67,5 +68,34 @@ describe('shadeBoard', () => {
     expect(frameProfile(0)).toBeCloseTo(0);
     expect(frameProfile(0.4)).toBeGreaterThan(0.9);
     expect(frameProfile(1)).toBeLessThan(0.2);
+  });
+});
+
+describe('weather', () => {
+  const len = 60, wid = 20;
+  const blank = (): GrainMaps => ({ albedo: new Float32Array(len * wid * 3).fill(100), gloss: new Float32Array(len * wid).fill(1), relief: new Float32Array(len * wid) });
+  const row = (m: GrainMaps, v: number) => {
+    let s = 0;
+    for (let u = 20; u < 40; u++) s += m.albedo[(v * len + u) * 3];
+    return s / 20;
+  };
+  const base = { wear: 0.8, grime: 0.8, patches: 0, mitres: false, seed: 1 };
+
+  it('leaves the board alone when wear and grime are zero', () => {
+    expect(weather(blank(), len, wid, frameProfile, { ...base, wear: 0, grime: 0 })).toEqual(blank());
+  });
+
+  it('pales the raised face and darkens the low rebate', () => {
+    const m = weather(blank(), len, wid, frameProfile, base);
+    const face = Math.round(wid * 0.4), rebate = wid - 1;
+    expect(row(m, face)).toBeGreaterThan(100);
+    expect(row(m, rebate)).toBeLessThan(100);
+  });
+
+  it('collects grime along mitre joints at both ends', () => {
+    const m = weather(blank(), len, wid, () => 0.7, { ...base, wear: 0, mitres: true });
+    const at = (u: number, v: number) => m.albedo[(v * len + u) * 3];
+    expect(at(10, 10)).toBeLessThan(at(30, 10)); // on the start mitre vs mid-board
+    expect(at(len - 11, 10)).toBeLessThan(at(30, 10)); // on the end mitre
   });
 });

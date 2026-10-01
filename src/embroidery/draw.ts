@@ -3,6 +3,7 @@
 import { AMBIENT, LIGHT_ELEVATION_DEG } from '../light';
 import { frameProfile, shadeBoard } from '../wood/board';
 import { grainMaps, type RGB } from '../wood/grain';
+import { weather } from '../wood/wear';
 import { hash2 } from '../wood/noise';
 import type { Chart, Ink } from './chart';
 
@@ -17,6 +18,9 @@ export interface WoodStyle {
   depth: number; // moulding profile depth, fraction of its width
   sheen: number;
   gloss: number;
+  wear: number;
+  grime: number;
+  patches: number;
 }
 
 export interface EmbroideryStyle {
@@ -135,6 +139,7 @@ function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, L:
       drift: w.drift,
       seed: 41 + k * 7,
     });
+    weather(maps, len, wid, frameProfile, { wear: w.wear, grime: w.grime, patches: w.patches, mitres: true, seed: 77 + k });
     const inward: V = [-side.n[0], -side.n[1]];
     const Lb: [number, number, number] = [L3[0] * side.along[0] + L3[1] * side.along[1], L3[0] * inward[0] + L3[1] * inward[1], L3[2]];
     const rgba = shadeBoard(maps, len, wid, { profile: frameProfile, profileDepth: w.depth * wid, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, Lb);
