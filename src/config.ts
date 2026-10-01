@@ -9,6 +9,10 @@ export const CONFIG = {
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
   TRAILING_ROWS: 6, // blank rows after the last project row
   REFLOW_FADE_MS: 220, // crossfade when projects move tiles as columns appear/disappear
+
+  // Screen pinning (desktop): smooths the wall's correction while the window moves
+  PIN_PREDICT_MS: 24, // lead the reported window position by ~display latency during drags
+  PIN_SMOOTH_MS: 60, // easing time constant; absorbs overshoot when a drag stops
   TILE_COLOR: '#fbfbf9',
   GROUT_COLOR: '#d4d4d0',
 

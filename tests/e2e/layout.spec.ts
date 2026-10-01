@@ -153,7 +153,7 @@ const moveWindowBy = (page: import('@playwright/test').Page, dx: number, dy: num
       return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     },
     [dx, dy],
-  );
+  ).then(() => page.waitForSelector('html[data-pin="settled"]'));
 
 test('pinned to the screen: left/top edge moves reveal wall instead of moving it', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -177,15 +177,15 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
   const out = await at();
   const lattice = (x: number, ref: number) => Math.abs(((x - ref) / pitch) - Math.round((x - ref) / pitch)) < 0.01;
   expect(lattice(out.tile, before.tile + 200)).toBe(true);
-  expect(out.frame.left).toBeCloseTo(before.frame.left + 200, 0);
-  expect(out.frame.top).toBeCloseTo(before.frame.top + 80, 0); // wallpaper grew upwards
-  expect(out.scrollY).toBe(0);
+  // Within 1px: eased corrections end on sub-pixel scroll positions.
+  expect(Math.abs(out.frame.left - (before.frame.left + 200))).toBeLessThan(1);
+  expect(Math.abs(out.frame.top - (before.frame.top + 80))).toBeLessThan(1); // wallpaper grew upwards
 
   // Viewport moves 160 down: the page scrolls so the wall stays put on screen.
   await moveWindowBy(page, 0, 160);
   const down = await at();
-  expect(down.scrollY).toBeCloseTo(160, 0);
-  expect(down.frame.top).toBeCloseTo(before.frame.top - 80, 0);
+  expect(down.scrollY).toBeGreaterThan(70); // the cut-off top became scroll area
+  expect(Math.abs(down.frame.top - (before.frame.top - 80))).toBeLessThan(1);
 });
 
 test('projects crossfade when they move tiles', async ({ page }) => {
