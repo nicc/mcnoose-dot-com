@@ -85,13 +85,14 @@ function stamp(chart: Chart, b: Block, ox: number, oy: number) {
   for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) chart.cells[(oy + y) * chart.w + ox + x] ??= b.at(x, y);
 }
 
-// Text centred; florals in the top-left and bottom-right corners. The cloth grows taller until
-// florals clear the lettering by a stitch, so any text fits.
-export function layoutSampler(lines: string[], margin = 3, sidePad = 4): Chart {
+// Text centred; florals locked into the top-left and bottom-right corners. The cloth is the
+// requested size (at least the text plus margins), grown taller only as far as needed for the florals to clear
+// the lettering by a stitch, so any text fits and margins can be dialled in freely.
+export function layoutSampler(lines: string[], cloth: { w: number; h: number } = { w: 0, h: 0 }, margin = 3): Chart {
   const text = textBlock(lines);
   const floral = fromRows(FLORAL);
-  const w = text.w + 2 * (margin + sidePad);
-  for (let h = text.h + 2 * margin; ; h++) {
+  const w = Math.max(Math.round(cloth.w), text.w + 2 * margin);
+  for (let h = Math.max(Math.round(cloth.h), text.h + 2 * margin); ; h++) {
     const chart: Chart = { w, h, cells: new Array(w * h).fill(null) };
     stamp(chart, text, Math.floor((w - text.w) / 2), Math.floor((h - text.h) / 2));
     const tl = [margin - 1, margin - 1] as const;

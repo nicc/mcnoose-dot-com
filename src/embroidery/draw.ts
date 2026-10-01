@@ -175,3 +175,22 @@ export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: Embro
   innerShadow(ctx, W, H, o.frame, L);
   frame(ctx, W, H, o.frame, o, L, rand);
 }
+
+// High-quality shrink: halve repeatedly, then a final step to the target. One big bilinear step
+// skips most source pixels and shimmers; halving averages them, consistently across browsers.
+export function downscale(src: HTMLCanvasElement, w: number, h: number): HTMLCanvasElement {
+  let cur = src;
+  const step = (nw: number, nh: number) => {
+    const next = document.createElement('canvas');
+    next.width = nw;
+    next.height = nh;
+    const ctx = next.getContext('2d')!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(cur, 0, 0, nw, nh);
+    cur = next;
+  };
+  while (cur.width / 2 >= w && cur.height / 2 >= h) step(Math.round(cur.width / 2), Math.round(cur.height / 2));
+  if (cur.width !== w || cur.height !== h) step(w, h);
+  return cur;
+}

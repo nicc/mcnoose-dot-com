@@ -49,7 +49,10 @@ export const CONFIG = {
   WALLPAPER_SHEEN: 0.1, // satin highlight
 
   // Embroidery (framed cross-stitch on the wallpaper). Hand-charted: stitch size scales the piece.
-  EMBROIDERY_STITCH_SIZE: 0.0132, // one cross-stitch, in tiles
+  EMBROIDERY_STITCH_SIZE: 0.0132, // one cross-stitch, in tiles: sets the detail
+  EMBROIDERY_ZOOM: 1, // scales the finished framed piece; < 1 shrinks a detailed render
+  EMBROIDERY_CLOTH_W: 62, // cloth size in stitches; florals stay in the corners
+  EMBROIDERY_CLOTH_H: 49,
   EMBROIDERY_FRAME: 0.05, // moulding width
   EMBROIDERY_TILT_DEG: 3, // clockwise
   EMBROIDERY_SHADOW: 0.012, // cast-shadow distance, away from WALLPAPER_LIGHT_DEG
