@@ -30,7 +30,7 @@ export function blurWrap(src: Float32Array, w: number, h: number, radius: number
 }
 
 export interface ShadeOptions {
-  color: [number, number, number]; // 0–255, the colour of flat areas
+  albedo: Uint8ClampedArray; // RGBA per pixel: the colour flat areas render as
   relief: number; // height-to-slope scale
   lightDeg: number; // azimuth the light comes from: 0 = right, 90 = above, 135 = upper left
   elevationDeg: number;
@@ -38,7 +38,7 @@ export interface ShadeOptions {
   sheen: number; // satin paint highlight strength
 }
 
-// Lambert shading normalised so flat areas come out exactly `color`, plus a soft sheen.
+// Lambert shading normalised so flat areas come out exactly their albedo, plus a soft sheen.
 export function shade(height: Float32Array, w: number, h: number, o: ShadeOptions): Uint8ClampedArray {
   const az = (o.lightDeg * Math.PI) / 180, el = (o.elevationDeg * Math.PI) / 180;
   const lx = Math.cos(az) * Math.cos(el), ly = -Math.sin(az) * Math.cos(el), lz = Math.sin(el); // screen y points down
@@ -55,7 +55,7 @@ export function shade(height: Float32Array, w: number, h: number, o: ShadeOption
       const lambert = Math.max(0, nx * lx + ny * ly + nz * lz) / flat;
       const light = o.ambient + (1 - o.ambient) * lambert;
       const spec = o.sheen * Math.max(0, lambert - 1) ** 2; // only slopes tilted toward the light
-      for (let c = 0; c < 3; c++) out[i * 4 + c] = o.color[c] * light + 255 * spec;
+      for (let c = 0; c < 3; c++) out[i * 4 + c] = o.albedo[i * 4 + c] * light + 255 * spec;
       out[i * 4 + 3] = 255;
     }
   }
@@ -67,8 +67,8 @@ export function hexToRgb(hex: string): [number, number, number] {
   return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 }
 
-// Seeded stipple: fine sand texture in the background of the relief.
-export function stipple(w: number, h: number, amount: number, seed = 7): Float32Array {
+// Seeded pebble emboss: a jittered dome per cell, tileable because cells wrap at the edges.
+export function pebbles(w: number, h: number, cell: number, seed = 7): Float32Array {
   let a = seed >>> 0;
   const rand = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -76,7 +76,33 @@ export function stipple(w: number, h: number, amount: number, seed = 7): Float32
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  const cols = Math.max(1, Math.round(w / cell)), rows = Math.max(1, Math.round(h / cell));
+  const cw = w / cols, ch = h / rows;
+  const px = new Float32Array(cols * rows), py = new Float32Array(cols * rows), pr = new Float32Array(cols * rows);
+  for (let i = 0; i < px.length; i++) {
+    px[i] = (0.2 + 0.6 * rand()) * cw;
+    py[i] = (0.2 + 0.6 * rand()) * ch;
+    pr[i] = 0.62 * Math.min(cw, ch) * (0.8 + 0.4 * rand());
+  }
   const out = new Float32Array(w * h);
-  for (let i = 0; i < out.length; i++) out[i] = rand() * amount;
+  for (let y = 0; y < h; y++) {
+    const cy = Math.floor(y / ch);
+    for (let x = 0; x < w; x++) {
+      const cx = Math.floor(x / cw);
+      let best = 0;
+      for (let j = -1; j <= 1; j++) {
+        const ry = (cy + j + rows) % rows;
+        const oy = (cy + j) * ch - y;
+        for (let k = -1; k <= 1; k++) {
+          const rx = (cx + k + cols) % cols;
+          const i = ry * cols + rx;
+          const dx = (cx + k) * cw + px[i] - x, dy = oy + py[i];
+          const t = 1 - (dx * dx + dy * dy) / (pr[i] * pr[i]);
+          if (t > best) best = t;
+        }
+      }
+      out[y * w + x] = Math.sqrt(best); // rounded dome
+    }
+  }
   return out;
 }

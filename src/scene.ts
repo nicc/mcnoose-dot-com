@@ -188,7 +188,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--tile-color': c.TILE_COLOR,
     '--grout-color': c.GROUT_COLOR,
     '--print-color': c.PRINT_COLOR,
-    '--wallpaper-color': c.WALLPAPER_COLOR,
+    '--wallpaper-color': c.WALLPAPER_GROUND, // shown until the pattern is ready
     '--skirting-color': c.SKIRTING_COLOR,
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);

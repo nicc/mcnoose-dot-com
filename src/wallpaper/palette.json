@@ -1,0 +1,66 @@
+{
+  "source": "Sidewall, ca. 1875, Cooper Hewitt, Smithsonian Design Museum, 1939-45-7 (CC0)",
+  "indexStep": 40,
+  "inks": [
+    {
+      "name": "ground",
+      "rgb": [
+        190,
+        176,
+        145
+      ],
+      "hex": "#beb091",
+      "share": 0.5818
+    },
+    {
+      "name": "foliage",
+      "rgb": [
+        163,
+        162,
+        141
+      ],
+      "hex": "#a3a28d",
+      "share": 0.1964
+    },
+    {
+      "name": "vine",
+      "rgb": [
+        155,
+        176,
+        161
+      ],
+      "hex": "#9bb0a1",
+      "share": 0.12
+    },
+    {
+      "name": "petal",
+      "rgb": [
+        193,
+        171,
+        131
+      ],
+      "hex": "#c1ab83",
+      "share": 0.022
+    },
+    {
+      "name": "berry",
+      "rgb": [
+        166,
+        141,
+        110
+      ],
+      "hex": "#a68d6e",
+      "share": 0.0419
+    },
+    {
+      "name": "outline",
+      "rgb": [
+        129,
+        116,
+        98
+      ],
+      "hex": "#817462",
+      "share": 0.0379
+    }
+  ]
+}

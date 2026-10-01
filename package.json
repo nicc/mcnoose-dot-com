@@ -10,12 +10,14 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "shots": "node scripts/shots.ts"
+    "shots": "node scripts/shots.ts",
+    "prepare:wallpaper": "node scripts/prepare-wallpaper.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
     "lil-gui": "^0.21.0",
+    "sharp": "^0.35.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
     "vite-plugin-singlefile": "^2.3.3",

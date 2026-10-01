@@ -33,13 +33,20 @@ export const CONFIG = {
 
   // Header wallpaper
   HEADER_HEIGHT: 1.4,
-  WALLPAPER_ZOOM: 0.35, // pattern repeat width, in tiles
-  WALLPAPER_COLOR: '#efe6cf',
-  WALLPAPER_RELIEF: 1, // emboss depth
-  WALLPAPER_SOFTNESS: 0.006, // edge rounding (paint build-up), fraction of repeat width
+  WALLPAPER_ZOOM: 2.1, // pattern repeat width, in tiles (~32cm at real scale)
+  // Ink colours (defaults: the 1875 scan's own)
+  WALLPAPER_GROUND: '#beb091', // ink: ground
+  WALLPAPER_FOLIAGE: '#a3a28d', // ink: foliage
+  WALLPAPER_VINE: '#9bb0a1', // ink: vine
+  WALLPAPER_PETAL: '#c1ab83', // ink: petal
+  WALLPAPER_BERRY: '#a68d6e', // ink: berry
+  WALLPAPER_OUTLINE: '#817462', // ink: outline
+  WALLPAPER_RELIEF: 0.6, // pebble emboss depth
+  WALLPAPER_PEBBLE_PX: 3, // pebble size
+  WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
   WALLPAPER_LIGHT_DEG: 125, // direction light comes from: 90 = above, 180 = left
-  WALLPAPER_AMBIENT: 0.7, // how dark shadowed slopes get (1 = no shadow)
-  WALLPAPER_SHEEN: 0.15, // satin paint highlight
+  WALLPAPER_AMBIENT: 0.75, // how dark shadowed slopes get (1 = no shadow)
+  WALLPAPER_SHEEN: 0.1, // satin highlight
 
   // Embroidery (framed cross-stitch on the wallpaper)
   EMBROIDERY_WIDTH: 0.92, // outer frame width
