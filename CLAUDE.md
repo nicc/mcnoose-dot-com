@@ -20,10 +20,11 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - Units: sizes in tiles (1 = one tile edge) unless suffixed `_PX` / `_DEG`. Group keys by prefix (`EMBROIDERY_*`, `BULLNOSE_*`).
 
 ## Layout rules (tested in `src/layout.test.ts`, `tests/e2e/`)
-- Tiles square, ≤ `TILE_MAX_PX`; one full tile + `MIN_PEEK` of each neighbour fits both axes (height = svh).
-- Column added only if it still leaves `MIN_PEEK` visible each side; grout counted once per joint.
-- Edge partial columns always blank; last project row padded with blanks; `TRAILING_ROWS` after; page ends at skirting.
-- Bull-nose joints anchored at page centre + `BULLNOSE_OFFSET` — deliberately not centred.
+- Portal, not responsive: the wall is anchored once (centred) and stays put across resizes. Tiles, grout, bull-nose joints, embroidery and any wall texture never move; resizing reveals/hides wall. Anchor textures to `--wall-x`, never the viewport.
+- Re-anchor only when tile geometry config changes or one full tile + `MIN_PEEK` either side no longer fits (`anchorFits`).
+- Tiles square, ≤ `TILE_MAX_PX`; sized at anchor time to fit width and height (svh) with `MIN_PEEK` peeks. Never grow back until re-anchor.
+- Projects fill fully visible tiles row by row; partial tiles blank; `TRAILING_ROWS` after; page ends at skirting.
+- Halftone prints are cached per project; resizes move canvases, never re-print.
 
 ## Projects
 `src/projects.json` (ordered `{title, url, logo}`) + logo files in `src/logos/` (SVG/PNG, any colour; darker + more opaque = more ink). Test fails on missing fields/logos.

@@ -1,7 +1,7 @@
 // Dev-only tweak panel. Every key in CONFIG gets a control; "save" writes them to src/config.ts.
 import GUI from 'lil-gui';
 import type { Config } from '../config';
-import type { Layout } from '../layout';
+import type { Frame } from '../scene';
 
 type Range = [min: number, max: number, step: number];
 
@@ -35,16 +35,16 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   HALFTONE_OPACITY: [0, 1, 0.01],
 };
 
-export function mountPanel(state: Config, render: (force?: boolean) => Layout) {
+export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
   const gui = new GUI({ title: 'config' });
   const values = state as Record<string, number | string>;
-  const readout = { tile: '', columns: 0, peek: '' };
+  const readout = { tile: '', columns: 0, peek: '' }; // peek: left / right edge tiles, in tiles
 
   const update = (force = true) => {
     const l = render(force);
     readout.tile = `${l.tile.toFixed(1)}px`;
     readout.columns = l.columns;
-    readout.peek = `${(l.peek / l.tile).toFixed(2)} tile`;
+    readout.peek = `${(l.peekLeft / l.tile).toFixed(2)} / ${(l.peekRight / l.tile).toFixed(2)}`;
   };
 
   for (const key of Object.keys(values)) {

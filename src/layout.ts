@@ -39,8 +39,49 @@ export function computeLayout({ width, height, tileMax, grout, minPeek }: Layout
   return { tile, pitch, columns, peek, gridWidth, gridLeft: (width - gridWidth) / 2 };
 }
 
+// The wall's fixed world position, chosen once (centred) and kept across resizes so
+// the window reads as a portal onto a wall rather than a layout that reflows.
+export interface Anchor {
+  tile: number;
+  grout: number;
+  pitch: number;
+  originX: number; // left edge of tile column 0, in viewport px
+  centreX: number; // first-render viewport centre: embroidery and bull-nose reference
+}
+
+export function initialAnchor(input: LayoutInput): Anchor {
+  const l = computeLayout(input);
+  return { tile: l.tile, grout: input.grout, pitch: l.pitch, originX: l.gridLeft, centreX: input.width / 2 };
+}
+
+export interface Columns {
+  first: number; // leftmost column index (relative to origin) with any part visible
+  count: number;
+  full: number[]; // indices of fully visible columns: projects go here
+}
+
+export function visibleColumns(a: Anchor, width: number): Columns {
+  const first = Math.floor((-a.originX - a.tile) / a.pitch + EPS) + 1;
+  const last = Math.ceil((width - a.originX) / a.pitch - EPS) - 1;
+  const full: number[] = [];
+  for (let k = first; k <= last; k++) {
+    const x = a.originX + k * a.pitch;
+    if (x >= -EPS && x + a.tile <= width + EPS) full.push(k);
+  }
+  return { first, count: last - first + 1, full };
+}
+
+// The anchor holds while some full tile still shows minPeek of each neighbour and fits the height.
+export function anchorFits(a: Anchor, width: number, height: number, minPeek: number): boolean {
+  if (a.tile > (height - 2 * a.grout) / (1 + 2 * minPeek) + EPS) return false;
+  const margin = a.grout + minPeek * a.tile - EPS;
+  const k = Math.ceil((margin - a.originX) / a.pitch - EPS); // first column clearing the left margin
+  return a.originX + k * a.pitch + a.tile <= width - margin;
+}
+
 export interface StripInput {
   width: number;
+  origin: number; // fixed reference x for the joint pattern
   tile: number;
   grout: number;
   widthRatio: number;
@@ -54,12 +95,12 @@ export interface Strip {
   count: number;
 }
 
-// Bull-nose joints are anchored to page centre plus an arbitrary offset, so the
-// row reads as a patch of wall rather than a centred composition.
-export function computeStrip({ width, tile, grout, widthRatio, offset }: StripInput): Strip {
+// Bull-nose joints sit at a fixed origin plus an arbitrary offset, so the row reads
+// as a patch of wall rather than a centred composition.
+export function computeStrip({ width, origin, tile, grout, widthRatio, offset }: StripInput): Strip {
   const w = tile * widthRatio;
   const pitch = w + grout;
-  const anchor = width / 2 + offset * pitch;
+  const anchor = origin + offset * pitch;
   const start = (((anchor % pitch) + pitch) % pitch) - pitch;
   return { width: w, pitch, start, count: Math.ceil((width - start) / pitch) };
 }

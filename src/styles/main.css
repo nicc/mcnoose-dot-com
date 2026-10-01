@@ -31,20 +31,21 @@ body {
 /* Wallpaper header */
 .wallpaper {
   position: relative;
-  display: grid;
-  place-items: center;
   height: var(--header-h);
   overflow: hidden;
   background: var(--wallpaper-color);
 }
 
+/* Fixed at its first-render position (--frame-x), not re-centred on resize */
 .frame {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: var(--frame-x);
   display: grid;
   place-items: center;
   width: var(--frame-w);
   aspect-ratio: 4 / 3;
-  transform: rotate(var(--frame-tilt));
+  transform: translate(-50%, -50%) rotate(var(--frame-tilt));
   background: #f7f5ef;
   border: calc(var(--frame-w) * 0.06) solid #6e4b2e;
   box-shadow: 0 calc(var(--frame-w) * 0.02) calc(var(--frame-w) * 0.04) rgb(0 0 0 / 0.2);

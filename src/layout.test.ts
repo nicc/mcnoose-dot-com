@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeLayout, computeStrip, rowCount } from './layout';
+import { anchorFits, computeLayout, computeStrip, initialAnchor, rowCount, visibleColumns } from './layout';
 
 const base = { height: 2000, tileMax: 400, grout: 0, minPeek: 0.25 };
 
@@ -55,7 +55,7 @@ describe('computeLayout', () => {
 describe('computeStrip', () => {
   it('covers the viewport from a start at or left of 0', () => {
     for (const offset of [0, 0.37, 0.99]) {
-      const s = computeStrip({ width: 1440, tile: 400, grout: 4, widthRatio: 1.6, offset });
+      const s = computeStrip({ width: 1440, origin: 720, tile: 400, grout: 4, widthRatio: 1.6, offset });
       expect(s.start).toBeLessThanOrEqual(0);
       expect(s.start).toBeGreaterThan(-s.pitch);
       expect(s.start + s.count * s.pitch).toBeGreaterThanOrEqual(1440);
@@ -63,7 +63,7 @@ describe('computeStrip', () => {
   });
 
   it('puts a joint at page centre + offset·pitch', () => {
-    const s = computeStrip({ width: 1000, tile: 400, grout: 0, widthRatio: 1.6, offset: 0.25 });
+    const s = computeStrip({ width: 1000, origin: 500, tile: 400, grout: 0, widthRatio: 1.6, offset: 0.25 });
     const joint = 500 + 0.25 * 640;
     expect(((joint - s.start) % s.pitch + s.pitch) % s.pitch).toBeCloseTo(0);
   });
@@ -74,5 +74,43 @@ describe('rowCount', () => {
     expect(rowCount(5, 3, 6)).toBe(8);
     expect(rowCount(6, 3, 6)).toBe(8);
     expect(rowCount(5, 1, 6)).toBe(11);
+  });
+});
+
+describe('anchor', () => {
+  const input = { ...base, grout: 4, width: 1440 };
+  const a = initialAnchor(input);
+
+  it('starts centred with the same full columns as computeLayout', () => {
+    const l = computeLayout(input);
+    const c = visibleColumns(a, 1440);
+    expect(c.full.length).toBe(l.columns);
+    expect(c.full).toEqual([1, 2, 3]);
+    expect(c.first).toBe(0);
+    expect(c.count).toBe(l.columns + 2);
+  });
+
+  it('keeps tile positions fixed while the width changes', () => {
+    for (const w of [1100, 1440, 1900]) {
+      const c = visibleColumns(a, w);
+      for (const k of c.full) expect(a.originX + k * a.pitch).toBeGreaterThanOrEqual(0);
+    }
+    expect(visibleColumns(a, 1100).full).toEqual([1, 2]);
+    expect(visibleColumns(a, 1900).full).toEqual([1, 2, 3, 4]);
+  });
+
+  it('holds until one full tile with minPeek either side no longer fits', () => {
+    const leftEdge = a.originX + a.pitch; // first full tile
+    const minWidth = leftEdge + a.tile + a.grout + 0.25 * a.tile;
+    expect(anchorFits(a, minWidth + 0.5, 900, 0.25)).toBe(true);
+    expect(anchorFits(a, minWidth - 0.5, 900, 0.25)).toBe(false);
+    expect(anchorFits(a, 1440, 500, 0.25)).toBe(false); // too short for the tile
+  });
+
+  it('covers columns left of the origin when the viewport is wider than first render', () => {
+    const narrow = initialAnchor({ ...input, width: 700 });
+    const c = visibleColumns(narrow, 1600);
+    expect(narrow.originX + c.first * narrow.pitch).toBeLessThanOrEqual(0);
+    expect(narrow.originX + (c.first + c.count) * narrow.pitch).toBeGreaterThanOrEqual(1600);
   });
 });

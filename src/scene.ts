@@ -1,6 +1,6 @@
 // Builds the wall: wallpaper header, bull-nose row, tile grid, skirting.
 import type { Config } from './config';
-import { computeLayout, computeStrip, rowCount, type Layout } from './layout';
+import { computeStrip, rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import type { Project } from './projects';
 
@@ -22,8 +22,8 @@ function header(): HTMLElement {
   return el('header', 'wallpaper', [frame]);
 }
 
-function bullnose(c: Config, vp: Viewport, l: Layout): HTMLElement {
-  const s = computeStrip({ width: vp.width, tile: l.tile, grout: c.GROUT_PX, widthRatio: c.BULLNOSE_WIDTH, offset: c.BULLNOSE_OFFSET });
+function bullnose(c: Config, vp: Viewport, a: Anchor): HTMLElement {
+  const s = computeStrip({ width: vp.width, origin: a.centreX, tile: a.tile, grout: c.GROUT_PX, widthRatio: c.BULLNOSE_WIDTH, offset: c.BULLNOSE_OFFSET });
   const row = el('div', 'bullnose');
   for (let i = 0; i < s.count; i++) {
     const t = el('i', 'bullnose-tile');
@@ -34,55 +34,91 @@ function bullnose(c: Config, vp: Viewport, l: Layout): HTMLElement {
   return row;
 }
 
+// Prints are cached per project so resizes and re-flows move canvases instead of re-printing.
+interface Print {
+  canvas: HTMLCanvasElement;
+  done: Promise<boolean>; // false if printing failed
+}
+const prints = new Map<string, Print>();
+let printsKey = '';
+
+function printFor(c: Config, tile: number, p: Project): Print {
+  const key = JSON.stringify([tile, devicePixelRatio, Object.entries(c).filter(([k]) => /^(TILE_|HALFTONE_|PRINT_)/.test(k))]);
+  if (key !== printsKey) {
+    prints.clear();
+    printsKey = key;
+  }
+  const id = `${p.title}\n${p.logoUrl}`;
+  let pr = prints.get(id);
+  if (!pr) {
+    const canvas = el('canvas', 'tile-print');
+    canvas.setAttribute('aria-hidden', 'true');
+    const done = printTile(c, { canvas, title: p.title, logoUrl: p.logoUrl, tile }).then(
+      () => true,
+      (e) => (console.warn(e), false),
+    );
+    pr = { canvas, done };
+    prints.set(id, pr);
+  }
+  return pr;
+}
+
 // Title stays in the DOM for screen readers; the canvas carries the visible print.
-function projectTile(c: Config, l: Layout, p: Project): HTMLElement {
+function projectTile(c: Config, tile: number, p: Project, pending: Promise<unknown>[]): HTMLElement {
   const a = el('a', 'tile tile-project');
   a.href = p.url;
-  const canvas = el('canvas', 'tile-print');
-  canvas.setAttribute('aria-hidden', 'true');
+  const pr = printFor(c, tile, p);
   const title = el('span', 'tile-title sr-only', [document.createTextNode(p.title)]);
-  a.append(canvas, title);
-  pending.push(
-    printTile(c, { canvas, title: p.title, logoUrl: p.logoUrl, tile: l.tile }).catch((e) => {
-      console.warn(e);
-      title.classList.remove('sr-only'); // fall back to plain text
-    }),
-  );
+  a.append(pr.canvas, title);
+  pending.push(pr.done.then((ok) => ok || title.classList.remove('sr-only'))); // plain-text fallback
   return a;
 }
 
-let pending: Promise<void>[] = [];
-
-function grid(c: Config, l: Layout, projects: Project[]): HTMLElement {
+// Projects fill fully visible tiles row by row; partly visible tiles stay blank.
+function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[]): HTMLElement {
   const g = el('div', 'grid');
-  const rows = rowCount(projects.length, l.columns, c.TRAILING_ROWS);
+  const slot = new Map(cols.full.map((k, i) => [k, i]));
+  const n = Math.max(1, cols.full.length);
+  const rows = rowCount(projects.length, n, c.TRAILING_ROWS);
   for (let r = 0; r < rows; r++) {
-    for (let col = -1; col <= l.columns; col++) {
-      const edge = col < 0 || col === l.columns;
-      const p = edge ? undefined : projects[r * l.columns + col];
-      g.append(p ? projectTile(c, l, p) : el('div', edge ? 'tile tile-edge' : 'tile'));
+    for (let k = cols.first; k < cols.first + cols.count; k++) {
+      const i = slot.get(k);
+      const p = i === undefined ? undefined : projects[r * n + i];
+      g.append(p ? projectTile(c, a.tile, p, pending) : el('div', 'tile'));
     }
   }
   return el('main', 'wall', [g]);
 }
 
-export function renderScene(root: HTMLElement, c: Config, vp: Viewport, projects: Project[]): Layout {
-  const l = computeLayout({ width: vp.width, height: vp.height, tileMax: c.TILE_MAX_PX, grout: c.GROUT_PX, minPeek: c.MIN_PEEK });
+export interface Frame {
+  tile: number;
+  columns: number; // fully visible
+  peekLeft: number; // px of the left edge tile showing
+  peekRight: number;
+}
+
+let generation = 0;
+
+export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, projects: Project[]): Frame {
+  const cols = visibleColumns(a, vp.width);
+  const gridLeft = a.originX + cols.first * a.pitch;
   const vars: Record<string, string> = {
-    '--tile': `${l.tile}px`,
+    '--tile': `${a.tile}px`,
     '--grout': `${c.GROUT_PX}px`,
-    '--cols-total': String(l.columns + 2),
-    '--grid-w': `${l.gridWidth}px`,
-    '--grid-left': `${l.gridLeft}px`,
-    '--header-h': `${c.HEADER_HEIGHT * l.tile}px`,
-    '--frame-w': `${c.EMBROIDERY_WIDTH * l.tile}px`,
-    '--stitch-text': `${c.EMBROIDERY_TEXT_SIZE * l.tile}px`,
-    '--stitch-size': `${c.EMBROIDERY_STITCH_SIZE * l.tile}px`,
-    '--accent-size': `${c.EMBROIDERY_FLORAL_SIZE * l.tile}px`,
+    '--cols-total': String(cols.count),
+    '--grid-w': `${cols.count * a.pitch - c.GROUT_PX}px`,
+    '--grid-left': `${gridLeft}px`,
+    '--wall-x': `${a.originX}px`, // world origin: anchor any future wall texture here, not to the viewport
+    '--frame-x': `${a.centreX}px`,
+    '--header-h': `${c.HEADER_HEIGHT * a.tile}px`,
+    '--frame-w': `${c.EMBROIDERY_WIDTH * a.tile}px`,
+    '--stitch-text': `${c.EMBROIDERY_TEXT_SIZE * a.tile}px`,
+    '--stitch-size': `${c.EMBROIDERY_STITCH_SIZE * a.tile}px`,
+    '--accent-size': `${c.EMBROIDERY_FLORAL_SIZE * a.tile}px`,
     '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
     '--wallpaper-zoom': String(c.WALLPAPER_ZOOM),
-    '--bn-h': `${c.BULLNOSE_HEIGHT * l.tile}px`,
-    '--skirting-h': `${c.SKIRTING_HEIGHT * l.tile}px`,
+    '--bn-h': `${c.BULLNOSE_HEIGHT * a.tile}px`,
+    '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
     '--halftone-blur': `${c.HALFTONE_BLUR_PX}px`,
     '--halftone-opacity': String(c.HALFTONE_OPACITY),
     '--tile-color': c.TILE_COLOR,
@@ -92,11 +128,14 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, projects
     '--skirting-color': c.SKIRTING_COLOR,
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
-  pending = [];
+
+  const pending: Promise<unknown>[] = [];
+  const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
-  root.replaceChildren(header(), bullnose(c, vp, l), grid(c, l, projects), el('footer', 'skirting'));
-  const batch = pending;
-  // Signals tests and screenshots that every tile print has settled.
-  Promise.all(batch).then(() => batch === pending && (document.documentElement.dataset.printed = 'true'));
-  return l;
+  root.replaceChildren(header(), bullnose(c, vp, a), grid(c, a, cols, projects, pending), el('footer', 'skirting'));
+  // Signals tests and screenshots that every visible print has settled.
+  Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
+
+  const right = a.originX + (cols.first + cols.count - 1) * a.pitch;
+  return { tile: a.tile, columns: cols.full.length, peekLeft: gridLeft + a.tile, peekRight: vp.width - right };
 }
