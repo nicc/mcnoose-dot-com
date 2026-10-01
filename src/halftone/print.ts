@@ -1,7 +1,14 @@
 // Draws a tile's logo + title as halftone dots onto a canvas.
+import { loadImage, renderHalftone } from 'halftone-print';
 import type { Config } from '../config';
-import { loadLogo } from './logo';
-import { densityFromRGBA, hashString, screenDots } from './screen';
+
+// Logos are shared across re-anchors and config changes, so load each once.
+const logos = new Map<string, Promise<HTMLImageElement>>();
+const loadLogo = (url: string) => {
+  let p = logos.get(url);
+  if (!p) logos.set(url, (p = loadImage(url)));
+  return p;
+};
 
 const SOURCE_SCALE = 2; // source px per CSS px: enough samples per dot cell for clean tone
 const TITLE_MAX_WIDTH = 0.86; // of tile; longer titles shrink to fit
@@ -16,7 +23,7 @@ export interface PrintJob {
 function drawSource(c: Config, logo: HTMLImageElement, title: string, size: number): CanvasRenderingContext2D {
   const src = document.createElement('canvas');
   src.width = src.height = size;
-  const ctx = src.getContext('2d', { willReadFrequently: true })!;
+  const ctx = src.getContext('2d')!;
 
   let font = c.TILE_TITLE_SIZE * size;
   const setFont = () => (ctx.font = `${c.TILE_TITLE_WEIGHT} ${font}px ${c.TILE_TITLE_FONT}`);
@@ -47,29 +54,20 @@ export async function printTile(c: Config, job: PrintJob): Promise<void> {
   await document.fonts.ready;
   if (!job.canvas.isConnected) return; // superseded by a newer render
 
-  const size = Math.round(job.tile * SOURCE_SCALE);
-  const src = drawSource(c, logo, job.title, size);
-  const density = densityFromRGBA(src.getImageData(0, 0, size, size).data);
-  const dots = screenDots(density, size, size, {
-    pitch: c.HALFTONE_PITCH_PX * SOURCE_SCALE,
-    angleDeg: c.HALFTONE_ANGLE_DEG,
+  // Compose logo + title at sampling resolution, then print it 1:1 into the tile.
+  const src = drawSource(c, logo, job.title, Math.round(job.tile * SOURCE_SCALE));
+  renderHalftone(job.canvas, src.canvas, {
+    width: job.tile,
+    height: job.tile,
+    fit: 'fill',
+    sampleScale: SOURCE_SCALE,
+    pitch: c.HALFTONE_PITCH_PX,
+    angle: c.HALFTONE_ANGLE_DEG,
     gain: c.HALFTONE_GAIN,
     minDot: c.HALFTONE_MIN_DOT,
     jitter: c.HALFTONE_JITTER,
     noise: c.HALFTONE_NOISE,
-    seed: hashString(job.title),
+    seed: job.title,
+    color: c.PRINT_COLOR,
   });
-
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const out = job.canvas;
-  out.width = out.height = Math.round(job.tile * dpr);
-  const ctx = out.getContext('2d')!;
-  ctx.scale(dpr / SOURCE_SCALE, dpr / SOURCE_SCALE);
-  ctx.fillStyle = c.PRINT_COLOR;
-  ctx.beginPath();
-  for (let i = 0; i < dots.length; i += 3) {
-    ctx.moveTo(dots[i] + dots[i + 2], dots[i + 1]);
-    ctx.arc(dots[i], dots[i + 1], dots[i + 2], 0, Math.PI * 2);
-  }
-  ctx.fill();
 }

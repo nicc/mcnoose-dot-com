@@ -32,8 +32,8 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 ## Projects
 `src/projects.json` (ordered `{title, url, logo}`) + logo files in `src/logos/` (SVG/PNG, any colour; darker + more opaque = more ink). Test fails on missing fields/logos.
 
-## Halftone (`src/halftone/`)
-Per tile: logo + title drawn to a source canvas → ink density → dots on a rotated screen (`screen.ts`, pure, tested) → output canvas. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
+## Halftone
+Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
 
 ## Browser support
 Chrome, Firefox, Safari on desktop and mobile, always. Check support before using new CSS/JS. `npm run test:e2e` covers chromium/firefox/webkit + Pixel/iPhone emulation; Playwright WebKit ≠ real iOS Safari.
