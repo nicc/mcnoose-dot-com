@@ -4,14 +4,16 @@ import type { Plugin } from 'vite';
 
 export type Values = Record<string, number | string>;
 
-const format = (v: number | string) => (typeof v === 'number' ? String(Number(v.toFixed(4))) : `'${v}'`);
+const format = (v: number | string) =>
+  typeof v === 'number' ? String(Number(v.toFixed(4))) : `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 export function rewriteConfig(source: string, values: Values): string {
   let out = source;
   for (const [key, value] of Object.entries(values)) {
-    const re = new RegExp(`^(\\s*${key}:\\s*)([^,\\n]+)(,)`, 'm');
+    // Value is a quoted string (may contain commas) or a bare token.
+    const re = new RegExp(`^(\\s*${key}:\\s*)('(?:[^'\\\\\\n]|\\\\.)*'|[^,\\n]+)(,)`, 'm');
     if (!re.test(out)) throw new Error(`config key not found: ${key}`);
-    out = out.replace(re, `$1${format(value)}$3`);
+    out = out.replace(re, (_, head: string, _old: string, tail: string) => head + format(value) + tail);
   }
   return out;
 }

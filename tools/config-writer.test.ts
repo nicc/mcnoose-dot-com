@@ -5,6 +5,8 @@ const src = `export const CONFIG = {
   TILE_MAX: 400, // px
   MIN_PEEK: 0.25,
   GROUT_COLOR: '#d4d4d0',
+  FONT: 'Georgia, serif', // note
+  AFTER: 1,
 };`;
 
 describe('rewriteConfig', () => {
@@ -13,6 +15,12 @@ describe('rewriteConfig', () => {
     expect(out).toContain('TILE_MAX: 360, // px');
     expect(out).toContain('MIN_PEEK: 0.3,');
     expect(out).toContain("GROUT_COLOR: '#cccccc',");
+  });
+
+  it('handles strings containing commas, quotes and $', () => {
+    const out = rewriteConfig(src, { FONT: "Baskerville, 'Times New Roman', $1 serif", AFTER: 2 });
+    expect(out).toContain("FONT: 'Baskerville, \\'Times New Roman\\', $1 serif', // note");
+    expect(out).toContain('AFTER: 2,');
   });
 
   it('throws on unknown keys', () => {

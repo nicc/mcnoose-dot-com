@@ -6,7 +6,11 @@ import { renderScene, type Viewport } from './scene';
 
 const root = document.getElementById('app')!;
 const probe = document.getElementById('svh-probe')!;
-const projects = loadProjects();
+// ?fixtures swaps in the dev test logos; the branch is dropped from production builds.
+const projects =
+  import.meta.env.DEV && new URLSearchParams(location.search).has('fixtures')
+    ? (await import('./dev/fixtures')).fixtureProjects()
+    : loadProjects();
 const state: Config = { ...CONFIG };
 
 // Small viewport height (svh) stays put while mobile URL bars show/hide, so tiles don't jitter.

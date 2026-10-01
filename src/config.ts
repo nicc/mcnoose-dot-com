@@ -10,7 +10,22 @@ export const CONFIG = {
   TRAILING_ROWS: 6, // blank rows after the last project row
   TILE_COLOR: '#fbfbf9',
   GROUT_COLOR: '#d4d4d0',
+
+  // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#5a7fb0', // hazy transfer-print blue
+  TILE_LOGO_SIZE: 0.32,
+  TILE_TITLE_SIZE: 0.075,
+  TILE_TITLE_GAP: 0.06,
+  TILE_TITLE_FONT: 'Georgia, serif',
+  TILE_TITLE_WEIGHT: 400,
+  HALFTONE_PITCH_PX: 2.2, // dot spacing; fixed in CSS px so dots look the same on every screen
+  HALFTONE_ANGLE_DEG: 45,
+  HALFTONE_GAIN: 1.2, // ink spread: >1 fattens dots so solids close up
+  HALFTONE_MIN_DOT: 0.12, // fraction of pitch; smaller dots don't print
+  HALFTONE_JITTER: 0.08, // dot position wobble, fraction of pitch
+  HALFTONE_NOISE: 0.15, // dot size wobble
+  HALFTONE_BLUR_PX: 0.3, // ink bleed under the glaze
+  HALFTONE_OPACITY: 0.85,
 
   // Header wallpaper
   HEADER_HEIGHT: 1.3,
@@ -27,7 +42,7 @@ export const CONFIG = {
   // Bull-nose row
   BULLNOSE_WIDTH: 1.5,
   BULLNOSE_HEIGHT: 0.3,
-  BULLNOSE_OFFSET: 0.4, // 0–1 of a bull-nose tile: where joints fall relative to page centre
+  BULLNOSE_OFFSET: 0.2, // 0–1 of a bull-nose tile: where joints fall relative to page centre
 
   // Skirting
   SKIRTING_HEIGHT: 0.55,

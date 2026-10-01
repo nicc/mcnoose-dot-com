@@ -107,24 +107,37 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--tile) * 0.06);
   background: var(--tile-color);
   color: var(--print-color);
   text-decoration: none;
 }
 
-.tile-logo {
-  width: 32%;
-  aspect-ratio: 1;
-  background: currentColor;
-  opacity: 0.8;
-  -webkit-mask: var(--logo) center / contain no-repeat;
-  mask: var(--logo) center / contain no-repeat;
+.tile-project {
+  position: relative;
+}
+
+.tile-print {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--halftone-opacity);
+  filter: blur(var(--halftone-blur));
+  mix-blend-mode: multiply;
 }
 
 .tile-title {
   font-size: calc(var(--tile) * 0.075);
-  letter-spacing: 0.02em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Skirting: page ends here */

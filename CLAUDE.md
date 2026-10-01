@@ -7,7 +7,8 @@ Use tokens efficiently at all times — in this file, in replies, in tool use. R
 
 ## Aesthetics are the product
 The vibe is the key outcome, not a finish. Treat look and feel with the same rigour as function:
-- Iterate visually: `npm run shots [-- firefox|webkit]` → read `shots/<browser>/*.png` before and after every visual change.
+- Iterate visually: `npm run shots [-- firefox|webkit] [--fixtures]` → read `shots/<browser>[-fixtures]/*.png` (incl. per-tile close-ups) before and after every visual change.
+- `?fixtures` (dev only) swaps in `src/dev/fixtures/` test logos: solid, fine lines, tone, small text, colour, moiré, no-size SVG, PNGs.
 - Communicate in felt terms first (what it's like to look at), then mechanism. Show screenshots.
 - Name register conflicts early; don't split the difference.
 - Expect many rounds, especially halftone print, wallpaper, skirting, hover effects.
@@ -25,7 +26,10 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - Bull-nose joints anchored at page centre + `BULLNOSE_OFFSET` — deliberately not centred.
 
 ## Projects
-`src/projects.json` (ordered `{title, url, logo}`) + logo files in `src/logos/`. Test fails on missing fields/logos.
+`src/projects.json` (ordered `{title, url, logo}`) + logo files in `src/logos/` (SVG/PNG, any colour; darker + more opaque = more ink). Test fails on missing fields/logos.
+
+## Halftone (`src/halftone/`)
+Per tile: logo + title drawn to a source canvas → ink density → dots on a rotated screen (`screen.ts`, pure, tested) → output canvas. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
 
 ## Browser support
 Chrome, Firefox, Safari on desktop and mobile, always. Check support before using new CSS/JS. `npm run test:e2e` covers chromium/firefox/webkit + Pixel/iPhone emulation; Playwright WebKit ≠ real iOS Safari.

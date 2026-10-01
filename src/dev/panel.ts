@@ -21,6 +21,18 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   BULLNOSE_HEIGHT: [0.1, 1, 0.01],
   BULLNOSE_OFFSET: [0, 1, 0.01],
   SKIRTING_HEIGHT: [0.1, 1.5, 0.01],
+  TILE_LOGO_SIZE: [0.05, 0.8, 0.005],
+  TILE_TITLE_SIZE: [0.02, 0.2, 0.002],
+  TILE_TITLE_GAP: [0, 0.3, 0.005],
+  TILE_TITLE_WEIGHT: [100, 900, 100],
+  HALFTONE_PITCH_PX: [0.6, 8, 0.05],
+  HALFTONE_ANGLE_DEG: [0, 90, 0.5],
+  HALFTONE_GAIN: [0.5, 2, 0.01],
+  HALFTONE_MIN_DOT: [0, 0.5, 0.01],
+  HALFTONE_JITTER: [0, 0.5, 0.01],
+  HALFTONE_NOISE: [0, 0.6, 0.01],
+  HALFTONE_BLUR_PX: [0, 2, 0.05],
+  HALFTONE_OPACITY: [0, 1, 0.01],
 };
 
 export function mountPanel(state: Config, render: (force?: boolean) => Layout) {
@@ -39,7 +51,9 @@ export function mountPanel(state: Config, render: (force?: boolean) => Layout) {
     const v = values[key];
     const c =
       typeof v === 'string'
-        ? gui.addColor(values, key)
+        ? v.startsWith('#')
+          ? gui.addColor(values, key)
+          : gui.add(values, key)
         : gui.add(values, key, ...(RANGES[key as keyof Config] ?? [0, Math.max(1, v * 4), 0.01]));
     c.onChange(() => update());
   }

@@ -1,6 +1,7 @@
 // Builds the wall: wallpaper header, bull-nose row, tile grid, skirting.
 import type { Config } from './config';
 import { computeLayout, computeStrip, rowCount, type Layout } from './layout';
+import { printTile } from './halftone/print';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -33,15 +34,24 @@ function bullnose(c: Config, vp: Viewport, l: Layout): HTMLElement {
   return row;
 }
 
-function projectTile(p: Project): HTMLElement {
+// Title stays in the DOM for screen readers; the canvas carries the visible print.
+function projectTile(c: Config, l: Layout, p: Project): HTMLElement {
   const a = el('a', 'tile tile-project');
   a.href = p.url;
-  // Logo used as a mask so it takes the print colour; replaced by the halftone renderer later.
-  const logo = el('i', 'tile-logo');
-  logo.style.setProperty('--logo', `url("${p.logoUrl}")`);
-  a.append(logo, el('span', 'tile-title', [document.createTextNode(p.title)]));
+  const canvas = el('canvas', 'tile-print');
+  canvas.setAttribute('aria-hidden', 'true');
+  const title = el('span', 'tile-title sr-only', [document.createTextNode(p.title)]);
+  a.append(canvas, title);
+  pending.push(
+    printTile(c, { canvas, title: p.title, logoUrl: p.logoUrl, tile: l.tile }).catch((e) => {
+      console.warn(e);
+      title.classList.remove('sr-only'); // fall back to plain text
+    }),
+  );
   return a;
 }
+
+let pending: Promise<void>[] = [];
 
 function grid(c: Config, l: Layout, projects: Project[]): HTMLElement {
   const g = el('div', 'grid');
@@ -50,7 +60,7 @@ function grid(c: Config, l: Layout, projects: Project[]): HTMLElement {
     for (let col = -1; col <= l.columns; col++) {
       const edge = col < 0 || col === l.columns;
       const p = edge ? undefined : projects[r * l.columns + col];
-      g.append(p ? projectTile(p) : el('div', edge ? 'tile tile-edge' : 'tile'));
+      g.append(p ? projectTile(c, l, p) : el('div', edge ? 'tile tile-edge' : 'tile'));
     }
   }
   return el('main', 'wall', [g]);
@@ -73,6 +83,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, projects
     '--wallpaper-zoom': String(c.WALLPAPER_ZOOM),
     '--bn-h': `${c.BULLNOSE_HEIGHT * l.tile}px`,
     '--skirting-h': `${c.SKIRTING_HEIGHT * l.tile}px`,
+    '--halftone-blur': `${c.HALFTONE_BLUR_PX}px`,
+    '--halftone-opacity': String(c.HALFTONE_OPACITY),
     '--tile-color': c.TILE_COLOR,
     '--grout-color': c.GROUT_COLOR,
     '--print-color': c.PRINT_COLOR,
@@ -80,6 +92,11 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, projects
     '--skirting-color': c.SKIRTING_COLOR,
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
+  pending = [];
+  document.documentElement.dataset.printed = 'false';
   root.replaceChildren(header(), bullnose(c, vp, l), grid(c, l, projects), el('footer', 'skirting'));
+  const batch = pending;
+  // Signals tests and screenshots that every tile print has settled.
+  Promise.all(batch).then(() => batch === pending && (document.documentElement.dataset.printed = 'true'));
   return l;
 }

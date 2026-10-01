@@ -44,3 +44,22 @@ test('projects render as links in order', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.tile-project .tile-title').first()).toHaveText('Project One');
 });
+
+test('every project tile prints halftone ink, with the title kept for screen readers', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('html[data-printed="true"]');
+  const tiles = await page.$$eval('.tile-project', (els) =>
+    els.map((a) => {
+      const c = a.querySelector('canvas')!;
+      const px = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      let inked = 0;
+      for (let i = 3; i < px.length; i += 4) if (px[i] > 0) inked++;
+      return { inked, srOnly: a.querySelector('.tile-title')!.classList.contains('sr-only') };
+    }),
+  );
+  expect(tiles.length).toBeGreaterThan(0);
+  for (const t of tiles) {
+    expect(t.inked).toBeGreaterThan(500);
+    expect(t.srOnly).toBe(true);
+  }
+});
