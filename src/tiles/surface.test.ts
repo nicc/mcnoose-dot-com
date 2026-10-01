@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Light } from '../room';
-import { edgeShadows, tileTone, wallPoint } from './surface';
+import { edgeShadows, roundedTop, tileTone, wallPoint } from './surface';
 
 describe('wallPoint', () => {
   const m = { pxPerCm: 10, embroidery: { x: 130, y: 132 }, embroideryPage: { x: 700, y: 200 } };
@@ -34,5 +34,17 @@ describe('edgeShadows', () => {
     const alpha = (s: string) => Number(s.match(/inset [-\d.]+px [-\d.]+px [\d.]+px rgba\(255,255,255,([\d.]+)\)/)![1]);
     const frontal = edgeShadows([{ dir: [-0.05, 0, 0.999], weight: 1 }], style);
     expect(alpha(frontal)).toBeLessThan(alpha(edgeShadows([fromLeft], style)));
+  });
+});
+
+describe('roundedTop', () => {
+  it('lightens the curve under a light from above and fades out where it meets the face', () => {
+    const g = roundedTop([{ dir: [0, -0.8, 0.6], weight: 1 }], 10, 0.5);
+    expect(g).toMatch(/^linear-gradient\(to bottom, rgba\(255,255,255/);
+    expect(g).toMatch(/rgba\(0,0,0,0\) 10\.00px\)$/);
+  });
+
+  it('darkens the very top under light from below the curve', () => {
+    expect(roundedTop([{ dir: [0, 0.6, 0.8], weight: 1 }], 10, 0)).toMatch(/^linear-gradient\(to bottom, rgba\(0,0,0/);
   });
 });

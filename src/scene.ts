@@ -5,10 +5,10 @@ import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
 import { lightsAt, pxPerCm, roomFromConfig, type Room, type Vec3 } from './room';
-import { drawAgeing, grimeLevel } from './tiles/glaze';
+import { drawAgeing, grimeLevel, type Ageing } from './tiles/glaze';
 import { groutTexture } from './tiles/grout';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
-import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
+import { edgeShadows, roundedTop, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
 
@@ -56,12 +56,29 @@ function header(c: Config, tile: number): HTMLElement {
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame])]);
 }
 
-function bullnose(c: Config, vp: Viewport, a: Anchor): HTMLElement {
+// The capping row: same glaze, crazing, marks and reflections as the field tiles, plus the
+// rounded top where it meets the wallpaper, lit from the room. High on the wall: marks stay light.
+function bullnose(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
   const s = computeStrip({ width: vp.width, origin: a.centreX, tile: a.tile, grout: c.GROUT_PX, widthRatio: c.BULLNOSE_WIDTH, offset: c.BULLNOSE_OFFSET });
+  const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
+  const h = c.BULLNOSE_HEIGHT * a.tile, top = topExtra + c.HEADER_HEIGHT * a.tile;
+  const base = hexToRgb(c.TILE_COLOR);
+  const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
   const row = el('div', 'bullnose');
   for (let i = 0; i < s.count; i++) {
+    const left = s.start + i * s.pitch;
+    const index = Math.round((left - (a.centreX + c.BULLNOSE_OFFSET * s.pitch)) / s.pitch); // its place on the wall
+    const at = wallPoint(map, { x: left + s.width / 2, y: top + h / 2 });
+    const lights = lightsAt(room, at);
     const t = el('i', 'bullnose-tile');
-    t.style.left = `${s.start + i * s.pitch}px`;
+    t.style.left = `${left}px`;
+    t.style.background = `${roundedTop(lights, c.BULLNOSE_ROUND_CM * ppc, c.TILE_EDGE_SHEEN)}, ${tileTone(base, c.TILE_TONE, index, -1)}`;
+    t.style.boxShadow = edgeShadows(lights, edge);
+    const seed = tileSeed(index, -1);
+    t.append(
+      reflectionLayer(`bn:${index}`, top, { centre: at, wCm: s.width / ppc, hCm: h / ppc, roundTopCm: c.BULLNOSE_ROUND_CM, tiltDeg: c.TILE_TILT_DEG, waviness: c.TILE_WAVINESS, strength: c.TILE_REFLECTION, seed }),
+      ageLayer(`bn:${index}`, s.width, h, ageAt(c, a.tile, 0), seed),
+    );
     row.append(t);
   }
   row.style.setProperty('--bn-w', `${s.width}px`);
@@ -153,9 +170,14 @@ function projectTile(c: Config, tile: number, p: Project, slot: string, now: num
 // Each tile's glaze tone and cushion-edge lighting, from where it sits in the room.
 type TileSurface = (row: number, col: number) => { background: string; boxShadow: string; at: { x: number; y: number } };
 
+const wallMap = (c: Config, a: Anchor, topExtra: number): WallMap => {
+  const room = roomFromConfig(c);
+  return { pxPerCm: pxPerCm(room, a.tile), embroidery: room.embroidery, embroideryPage: { x: a.centreX, y: topExtra + (c.HEADER_HEIGHT * a.tile) / 2 } };
+};
+
 function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile);
-  const map: WallMap = { pxPerCm: ppc, embroidery: room.embroidery, embroideryPage: { x: a.centreX, y: topExtra + (c.HEADER_HEIGHT * a.tile) / 2 } };
+  const map = wallMap(c, a, topExtra);
   const firstTileTop = topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX;
   const base = hexToRgb(c.TILE_COLOR);
   const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
@@ -176,8 +198,7 @@ const reflectCanvases = new Map<string, HTMLCanvasElement>();
 let reflecting: { canvas: HTMLCanvasElement; tile: TileReflection; top: number }[] = []; // top: page px
 let reflectScene: { room: Room; look: RoomLook; ppc: number; follow: number; size: number } | undefined;
 
-function reflectionLayer(col: number, row: number, top: number, tile: TileReflection): HTMLCanvasElement {
-  const id = `${col}:${row}`;
+function reflectionLayer(id: string, top: number, tile: TileReflection): HTMLCanvasElement {
   let canvas = reflectCanvases.get(id);
   if (!canvas) {
     canvas = el('canvas', 'tile-reflect');
@@ -212,27 +233,30 @@ const roomLook = (c: Config): RoomLook => ({
 // Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
 const ageing = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
 
-function tileAgeing(c: Config, a: Anchor, rows: number) {
+function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number): HTMLCanvasElement {
   const dpr = Math.min(1.5, devicePixelRatio || 1); // soft detail: no need for full density
-  return (row: number, col: number): HTMLCanvasElement => {
-    const level = grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS);
-    const age = {
-      crazing: c.TILE_CRAZING,
-      spots: c.TILE_SPOTS + (c.TILE_SPOTS_LOW - c.TILE_SPOTS) * level,
-      limescale: c.TILE_LIMESCALE * level,
-      spotSize: c.WATER_SPOT_SIZE * a.tile,
-    };
-    const key = JSON.stringify([a.tile, dpr, age]);
-    const id = `${col}:${row}`;
-    let hit = ageing.get(id);
-    if (!hit || hit.key !== key) {
-      const canvas = el('canvas', 'tile-age');
-      canvas.setAttribute('aria-hidden', 'true');
-      drawAgeing(canvas, a.tile, dpr, age, tileSeed(col, row));
-      ageing.set(id, (hit = { key, canvas }));
-    }
-    return hit.canvas;
-  };
+  const key = JSON.stringify([w, h, dpr, age]);
+  let hit = ageing.get(id);
+  if (!hit || hit.key !== key) {
+    const canvas = el('canvas', 'tile-age');
+    canvas.setAttribute('aria-hidden', 'true');
+    drawAgeing(canvas, w, h, dpr, age, seed);
+    ageing.set(id, (hit = { key, canvas }));
+  }
+  return hit.canvas;
+}
+
+// grime: 0 high on the wall … 1 bottom row
+const ageAt = (c: Config, tile: number, grime: number): Ageing => ({
+  crazing: c.TILE_CRAZING,
+  spots: c.TILE_SPOTS + (c.TILE_SPOTS_LOW - c.TILE_SPOTS) * grime,
+  limescale: c.TILE_LIMESCALE * grime,
+  spotSize: c.WATER_SPOT_SIZE * tile,
+});
+
+function tileAgeing(c: Config, a: Anchor, rows: number) {
+  return (row: number, col: number) =>
+    ageLayer(`${col}:${row}`, a.tile, a.tile, ageAt(c, a.tile, grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS)), tileSeed(col, row));
 }
 
 function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface, firstTileTop: number): HTMLElement {
@@ -241,9 +265,6 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
   const n = Math.max(1, cols.full.length);
   const rows = rowCount(projects.length, n, c.TRAILING_ROWS);
   const aged = tileAgeing(c, a, rows);
-  const room = roomFromConfig(c);
-  reflecting = [];
-  reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
   const now = performance.now();
   const tiles = new Map<string, HTMLElement>();
   for (let r = 0; r < rows; r++) {
@@ -255,9 +276,10 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
       const { at, ...style } = surface(r, k);
       Object.assign(t.style, style);
       t.append(
-        reflectionLayer(k, r, firstTileTop + r * a.pitch, {
+        reflectionLayer(`${k}:${r}`, firstTileTop + r * a.pitch, {
           centre: at,
-          sizeCm: c.ROOM_TILE_CM,
+          wCm: c.ROOM_TILE_CM,
+          hCm: c.ROOM_TILE_CM,
           tiltDeg: c.TILE_TILT_DEG,
           waviness: c.TILE_WAVINESS,
           strength: c.TILE_REFLECTION,
@@ -336,7 +358,10 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
   const top = header(c, a.tile);
   hangWallpaper(top, c, a, topExtra, pending);
-  root.replaceChildren(top, bullnose(c, vp, a), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX), el('footer', 'skirting'));
+  const room = roomFromConfig(c);
+  reflecting = []; // the bull-nose row and the grid both register reflecting tiles
+  reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
+  root.replaceChildren(top, bullnose(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

@@ -29,7 +29,7 @@ describe('roomColour', () => {
 });
 
 describe('reflectTile', () => {
-  const tile = { centre: { x: 130, y: 60 }, sizeCm: 15, tiltDeg: 0, waviness: 0, strength: 0.2, seed: 3 };
+  const tile = { centre: { x: 130, y: 60 }, wCm: 15, hCm: 15, tiltDeg: 0, waviness: 0, strength: 0.2, seed: 3 };
   const eye: [number, number, number] = [130, 168, 150];
 
   it('a low tile reflects the floor, and more strongly than a tile at eye level (Fresnel)', () => {
@@ -48,5 +48,14 @@ describe('reflectTile', () => {
   it('a tilted tile reflects a different part of the room', () => {
     const high = { ...tile, centre: { x: 130, y: 120 } }; // sees the wall/window region, where tilt shows
     expect(reflectTile(room, look, { ...high, tiltDeg: 6 }, eye, 6)).not.toEqual(reflectTile(room, look, high, eye, 6));
+  });
+});
+
+describe('bull-nose', () => {
+  it('its rounded top reflects higher in the room than its flat face', () => {
+    const bn = { centre: { x: 130, y: 120 }, wCm: 22, hCm: 4, roundTopCm: 1.5, tiltDeg: 0, waviness: 0, strength: 0.2, seed: 5 };
+    const px = reflectTile(room, { ...look, ceiling: [255, 0, 0] }, bn, [130, 168, 150], 8);
+    const topRow = [...px.slice(0, 8 * 4)];
+    expect(topRow.some((v, i) => i % 4 === 0 && v === 255) && topRow.some((v, i) => i % 4 === 1 && v === 0)).toBe(true); // ceiling (red) at the top
   });
 });

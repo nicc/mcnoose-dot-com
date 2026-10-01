@@ -83,8 +83,6 @@ body {
   bottom: 0;
   width: var(--bn-w);
   background: var(--tile-color);
-  border-bottom-left-radius: 2px;
-  border-bottom-right-radius: 2px;
 }
 
 /* Tile wall */

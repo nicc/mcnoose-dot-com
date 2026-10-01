@@ -71,6 +71,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   BULLNOSE_WIDTH: [0.5, 3, 0.05],
   BULLNOSE_HEIGHT: [0.1, 1, 0.01],
   BULLNOSE_OFFSET: [0, 1, 0.01],
+  BULLNOSE_ROUND_CM: [0, 3, 0.05],
   SKIRTING_HEIGHT: [0.1, 1.5, 0.01],
   TILE_LOGO_SIZE: [0.05, 0.8, 0.005],
   TILE_TITLE_SIZE: [0.02, 0.2, 0.002],

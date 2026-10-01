@@ -55,7 +55,9 @@ export function roomColour(r: Room, look: RoomLook, p: Vec3, d: Vec3): RGB {
 
 export interface TileReflection {
   centre: { x: number; y: number }; // cm on the tiled wall
-  sizeCm: number;
+  wCm: number;
+  hCm: number;
+  roundTopCm?: number; // bull-nose: the top edge curves back over this radius, its normal turning up
   tiltDeg: number; // max per-tile tilt
   waviness: number; // 0–1 glaze undulation
   strength: number; // 0–1
@@ -76,10 +78,12 @@ export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
       const u = (i + 0.5) / n - 0.5, v = (j + 0.5) / n - 0.5;
-      const p: Vec3 = [t.centre.x + u * t.sizeCm, t.centre.y - v * t.sizeCm, 0];
-      // Tilt + low-frequency waviness → this sample's surface normal.
+      const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, 0];
+      // Tilt + low-frequency waviness (+ a bull-nose's curve) → this sample's surface normal.
       const nx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
-      const ny = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
+      let ny = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
+      const fromTop = (v + 0.5) * t.hCm;
+      if (t.roundTopCm && fromTop < t.roundTopCm) ny += Math.tan(Math.asin(1 - fromTop / t.roundTopCm) * 0.95); // turns up towards the ceiling
       const nl = Math.hypot(nx, ny, 1);
       const N: Vec3 = [nx / nl, ny / nl, 1 / nl];
       let dx = p[0] - eye[0], dy = p[1] - eye[1], dz = p[2] - eye[2];

@@ -118,6 +118,7 @@ export const CONFIG = {
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,
   BULLNOSE_HEIGHT: 0.25,
+  BULLNOSE_ROUND_CM: 1.2, // radius of the rounded top
   BULLNOSE_OFFSET: 0.3, // 0–1 of a bull-nose tile: where joints fall relative to page centre
 
   // Skirting

@@ -45,20 +45,21 @@ export function drawCrazing(ctx: CanvasRenderingContext2D, w: number, h: number,
   ctx.restore();
 }
 
-// A tile's ageing layer, in CSS px at the given pixel density.
-export function drawAgeing(canvas: HTMLCanvasElement, size: number, dpr: number, a: Ageing, seed: number) {
-  canvas.width = canvas.height = Math.max(1, Math.round(size * dpr));
+// A tile's ageing layer, w×h CSS px at the given pixel density.
+export function drawAgeing(canvas: HTMLCanvasElement, w: number, h: number, dpr: number, a: Ageing, seed: number) {
+  canvas.width = Math.max(1, Math.round(w * dpr));
+  canvas.height = Math.max(1, Math.round(h * dpr));
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  drawCrazing(ctx, size, size, a.crazing, seed);
+  drawCrazing(ctx, w, h, a.crazing, seed);
   const spots = { amount: a.spots, size: a.spotSize, limescale: a.limescale, seed: seed + 11 };
-  drawSpots(ctx, spotLayout(size, size, spots), spots);
+  drawSpots(ctx, spotLayout(w, h, spots), spots);
   if (a.limescale > 0.3) {
     // Drips stop at the grout below: a faint crust along the tile's bottom edge.
-    const g = ctx.createLinearGradient(0, size, 0, size - size * 0.08);
+    const g = ctx.createLinearGradient(0, h, 0, h - h * 0.08);
     g.addColorStop(0, `rgba(245,247,244,${(0.5 * (a.limescale - 0.3)).toFixed(3)})`);
     g.addColorStop(1, 'rgba(245,247,244,0)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, size * 0.92, size, size * 0.08);
+    ctx.fillRect(0, h * 0.92, w, h * 0.08);
   }
 }
