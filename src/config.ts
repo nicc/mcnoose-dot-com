@@ -4,7 +4,7 @@
 
 export const CONFIG = {
   // Tiles
-  TILE_MAX_PX: 250, // largest tile edge
+  TILE_MAX_PX: 200, // largest tile edge
   GROUT_PX: 4,
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
   TRAILING_ROWS: 6, // blank rows after the last project row
@@ -29,20 +29,20 @@ export const CONFIG = {
   HALFTONE_OPACITY: 0.85,
 
   // Header wallpaper
-  HEADER_HEIGHT: 1.3,
+  HEADER_HEIGHT: 1.4,
   WALLPAPER_ZOOM: 2.5,
   WALLPAPER_COLOR: '#efe6cf',
 
   // Embroidery (framed cross-stitch on the wallpaper)
-  EMBROIDERY_WIDTH: 0.91, // outer frame width
+  EMBROIDERY_WIDTH: 0.92, // outer frame width
   EMBROIDERY_TEXT_SIZE: 0.102, // lettering height
   EMBROIDERY_STITCH_SIZE: 0.012, // one cross-stitch; unused until mcn-xsf
   EMBROIDERY_FLORAL_SIZE: 0.08, // corner florals
   EMBROIDERY_TILT_DEG: 3, // clockwise
 
   // Bull-nose row
-  BULLNOSE_WIDTH: 1.5,
-  BULLNOSE_HEIGHT: 0.3,
+  BULLNOSE_WIDTH: 1.25,
+  BULLNOSE_HEIGHT: 0.25,
   BULLNOSE_OFFSET: 0.2, // 0–1 of a bull-nose tile: where joints fall relative to page centre
 
   // Skirting
