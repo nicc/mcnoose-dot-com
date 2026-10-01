@@ -225,9 +225,8 @@ test('no tile is left showing two prints once a re-flow fade ends', async ({ pag
   expect(doubled).toBe(0);
 });
 
-test('wallpaper is an embossed pattern image', async ({ page }) => {
+test('wallpaper is the build-time baked tile, applied with no runtime render', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('html[data-printed="true"]');
   const bg = await page.$eval('.wallpaper', (el) => getComputedStyle(el).backgroundImage);
-  expect(bg).toMatch(/^url\("blob:/);
+  expect(bg).toMatch(/^url\("data:image\/webp;base64,/);
 });

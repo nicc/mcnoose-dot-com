@@ -2,7 +2,7 @@
 import type { Config } from './config';
 import { computeStrip, rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
-import { wallpaper, wallpaperReady, type Wallpaper } from './wallpaper';
+import { baked } from 'virtual:wallpaper';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -17,17 +17,28 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, kids: No
   return n;
 };
 
+// Production uses the tile baked at build time; dev renders live so panel changes show.
+const live = import.meta.env.DEV ? import('./wallpaper') : undefined;
+
 // Pattern anchored to the wall's world origin so it stays put under resizes and window moves.
 function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[]) {
-  const apply = (wp: Wallpaper) => {
-    el.style.backgroundImage = `url("${wp.url}")`;
-    el.style.backgroundSize = `${wp.width}px ${wp.height}px`;
+  const apply = (url: string, width: number, height: number) => {
+    el.style.backgroundImage = `url("${url}")`;
+    el.style.backgroundSize = `${width}px ${height}px`;
     el.style.backgroundPosition = `${a.originX}px ${topExtra}px`;
   };
-  const p = wallpaper(c, a.tile);
-  const ready = wallpaperReady();
-  if (ready) apply(ready);
-  else pending.push(p.then((wp) => el.isConnected && apply(wp), (e) => console.warn(e)));
+  const width = c.WALLPAPER_ZOOM * a.tile;
+  if (baked) return apply(baked.url, width, width * baked.aspect);
+  if (!live) return;
+  pending.push(
+    live
+      .then(async (m) => {
+        const next = m.wallpaper(c, a.tile);
+        const wp = m.wallpaperReady() ?? (await next);
+        if (el.isConnected) apply(wp.url, wp.width, wp.height);
+      })
+      .catch((e) => console.warn(e)),
+  );
 }
 
 function header(): HTMLElement {
