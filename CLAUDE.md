@@ -35,4 +35,7 @@ Chrome, Firefox, Safari on desktop and mobile, always. Check support before usin
 
 ## Tracking
 Beads (`bd`); run `bd prime` for commands (auto-run at session start). `bd ready` → claim → note → close.
-Issues live in local Dolt, not git; `bd dolt push` once a remote exists. No remote yet — don't push; commit only when asked.
+Issues live in local Dolt, not git; sync with `bd dolt push`.
+
+## Done = committed + pushed
+When work is done and typecheck, unit and e2e tests pass: commit, `git push`, `bd dolt push`. Ask before ever committing a broken state.

@@ -54,13 +54,13 @@ body {
   display: grid;
   justify-items: center;
   color: #2f4f8f;
-  font-size: calc(var(--frame-w) * 0.12);
+  font-size: var(--stitch-text);
   line-height: 1.1;
 }
 
 .floral {
   position: absolute;
-  width: 18%;
+  width: var(--accent-size);
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #e8a98a 0 30%, #3f9c94 31% 60%, transparent 61%);

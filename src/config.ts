@@ -4,7 +4,7 @@
 
 export const CONFIG = {
   // Tiles
-  TILE_MAX: 400, // px, largest tile edge
+  TILE_MAX: 250, // px, largest tile edge
   GROUT: 4, // px
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
   TRAILING_ROWS: 6, // blank rows after the last project row
@@ -13,16 +13,19 @@ export const CONFIG = {
   PRINT_COLOR: '#5a7fb0', // hazy transfer-print blue
 
   // Header / wallpaper
-  HEADER_HEIGHT_TILES: 1,
-  WALLPAPER_ZOOM: 1,
+  HEADER_HEIGHT_TILES: 1.3,
+  WALLPAPER_ZOOM: 2.5,
   WALLPAPER_COLOR: '#efe6cf',
   FRAME_WIDTH_TILES: 0.7,
-  FRAME_TILT_DEG: 10, // clockwise
+  STITCH_TEXT_TILES: 0.084, // embroidered lettering height
+  STITCH_SIZE_TILES: 0.012, // one cross-stitch; unused until mcn-xsf
+  ACCENT_SIZE_TILES: 0.11, // corner florals
+  FRAME_TILT_DEG: 3, // clockwise
 
   // Bull-nose row
-  BULLNOSE_WIDTH_RATIO: 1.6, // of tile width
-  BULLNOSE_HEIGHT_RATIO: 0.5, // of tile height
-  BULLNOSE_OFFSET: 0.37, // 0–1, where the joint pattern falls relative to page centre
+  BULLNOSE_WIDTH_RATIO: 1.5, // of tile width
+  BULLNOSE_HEIGHT_RATIO: 0.3, // of tile height
+  BULLNOSE_OFFSET: 0.4, // 0–1, where the joint pattern falls relative to page centre
 
   // Skirting
   SKIRTING_HEIGHT_TILES: 0.55,
