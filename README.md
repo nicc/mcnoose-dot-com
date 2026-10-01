@@ -28,3 +28,7 @@ npm run build
 ```
 
 ## Deployment
+
+## Acknowledgements
+- Claude
+- Smithsonian: https://www.si.edu/object/sidewall:chndm_1939-45-7-a_b
