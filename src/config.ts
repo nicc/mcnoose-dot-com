@@ -18,10 +18,10 @@ export const CONFIG = {
   WALLPAPER_COLOR: '#efe6cf',
 
   // Embroidery (framed cross-stitch on the wallpaper)
-  EMBROIDERY_WIDTH: 0.7, // outer frame width
-  EMBROIDERY_TEXT_SIZE: 0.084, // lettering height
+  EMBROIDERY_WIDTH: 0.91, // outer frame width
+  EMBROIDERY_TEXT_SIZE: 0.102, // lettering height
   EMBROIDERY_STITCH_SIZE: 0.012, // one cross-stitch; unused until mcn-xsf
-  EMBROIDERY_FLORAL_SIZE: 0.11, // corner florals
+  EMBROIDERY_FLORAL_SIZE: 0.08, // corner florals
   EMBROIDERY_TILT_DEG: 3, // clockwise
 
   // Bull-nose row
