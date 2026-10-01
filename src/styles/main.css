@@ -1,0 +1,135 @@
+/* Flat structure pass: geometry only. Values come from src/config.ts via CSS vars set in scene.ts. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  background: var(--skirting-color);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+#svh-probe {
+  position: fixed;
+  top: 0;
+  width: 0;
+  height: 100vh;
+  height: 100svh;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Wallpaper header */
+.wallpaper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: var(--header-h);
+  overflow: hidden;
+  background: var(--wallpaper-color);
+}
+
+.frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--frame-w);
+  aspect-ratio: 4 / 3;
+  transform: rotate(var(--frame-tilt));
+  background: #f7f5ef;
+  border: calc(var(--frame-w) * 0.06) solid #6e4b2e;
+  box-shadow: 0 calc(var(--frame-w) * 0.02) calc(var(--frame-w) * 0.04) rgb(0 0 0 / 0.2);
+}
+
+.stitch {
+  display: grid;
+  justify-items: center;
+  color: #2f4f8f;
+  font-size: calc(var(--frame-w) * 0.12);
+  line-height: 1.1;
+}
+
+.floral {
+  position: absolute;
+  width: 18%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #e8a98a 0 30%, #3f9c94 31% 60%, transparent 61%);
+}
+.floral-tl { top: 6%; left: 5%; }
+.floral-br { bottom: 6%; right: 5%; }
+
+/* Bull-nose row: position: absolute tiles, joints placed by computeStrip */
+.bullnose {
+  position: relative;
+  height: var(--bn-h);
+  overflow: hidden;
+  background: var(--grout-color);
+}
+
+.bullnose-tile {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--bn-w);
+  background: var(--tile-color);
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+
+/* Tile wall */
+.wall {
+  overflow: hidden;
+  padding-block: var(--grout);
+  background: var(--grout-color);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols-total), var(--tile));
+  grid-auto-rows: var(--tile);
+  gap: var(--grout);
+  width: var(--grid-w);
+  margin-left: var(--grid-left);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--tile) * 0.06);
+  background: var(--tile-color);
+  color: var(--print-color);
+  text-decoration: none;
+}
+
+.tile-logo {
+  width: 32%;
+  aspect-ratio: 1;
+  background: currentColor;
+  opacity: 0.8;
+  -webkit-mask: var(--logo) center / contain no-repeat;
+  mask: var(--logo) center / contain no-repeat;
+}
+
+.tile-title {
+  font-size: calc(var(--tile) * 0.075);
+  letter-spacing: 0.02em;
+}
+
+/* Skirting: page ends here */
+.skirting {
+  height: var(--skirting-h);
+  background: var(--skirting-color);
+  border-top: calc(var(--tile) * 0.03) solid #e6e4dc;
+}
