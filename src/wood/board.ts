@@ -12,16 +12,21 @@ export interface Finish {
   ambient: number; // 0–1 how dark faces turned from the light get
 }
 
-export type Light = [number, number, number]; // towards the light, board coords: u along, v across, z up
+// A light in board coordinates: u along the grain, v across (inwards), z out towards the viewer.
+export interface BoardLight {
+  dir: [number, number, number];
+  weight: number;
+}
 
 const SHEEN_TINT = [1, 0.95, 0.86]; // warm highlight from an amber finish
 const ALONG_GRAIN = 0.25; // how much along-grain tilt the highlight sees
 
-export function shadeBoard(maps: GrainMaps, len: number, wid: number, f: Finish, L: Light): Uint8ClampedArray {
-  const ln = Math.hypot(...L);
-  const [lx, ly, lz] = [L[0] / ln, L[1] / ln, L[2] / ln];
-  const hl = Math.hypot(lx, ly, lz + 1);
-  const [hx, hy, hz] = [lx / hl, ly / hl, (lz + 1) / hl]; // half vector, viewer straight on
+export function shadeBoard(maps: GrainMaps, len: number, wid: number, f: Finish, lights: BoardLight[]): Uint8ClampedArray {
+  const flat = lights.reduce((s, l) => s + l.weight * l.dir[2], 0);
+  const halves = lights.map(({ dir: [lx, ly, lz], weight }) => {
+    const hl = Math.hypot(lx, ly, lz + 1);
+    return { h: [lx / hl, ly / hl, (lz + 1) / hl], weight }; // half vector, viewer straight on
+  });
   const exponent = 6 + 120 * f.gloss * f.gloss;
   const height = (u: number, v: number) => {
     const uu = Math.min(len - 1, Math.max(0, u)), vv = Math.min(wid - 1, Math.max(0, v));
@@ -34,11 +39,13 @@ export function shadeBoard(maps: GrainMaps, len: number, wid: number, f: Finish,
       const du = (height(u + 1, v) - height(u - 1, v)) * 0.5;
       const dv = (height(u, v + 1) - height(u, v - 1)) * 0.5;
       const nl = Math.hypot(du, dv, 1);
-      const lambert = Math.max(0, (-du * lx - dv * ly + lz) / nl) / lz;
-      const light = f.ambient + (1 - f.ambient) * lambert;
+      let lambert = 0;
+      for (const { dir, weight } of lights) lambert += weight * Math.max(0, (-du * dir[0] - dv * dir[1] + dir[2]) / nl);
+      const light = f.ambient + (1 - f.ambient) * (lambert / flat);
       const sl = Math.hypot(du * ALONG_GRAIN, dv, 1);
-      const nh = Math.max(0, (-du * ALONG_GRAIN * hx - dv * hy + hz) / sl);
-      const spec = f.sheen * maps.gloss[i] * nh ** exponent;
+      let spec = 0;
+      for (const { h, weight } of halves) spec += weight * Math.max(0, (-du * ALONG_GRAIN * h[0] - dv * h[1] + h[2]) / sl) ** exponent;
+      spec *= f.sheen * maps.gloss[i];
       for (let c = 0; c < 3; c++) out[i * 4 + c] = maps.albedo[i * 3 + c] * light + 255 * spec * SHEEN_TINT[c];
       out[i * 4 + 3] = 255;
     }

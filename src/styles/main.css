@@ -38,13 +38,13 @@ body {
 }
 
 /* Fixed at its first-render position (--frame-x/y), not re-centred on resize. The shadow
-   wrapper isn't rotated, so its drop-shadow falls in screen space, away from the light. */
+   wrapper isn't rotated, so its drop-shadows (one per room light) fall in screen space. */
 .frame-shadow {
   position: absolute;
   top: var(--frame-y);
   left: var(--frame-x);
   transform: translate(-50%, -50%);
-  filter: drop-shadow(var(--frame-shadow-x) var(--frame-shadow-y) var(--frame-shadow-blur) rgb(0 0 0 / 0.35));
+  filter: var(--frame-shadow);
 }
 
 .frame {

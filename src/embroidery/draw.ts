@@ -1,6 +1,6 @@
 // Paints the framed sampler: aida cloth, X stitches with thread sheen, and a mitred wooden frame,
 // all lit from the wallpaper's light direction (rotated into the tilted frame's own coordinates).
-import { AMBIENT, LIGHT_ELEVATION_DEG } from '../light';
+import { AMBIENT, blendedLight, type Light, type Vec3 } from '../room';
 import { drawSpots, spotLayout } from '../surface/spots';
 import { frameProfile, shadeBoard } from '../wood/board';
 import { grainMaps, type RGB } from '../wood/grain';
@@ -36,7 +36,7 @@ export interface EmbroideryStyle {
   colors: Record<Ink, string> & { cloth: string };
   wood: WoodStyle;
   glass: GlassStyle;
-  lightDeg: number; // direction light comes from, screen space
+  lights: Light[]; // the room's lights at the embroidery, screen coords
   tiltDeg: number; // frame rotation, clockwise
   dpr: number;
 }
@@ -56,12 +56,24 @@ function rng(seed: number) {
 
 const tint = (v: number) => (v >= 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`);
 
-// Light direction (towards the light) in the frame's local coordinates. Screen y points down;
-// CSS rotate(+t) turns the frame clockwise, so screen → local rotates by −t.
-export function localLight(lightDeg: number, tiltDeg: number): V {
-  const a = (lightDeg * Math.PI) / 180, t = (tiltDeg * Math.PI) / 180;
-  const [x, y] = [Math.cos(a), -Math.sin(a)];
-  return [x * Math.cos(t) + y * Math.sin(t), -x * Math.sin(t) + y * Math.cos(t)];
+// A screen-space light direction in the frame's own coordinates. CSS rotate(+t) turns the frame
+// clockwise (screen y down), so screen → local rotates by −t.
+export function toLocal([x, y, z]: Vec3, tiltDeg: number): Vec3 {
+  const t = (tiltDeg * Math.PI) / 180;
+  return [x * Math.cos(t) + y * Math.sin(t), -x * Math.sin(t) + y * Math.cos(t), z];
+}
+
+// Small details use one blended light: S is its slant (how far shadows reach per unit height, so
+// near-frontal window light casts short shadows) and D its unit direction across the surface.
+interface Detail {
+  S: V;
+  D: V;
+}
+
+function detailLight(lights: Light[]): Detail {
+  const [x, y, z] = blendedLight(lights);
+  const n = Math.hypot(x, y) || 1;
+  return { S: [x / z, y / z], D: [x / n, y / n] };
 }
 
 function cloth(ctx: Ctx, chart: Chart, s: number, o: EmbroideryStyle) {
@@ -81,7 +93,9 @@ function cloth(ctx: Ctx, chart: Chart, s: number, o: EmbroideryStyle) {
   ctx.fill();
 }
 
-function stitches(ctx: Ctx, chart: Chart, s: number, o: EmbroideryStyle, L: V, rand: () => number) {
+const THREAD_HEIGHT = 0.15; // of a stitch: how far a thread stands off the cloth
+
+function stitches(ctx: Ctx, chart: Chart, s: number, o: EmbroideryStyle, { S, D }: Detail, rand: () => number) {
   const inset = s * 0.12, width = s * 0.3;
   const legs = (x: number, y: number): [V, V][] => [
     [[x + inset, y + s - inset], [x + s - inset, y + inset]], // bottom-left → top-right first
@@ -97,8 +111,8 @@ function stitches(ctx: Ctx, chart: Chart, s: number, o: EmbroideryStyle, L: V, r
       ctx.lineWidth = width;
       ctx.strokeStyle = 'rgba(0,0,0,0.22)'; // thread shadow on the cloth
       ctx.beginPath();
-      ctx.moveTo(a[0] - L[0] * s * 0.08, a[1] - L[1] * s * 0.08);
-      ctx.lineTo(b[0] - L[0] * s * 0.08, b[1] - L[1] * s * 0.08);
+      ctx.moveTo(a[0] - S[0] * s * THREAD_HEIGHT, a[1] - S[1] * s * THREAD_HEIGHT);
+      ctx.lineTo(b[0] - S[0] * s * THREAD_HEIGHT, b[1] - S[1] * s * THREAD_HEIGHT);
       ctx.stroke();
       ctx.strokeStyle = o.colors[ink];
       ctx.beginPath();
@@ -110,8 +124,8 @@ function stitches(ctx: Ctx, chart: Chart, s: number, o: EmbroideryStyle, L: V, r
       ctx.lineWidth = width * 0.3; // sheen along the side facing the light
       ctx.strokeStyle = 'rgba(255,255,255,0.28)';
       ctx.beginPath();
-      ctx.moveTo(a[0] + L[0] * width * 0.25, a[1] + L[1] * width * 0.25);
-      ctx.lineTo(b[0] + L[0] * width * 0.25, b[1] + L[1] * width * 0.25);
+      ctx.moveTo(a[0] + D[0] * width * 0.25, a[1] + D[1] * width * 0.25);
+      ctx.lineTo(b[0] + D[0] * width * 0.25, b[1] + D[1] * width * 0.25);
       ctx.stroke();
     }
   }
@@ -131,9 +145,7 @@ const GRAIN_DEPTH = 0.8; // CSS px of height for pores and ring relief
 
 // Four mitred oak boards, each its own piece of wood: own grain, slightly different tone.
 // Lit with the scene light rotated into each board's coordinates (u along, v inward, z up).
-function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, L: V, pxPerUnit: number) {
-  const e = (LIGHT_ELEVATION_DEG * Math.PI) / 180;
-  const L3: [number, number, number] = [L[0] * Math.cos(e), L[1] * Math.cos(e), Math.sin(e)];
+function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, lights: Light[], pxPerUnit: number) {
   const w = o.wood, dpr = pxPerUnit; // board pixels per layout unit
   sides(W, H, f).forEach((side, k) => {
     const len = Math.max(2, Math.round((side.along[0] ? W : H) * dpr)), wid = Math.max(2, Math.round(f * dpr));
@@ -149,19 +161,19 @@ function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, L:
     });
     weather(maps, len, wid, frameProfile, { wear: w.wear, grime: w.grime, patches: w.patches, mitres: true, seed: 77 + k });
     const inward: V = [-side.n[0], -side.n[1]];
-    const Lb: [number, number, number] = [L3[0] * side.along[0] + L3[1] * side.along[1], L3[0] * inward[0] + L3[1] * inward[1], L3[2]];
-    const rgba = shadeBoard(maps, len, wid, { profile: frameProfile, profileDepth: w.depth * wid, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, Lb);
-    const board = document.createElement('canvas');
-    board.width = len;
-    board.height = wid;
-    board.getContext('2d')!.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, len, wid), 0, 0);
+    const board = lights.map(({ dir: [x, y, z], weight }) => ({ dir: [x * side.along[0] + y * side.along[1], x * inward[0] + y * inward[1], z] as Vec3, weight }));
+    const rgba = shadeBoard(maps, len, wid, { profile: frameProfile, profileDepth: w.depth * wid, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, board);
+    const boardCanvas = document.createElement('canvas');
+    boardCanvas.width = len;
+    boardCanvas.height = wid;
+    boardCanvas.getContext('2d')!.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, len, wid), 0, 0);
     ctx.save();
     ctx.beginPath();
     side.poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.closePath();
     ctx.clip();
     ctx.transform(side.along[0], side.along[1], inward[0], inward[1], side.from[0], side.from[1]);
-    ctx.drawImage(board, 0, 0, len / dpr, f);
+    ctx.drawImage(boardCanvas, 0, 0, len / dpr, f);
     ctx.restore();
   });
   // Mitre joints and the outer/inner edges.
@@ -176,10 +188,10 @@ function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, L:
 }
 
 // The frame casts a shadow onto the recessed cloth along sides that face the light.
-function innerShadow(ctx: Ctx, W: number, H: number, f: number, L: V) {
+function innerShadow(ctx: Ctx, W: number, H: number, f: number, { S }: Detail) {
   const depth = f * 0.6;
   for (const side of sides(W, H, f)) {
-    const k = Math.max(0, side.n[0] * L[0] + side.n[1] * L[1]);
+    const k = Math.min(1, Math.max(0, side.n[0] * S[0] + side.n[1] * S[1]) * 2);
     if (k === 0) continue;
     const inward: V = [-side.n[0], -side.n[1]];
     const ex = side.n[0] > 0 ? W - f : f, ey = side.n[1] > 0 ? H - f : f; // inner edge line
@@ -203,7 +215,8 @@ const MAX_SUPERSAMPLE = 2.5; // beyond this, shrinking a detailed render shows n
 // there's nothing to gain from supersampling and it's the expensive part.
 export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: EmbroideryStyle, zoom = 1) {
   const { width: W, height: H } = embroiderySize(chart, o);
-  const L = localLight(o.lightDeg, o.tiltDeg);
+  const lights = o.lights.map((l) => ({ dir: toLocal(l.dir, o.tiltDeg), weight: l.weight }));
+  const L = detailLight(lights);
   const f = o.frame, cw = chart.w * o.stitch, ch = chart.h * o.stitch;
   const final = o.dpr * zoom;
   const detail = Math.min(o.dpr * Math.max(1, zoom), final * MAX_SUPERSAMPLE);
@@ -225,7 +238,7 @@ export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: Embro
   ctx.drawImage(cloth_, f, f, cw, ch);
   innerShadow(ctx, W, H, f, L);
   glass(ctx, f, f, cw, ch, o.glass, L);
-  frame(ctx, W, H, f, o, L, final);
+  frame(ctx, W, H, f, o, lights, final);
 }
 
 const GLASS_CAST = [232, 244, 238]; // multiplied in: a green cast with almost no darkening
@@ -233,7 +246,7 @@ const GLASS_CAST = [232, 244, 238]; // multiplied in: a green cast with almost n
 // Glass over the cloth, under the frame lip: a slight colour cast, a lit cut edge and dried water
 // marks (it's a bathroom). The window reflection is a separate, moving layer (see index.ts).
 // Its own seed: no other surface shares its marks.
-function glass(ctx: Ctx, x: number, y: number, w: number, h: number, g: GlassStyle, L: V) {
+function glass(ctx: Ctx, x: number, y: number, w: number, h: number, g: GlassStyle, { S, D }: Detail) {
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
@@ -245,7 +258,7 @@ function glass(ctx: Ctx, x: number, y: number, w: number, h: number, g: GlassSty
   // The cut edge of the glass catches the light along the sides facing it.
   ctx.lineWidth = Math.max(0.6, Math.min(w, h) * 0.006);
   for (const [nx, ny, x0, y0, x1, y1] of [[0, -1, x, y, x + w, y], [-1, 0, x, y, x, y + h], [1, 0, x + w, y, x + w, y + h], [0, 1, x, y + h, x + w, y + h]]) {
-    const k = Math.max(0, nx * L[0] + ny * L[1]);
+    const k = Math.max(0, nx * D[0] + ny * D[1]) * Math.min(1, Math.hypot(...S) * 3); // fades as light goes frontal
     if (!k) continue;
     ctx.strokeStyle = `rgba(255,255,255,${(0.35 * k).toFixed(3)})`;
     ctx.beginPath();

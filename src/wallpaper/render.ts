@@ -1,7 +1,7 @@
 // The wallpaper pipeline as pure maths, shared by the live dev render (browser) and the
 // build-time bake (Node): scan + ink map → recoloured, pebble-embossed, lit RGBA.
 import type { Config } from '../config';
-import { LIGHT_ELEVATION_DEG } from '../light';
+import { lightsAt, roomFromConfig } from '../room';
 import palette from './palette.json';
 import { recolour, type RGB } from './recolour';
 import { blurWrap, hexToRgb, pebbles, shade } from './relief';
@@ -31,8 +31,7 @@ export function renderWallpaper(c: Config, albedo: Uint8ClampedArray, index: Uin
   return shade(height, w, h, {
     albedo,
     relief: c.WALLPAPER_RELIEF * c.WALLPAPER_PEBBLE_PX * pxPerCss * 0.5,
-    lightDeg: c.WALLPAPER_LIGHT_DEG,
-    elevationDeg: LIGHT_ELEVATION_DEG,
+    lights: lightsAt(roomFromConfig(c), roomFromConfig(c).embroidery), // the header sits around embroidery height
     ambient: c.WALLPAPER_AMBIENT,
     sheen: c.WALLPAPER_SHEEN,
   });

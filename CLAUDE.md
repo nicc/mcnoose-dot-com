@@ -11,7 +11,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - `?fixtures` (dev only) swaps in `src/dev/fixtures/` test logos: solid, fine lines, tone, small text, colour, moiré, no-size SVG, PNGs.
 - Communicate in felt terms first (what it's like to look at), then mechanism. Show screenshots.
 - Name register conflicts early; don't split the difference.
-- One coherent scene: every surface (wallpaper, embroidery, frame, tiles, bull-nose, skirting, prints) shares one light — `WALLPAPER_LIGHT_DEG` from the upper left, room light from above — and must read as the same physical place. New surfaces derive shading and shadows from it; never light anything independently.
+- One coherent scene: every surface (wallpaper, embroidery, frame, tiles, bull-nose, skirting, prints) is lit by the same physical room (`src/room.ts`, `ROOM_*` in cm): a window on the wall behind the viewer (key) and a ceiling light (fill), via `lightsAt(room, point)`. Reflections come from the same window by mirror geometry. Never light anything independently.
 - Expect many rounds, especially halftone print, wallpaper, skirting, hover effects.
 
 ## Constants
@@ -37,10 +37,10 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 Cooper Hewitt scan 1939-45-7 (CC0, ca. 1875). `npm run prepare:wallpaper` (scripts/prepare-wallpaper.ts, tools/wallpaper-prep.ts) → seamless half-drop `scan.webp` + per-pixel ink map `inks.png` + `palette.json`. `render.ts` (pure): recolour per ink (`WALLPAPER_<INK>` colours, shift-based so print grain survives), procedural pebble emboss + ink relief, lit by `shade()`. Production: baked at build by `tools/wallpaper-bake.ts` (`virtual:wallpaper`, config.ts values, no runtime compute). Dev: rendered live (`index.ts`) for the panel. Background anchored to wall origin.
 
 ## Embroidery (`src/embroidery/`)
-Hand-charted sampler (`chart.ts`: glyphs for the letters used, corner sprig, auto layout) painted on canvas (`draw.ts`: aida, X stitches, mitred wood frame) lit from `WALLPAPER_LIGHT_DEG` rotated into the frame's tilt. Size = `EMBROIDERY_STITCH_SIZE` × chart. New letters need new glyphs. Site title is a visually hidden h1.
+Hand-charted sampler (`chart.ts`: glyphs for the letters used, corner sprig, auto layout) painted on canvas (`draw.ts`: aida, X stitches, mitred wood frame) lit by the room's lights rotated into the frame's tilt; window reflection placed by `reflectedWindow` and slid by `parallaxFactor`. Size = `EMBROIDERY_STITCH_SIZE` × chart. New letters need new glyphs. Site title is a visually hidden h1.
 
 ## Wood (`src/wood/`)
-Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings with cathedral figure, pores, colour drift → albedo/gloss/relief (optionally periodic along the length). `board.ts`: lights a board from a cross-section profile + grain relief; finish sheen is scaled by the gloss map and streaks along the grain. `wear.ts`: rubbing on convex/high profile, grime in hollows and mitre joints, patchy along the length. Light from `src/light.ts`.
+Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings with cathedral figure, pores, colour drift → albedo/gloss/relief (optionally periodic along the length). `board.ts`: lights a board from a cross-section profile + grain relief; finish sheen is scaled by the gloss map and streaks along the grain. `wear.ts`: rubbing on convex/high profile, grime in hollows and mitre joints, patchy along the length. Lit by a list of room lights.
 
 ## Surfaces (`src/surface/`)
 Shared by glass now and tile glaze later. `spots.ts`: dried water, `limescale` 0 (droplet rings) → 1 (crust + drips); seeded per surface and clustered like splashes, so never a repeating texture. Size from shared `WATER_SPOT_SIZE` (same physical droplets everywhere). `reflection.ts`: crisp daylit-window reflection placed by the scene light, on its own screen-blended layer, slid with parallax as the view scrolls (`parallaxOffset`; window moves under screen pinning don't count). Dried marks are stains, not wet: never light them.

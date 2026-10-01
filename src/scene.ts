@@ -4,6 +4,7 @@ import { computeStrip, rowCount, visibleColumns, type Anchor, type Columns } fro
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
+import { lightsAt, pxPerCm, roomFromConfig } from './room';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -173,10 +174,18 @@ export interface Frame {
   peekRight: number;
 }
 
-// Cast shadow falls away from the wallpaper's light, in screen space (the shadow wrapper isn't rotated).
+// The frame stands off the wall, so each room light casts its own shadow of it, offset by the
+// light's slant (near-frontal window light: short; ceiling fill: longer, fainter, below). In screen
+// space: the shadow wrapper isn't rotated.
 function frameShadow(c: Config, tile: number): Record<string, string> {
-  const a = (c.WALLPAPER_LIGHT_DEG * Math.PI) / 180, d = c.EMBROIDERY_SHADOW * tile;
-  return { '--frame-shadow-x': `${-Math.cos(a) * d}px`, '--frame-shadow-y': `${Math.sin(a) * d}px`, '--frame-shadow-blur': `${d * 1.5}px` };
+  const room = roomFromConfig(c), d = c.EMBROIDERY_STANDOFF_CM * pxPerCm(room, tile);
+  const lights = lightsAt(room, room.embroidery), total = lights.reduce((s, l) => s + l.weight, 0);
+  const shadows = lights.map(({ dir: [x, y, z], weight }) => {
+    const sx = (-x / z) * d, sy = (-y / z) * d;
+    const blur = 2 + Math.hypot(sx, sy) * 0.8 + d * 0.3;
+    return `drop-shadow(${sx.toFixed(1)}px ${sy.toFixed(1)}px ${blur.toFixed(1)}px rgb(0 0 0 / ${((0.45 * weight) / total).toFixed(3)}))`;
+  });
+  return { '--frame-shadow': shadows.join(' ') };
 }
 
 let generation = 0;

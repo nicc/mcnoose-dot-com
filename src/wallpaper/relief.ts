@@ -1,3 +1,4 @@
+import type { Light } from '../room';
 // Pure relief maths for embossed wallpaper: a tileable height map → lit RGBA.
 // Everything wraps at the edges so the result repeats seamlessly.
 
@@ -32,17 +33,15 @@ export function blurWrap(src: Float32Array, w: number, h: number, radius: number
 export interface ShadeOptions {
   albedo: Uint8ClampedArray; // RGBA per pixel: the colour flat areas render as
   relief: number; // height-to-slope scale
-  lightDeg: number; // azimuth the light comes from: 0 = right, 90 = above, 135 = upper left
-  elevationDeg: number;
+  lights: Light[]; // the room's lights at this surface (screen coords: y down, z towards viewer)
   ambient: number; // 0–1: how dark slopes facing away can get
   sheen: number; // satin paint highlight strength
 }
 
-// Lambert shading normalised so flat areas come out exactly their albedo, plus a soft sheen.
+// Lambert shading over the room's lights, normalised so flat areas come out exactly their albedo,
+// plus a soft sheen on slopes turned towards the light.
 export function shade(height: Float32Array, w: number, h: number, o: ShadeOptions): Uint8ClampedArray {
-  const az = (o.lightDeg * Math.PI) / 180, el = (o.elevationDeg * Math.PI) / 180;
-  const lx = Math.cos(az) * Math.cos(el), ly = -Math.sin(az) * Math.cos(el), lz = Math.sin(el); // screen y points down
-  const flat = lz;
+  const flat = o.lights.reduce((s, l) => s + l.weight * l.dir[2], 0);
   const out = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) {
     const up = ((y - 1 + h) % h) * w, down = ((y + 1) % h) * w;
@@ -52,7 +51,9 @@ export function shade(height: Float32Array, w: number, h: number, o: ShadeOption
       const dy = (height[down + x] - height[up + x]) * 0.5 * o.relief;
       const len = Math.hypot(dx, dy, 1);
       const nx = -dx / len, ny = -dy / len, nz = 1 / len;
-      const lambert = Math.max(0, nx * lx + ny * ly + nz * lz) / flat;
+      let lambert = 0;
+      for (const { dir, weight } of o.lights) lambert += weight * Math.max(0, nx * dir[0] + ny * dir[1] + nz * dir[2]);
+      lambert /= flat;
       const light = o.ambient + (1 - o.ambient) * lambert;
       const spec = o.sheen * Math.max(0, lambert - 1) ** 2; // only slopes tilted toward the light
       for (let c = 0; c < 3; c++) out[i * 4 + c] = o.albedo[i * 4 + c] * light + 255 * spec;

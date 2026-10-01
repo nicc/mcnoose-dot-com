@@ -31,6 +31,23 @@ export const CONFIG = {
   HALFTONE_BLUR_PX: 0.4, // ink bleed under the glaze
   HALFTONE_OPACITY: 0.8,
 
+  // Room (cm): one physical scene for every surface's light and reflections. Daylight comes from a
+  // window on the wall behind the viewer; a ceiling light fills from above. x is measured from
+  // the left wall as you face the embroidery.
+  ROOM_TILE_CM: 15, // real tile edge: sets the px ↔ cm scale
+  ROOM_WIDTH_CM: 220,
+  ROOM_DEPTH_CM: 260, // embroidery wall to window wall
+  ROOM_CEILING_CM: 240,
+  ROOM_EYE_CM: 168, // a 180cm viewer, standing
+  ROOM_VIEW_CM: 150, // how far from the wall the viewer stands
+  ROOM_EMBROIDERY_X_CM: 130,
+  ROOM_EMBROIDERY_Y_CM: 132, // sternum height
+  ROOM_WINDOW_X_CM: 90, // window centre
+  ROOM_WINDOW_BOTTOM_CM: 80, // sill
+  ROOM_WINDOW_WIDTH_CM: 70,
+  ROOM_WINDOW_HEIGHT_CM: 110,
+  ROOM_FILL: 0.35, // ceiling light strength relative to the window
+
   // Bathroom: shared by every glossy surface so droplets are the same physical size everywhere
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
@@ -47,7 +64,6 @@ export const CONFIG = {
   WALLPAPER_RELIEF: 0.62, // pebble emboss depth
   WALLPAPER_PEBBLE_PX: 3, // pebble size
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
-  WALLPAPER_LIGHT_DEG: 125, // direction light comes from: 90 = above, 180 = left
   WALLPAPER_AMBIENT: 0.75, // how dark shadowed slopes get (1 = no shadow)
   WALLPAPER_SHEEN: 0.1, // satin highlight
 
@@ -58,7 +74,7 @@ export const CONFIG = {
   EMBROIDERY_CLOTH_H: 53,
   EMBROIDERY_FRAME: 0.2, // moulding width
   EMBROIDERY_TILT_DEG: 1, // clockwise
-  EMBROIDERY_SHADOW: 0.012, // cast-shadow distance, away from WALLPAPER_LIGHT_DEG
+  EMBROIDERY_STANDOFF_CM: 2, // how far the frame sits off the wall: sets its cast shadows
   EMBROIDERY_CLOTH: '#f6f3ea',
   EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
   EMBROIDERY_PETAL: '#e8a283', // peach
@@ -80,7 +96,7 @@ export const CONFIG = {
   // Glass over the cloth
   EMBROIDERY_GLASS_TINT: 0.45, // slight green colour cast
   EMBROIDERY_GLASS_REFLECTION: 0.24, // crisp window reflection
-  EMBROIDERY_GLASS_PARALLAX: 0.2, // how far the reflection slides as you scroll (0 = still, ~0.7 = physical)
+  EMBROIDERY_GLASS_PARALLAX: 0.4, // how far the reflection slides as you scroll: 1 = physically correct
   EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
   // Bull-nose row

@@ -2,10 +2,11 @@
 // and window moves just re-attach them. The glass's window reflection is a separate layer that
 // slides with parallax as the view scrolls (updateReflection), which is what makes it read as glass.
 import type { Config } from '../config';
+import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig } from '../room';
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
-import { drawEmbroidery, embroiderySize, localLight, type EmbroideryStyle } from './draw';
+import { drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
 export const SAMPLER_LINES = ['Snickers', 'McNoose'];
 
@@ -38,6 +39,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
   }
   const dpr = Math.min(3, devicePixelRatio || 1);
   const zoom = c.EMBROIDERY_ZOOM;
+  const room = roomFromConfig(c);
   const style: EmbroideryStyle = {
     stitch: c.EMBROIDERY_STITCH_SIZE * tile,
     frame: c.EMBROIDERY_FRAME * tile,
@@ -62,7 +64,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
       spots: c.EMBROIDERY_GLASS_SPOTS,
       spotSize: (c.WATER_SPOT_SIZE * tile) / zoom, // same physical marks as every other surface
     },
-    lightDeg: c.WALLPAPER_LIGHT_DEG,
+    lights: lightsAt(room, room.embroidery),
     tiltDeg: c.EMBROIDERY_TILT_DEG,
     dpr,
   };
@@ -83,26 +85,34 @@ export function embroidery(c: Config, tile: number): Embroidered {
   const inset = style.frame * zoom;
   const gw = chart.w * style.stitch * zoom, gh = chart.h * style.stitch * zoom;
   margin = Math.max(gw, gh) * 0.5;
-  parallax = c.EMBROIDERY_GLASS_PARALLAX;
+  parallax = c.EMBROIDERY_GLASS_PARALLAX * parallaxFactor(room);
   tilt = c.EMBROIDERY_TILT_DEG;
   Object.assign(glass.style, { left: `${inset}px`, top: `${inset}px`, width: `${gw}px`, height: `${gh}px` });
-  const rKey = JSON.stringify([gw, gh, dpr, c.EMBROIDERY_GLASS_REFLECTION, c.WALLPAPER_LIGHT_DEG, tilt]);
+  const rKey = JSON.stringify([gw, gh, dpr, tile, c.EMBROIDERY_GLASS_REFLECTION, room, tilt]);
   if (!reflection || rKey !== reflectionKey) {
     reflection = document.createElement('canvas');
     reflection.className = 'reflection';
     reflection.width = Math.round((gw + 2 * margin) * dpr);
     reflection.height = Math.round((gh + 2 * margin) * dpr);
     Object.assign(reflection.style, { width: `${gw + 2 * margin}px`, height: `${gh + 2 * margin}px`, left: `${-margin}px`, top: `${-margin}px` });
+    // The window's mirror image in wall cm → glass px about the glass centre (y down). A level
+    // window seen in tilted glass appears tilted the other way, so rotate by −tilt.
+    const ppc = pxPerCm(room, tile), win = reflectedWindow(room), e = room.embroidery;
+    const rect = { x0: (win.x0 - e.x) * ppc + gw / 2, x1: (win.x1 - e.x) * ppc + gw / 2, y0: (e.y - win.y1) * ppc + gh / 2, y1: (e.y - win.y0) * ppc + gh / 2 };
     const ctx = reflection.getContext('2d')!;
     ctx.scale(dpr, dpr);
-    ctx.translate(margin, margin);
-    drawWindowReflection(ctx, gw, gh, { strength: c.EMBROIDERY_GLASS_REFLECTION, light: localLight(c.WALLPAPER_LIGHT_DEG, tilt) });
+    ctx.translate(margin + gw / 2, margin + gh / 2);
+    ctx.rotate((-tilt * Math.PI) / 180);
+    ctx.translate(-gw / 2, -gh / 2);
+    drawWindowReflection(ctx, { strength: c.EMBROIDERY_GLASS_REFLECTION, rect, bars: WINDOW_BAR_CM * win.scale * ppc });
     glass.replaceChildren(reflection);
     reflectionKey = rKey;
     rest = undefined;
   }
   return { canvas, glass, ...size };
 }
+
+const WINDOW_BAR_CM = 5; // sash frame and glazing bars
 
 let rest: [number, number] | undefined; // the glass's screen position when its reflection is at rest
 

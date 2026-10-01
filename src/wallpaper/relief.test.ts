@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { blurWrap, hexToRgb, pebbles, shade } from './relief';
 
 const flatAlbedo = (n: number) => Uint8ClampedArray.from({ length: n * 4 }, (_, i) => [240, 230, 210, 255][i % 4]);
-const base = { relief: 4, lightDeg: 135, elevationDeg: 40, ambient: 0.6, sheen: 0 };
+const fromUpperLeft = { dir: [-0.54, -0.54, 0.64] as [number, number, number], weight: 1 };
+const base = { relief: 4, lights: [fromUpperLeft], ambient: 0.6, sheen: 0 };
 
 describe('blurWrap', () => {
   it('preserves the mean and wraps across edges', () => {
@@ -22,7 +23,9 @@ describe('blurWrap', () => {
 });
 
 describe('shade', () => {
-  it('renders flat relief exactly in the base colour', () => {
+  it('renders flat relief exactly in the base colour, with any number of lights', () => {
+    const two = shade(new Float32Array(9).fill(0.5), 3, 3, { ...base, lights: [fromUpperLeft, { dir: [0, -0.8, 0.6], weight: 0.35 }], albedo: flatAlbedo(9) });
+    expect([...two.slice(0, 4)]).toEqual([240, 230, 210, 255]);
     const px = shade(new Float32Array(9).fill(0.5), 3, 3, { ...base, albedo: flatAlbedo(9) });
     expect([...px.slice(0, 4)]).toEqual([240, 230, 210, 255]);
   });

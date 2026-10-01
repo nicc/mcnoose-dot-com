@@ -54,13 +54,13 @@ describe('shadeBoard', () => {
   const maps = { albedo: new Float32Array(4 * 4 * 3).fill(100), gloss: new Float32Array(16).fill(1), relief: new Float32Array(16) };
 
   it('renders a flat matte board exactly in its albedo', () => {
-    const px = shadeBoard(maps, 4, 4, flat, [0.5, -0.5, 0.7]);
+    const px = shadeBoard(maps, 4, 4, flat, [{ dir: [0.5, -0.5, 0.7], weight: 1 }, { dir: [0, 0.6, 0.8], weight: 0.4 }]);
     expect([...px.slice(0, 4)]).toEqual([100, 100, 100, 255]);
   });
 
   it('adds sheen only where gloss allows', () => {
-    const shiny = shadeBoard(maps, 4, 4, { ...flat, sheen: 1, gloss: 0 }, [0, 0, 1]);
-    const dull = shadeBoard({ ...maps, gloss: new Float32Array(16) }, 4, 4, { ...flat, sheen: 1, gloss: 0 }, [0, 0, 1]);
+    const shiny = shadeBoard(maps, 4, 4, { ...flat, sheen: 1, gloss: 0 }, [{ dir: [0, 0, 1], weight: 1 }]);
+    const dull = shadeBoard({ ...maps, gloss: new Float32Array(16) }, 4, 4, { ...flat, sheen: 1, gloss: 0 }, [{ dir: [0, 0, 1], weight: 1 }]);
     expect(shiny[0]).toBeGreaterThan(dull[0] + 50);
   });
 
