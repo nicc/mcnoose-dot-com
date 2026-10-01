@@ -1,11 +1,11 @@
 // The wallpaper pipeline as pure maths, shared by the live dev render (browser) and the
 // build-time bake (Node): scan + ink map → recoloured, pebble-embossed, lit RGBA.
 import type { Config } from '../config';
+import { LIGHT_ELEVATION_DEG } from '../light';
 import palette from './palette.json';
 import { recolour, type RGB } from './recolour';
 import { blurWrap, hexToRgb, pebbles, shade } from './relief';
 
-export const ELEVATION_DEG = 55; // room light from above, not raking
 export const ASPECT = 1660 / 1200; // repeat height / width of scan.webp
 
 // Config key per ink, in inks.png index order.
@@ -32,7 +32,7 @@ export function renderWallpaper(c: Config, albedo: Uint8ClampedArray, index: Uin
     albedo,
     relief: c.WALLPAPER_RELIEF * c.WALLPAPER_PEBBLE_PX * pxPerCss * 0.5,
     lightDeg: c.WALLPAPER_LIGHT_DEG,
-    elevationDeg: ELEVATION_DEG,
+    elevationDeg: LIGHT_ELEVATION_DEG,
     ambient: c.WALLPAPER_AMBIENT,
     sheen: c.WALLPAPER_SHEEN,
   });

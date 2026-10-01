@@ -60,7 +60,17 @@ export const CONFIG = {
   EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
   EMBROIDERY_PETAL: '#e8a283', // peach
   EMBROIDERY_LEAF: '#3f9c94', // teal
-  EMBROIDERY_WOOD: '#613e27',
+  // Oak frame
+  EMBROIDERY_WOOD: '#613e27', // base colour
+  EMBROIDERY_WOOD_LATE: '#2c1a0d', // growth-ring colour
+  EMBROIDERY_WOOD_RINGS: 0.025, // ring spacing, in tiles (before EMBROIDERY_ZOOM)
+  EMBROIDERY_WOOD_FIGURE: 0.6, // how strongly rings arch (cathedral figure)
+  EMBROIDERY_WOOD_PORES: 0.5, // open-pore flecks
+  EMBROIDERY_WOOD_DRIFT: 0.4, // colour variation along each board
+  EMBROIDERY_WOOD_VARIATION: 0.2, // tone difference between the four boards
+  EMBROIDERY_WOOD_DEPTH: 0.35, // moulding profile depth
+  EMBROIDERY_WOOD_SHEEN: 0.35, // finish highlight strength, broken up by the grain
+  EMBROIDERY_WOOD_GLOSS: 0.45, // highlight tightness
 
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,

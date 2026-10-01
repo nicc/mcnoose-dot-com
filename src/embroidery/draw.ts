@@ -1,11 +1,29 @@
 // Paints the framed sampler: aida cloth, X stitches with thread sheen, and a mitred wooden frame,
 // all lit from the wallpaper's light direction (rotated into the tilted frame's own coordinates).
+import { AMBIENT, LIGHT_ELEVATION_DEG } from '../light';
+import { frameProfile, shadeBoard } from '../wood/board';
+import { grainMaps, type RGB } from '../wood/grain';
+import { hash2 } from '../wood/noise';
 import type { Chart, Ink } from './chart';
+
+export interface WoodStyle {
+  early: RGB; // oak base colour
+  late: RGB; // growth-ring colour
+  ring: number; // CSS px between rings
+  figure: number;
+  pores: number;
+  drift: number;
+  variation: number; // tone difference between the four boards
+  depth: number; // moulding profile depth, fraction of its width
+  sheen: number;
+  gloss: number;
+}
 
 export interface EmbroideryStyle {
   stitch: number; // CSS px per stitch
   frame: number; // CSS px moulding width
-  colors: Record<Ink, string> & { cloth: string; wood: string };
+  colors: Record<Ink, string> & { cloth: string };
+  wood: WoodStyle;
   lightDeg: number; // direction light comes from, screen space
   tiltDeg: number; // frame rotation, clockwise
   dpr: number;
@@ -97,42 +115,48 @@ function sides(W: number, H: number, f: number): { n: V; poly: V[]; along: V; fr
   ];
 }
 
-function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, L: V, rand: () => number) {
-  for (const side of sides(W, H, f)) {
-    const lit = side.n[0] * L[0] + side.n[1] * L[1];
+const GRAIN_DEPTH = 0.8; // CSS px of height for pores and ring relief
+
+// Four mitred oak boards, each its own piece of wood: own grain, slightly different tone.
+// Lit with the scene light rotated into each board's coordinates (u along, v inward, z up).
+function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, L: V, pxPerUnit: number) {
+  const e = (LIGHT_ELEVATION_DEG * Math.PI) / 180;
+  const L3: [number, number, number] = [L[0] * Math.cos(e), L[1] * Math.cos(e), Math.sin(e)];
+  const w = o.wood, dpr = pxPerUnit; // board pixels per layout unit
+  sides(W, H, f).forEach((side, k) => {
+    const len = Math.max(2, Math.round((side.along[0] ? W : H) * dpr)), wid = Math.max(2, Math.round(f * dpr));
+    const toneShift = 1 + w.variation * (hash2(k, 17, 5) - 0.5);
+    const maps = grainMaps(len, wid, {
+      early: w.early.map((c) => c * toneShift) as RGB,
+      late: w.late.map((c) => c * toneShift) as RGB,
+      ringPx: w.ring * dpr,
+      figure: w.figure,
+      pores: w.pores,
+      drift: w.drift,
+      seed: 41 + k * 7,
+    });
+    const inward: V = [-side.n[0], -side.n[1]];
+    const Lb: [number, number, number] = [L3[0] * side.along[0] + L3[1] * side.along[1], L3[0] * inward[0] + L3[1] * inward[1], L3[2]];
+    const rgba = shadeBoard(maps, len, wid, { profile: frameProfile, profileDepth: w.depth * wid, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, Lb);
+    const board = document.createElement('canvas');
+    board.width = len;
+    board.height = wid;
+    board.getContext('2d')!.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, len, wid), 0, 0);
     ctx.save();
     ctx.beginPath();
     side.poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.closePath();
     ctx.clip();
-    ctx.fillStyle = o.colors.wood;
-    ctx.fillRect(0, 0, W, H);
-    // Grain: long wavering lines running along the side.
-    const len = Math.abs(side.along[0]) ? W : H;
-    const inward: V = [-side.n[0], -side.n[1]];
-    for (let d = 0; d < f; d += 0.7 + rand() * 0.9) {
-      const phase = rand() * 6, amp = 0.15 + rand() * 0.35, v = (rand() - 0.5) * 0.18;
-      ctx.strokeStyle = tint(v);
-      ctx.lineWidth = 0.4 + rand() * 0.8;
-      ctx.beginPath();
-      for (let t = 0; t <= len; t += 4) {
-        const off = d + Math.sin(t / 23 + phase) * amp;
-        const px = side.from[0] + side.along[0] * t + inward[0] * off, py = side.from[1] + side.along[1] * t + inward[1] * off;
-        t ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-      }
-      ctx.stroke();
-    }
-    // Bevel: outer slope faces outward (lit when facing the light), inner lip faces in.
-    const g = ctx.createLinearGradient(side.from[0], side.from[1], side.from[0] + inward[0] * f, side.from[1] + inward[1] * f);
-    g.addColorStop(0, tint(0.28 * lit));
-    g.addColorStop(0.45, tint(0));
-    g.addColorStop(0.8, tint(0));
-    g.addColorStop(1, tint(-0.3 * lit));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    ctx.transform(side.along[0], side.along[1], inward[0], inward[1], side.from[0], side.from[1]);
+    ctx.drawImage(board, 0, 0, len / dpr, f);
     ctx.restore();
-  }
+  });
+  // Mitre joints and the outer/inner edges.
   ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  for (const [cx, cy, ix, iy] of [[0, 0, f, f], [W, 0, W - f, f], [W, H, W - f, H - f], [0, H, f, H - f]]) ctx.moveTo(cx, cy), ctx.lineTo(ix, iy);
+  ctx.stroke();
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
   ctx.strokeRect(f - 0.5, f - 0.5, W - 2 * f + 1, H - 2 * f + 1);
@@ -159,21 +183,35 @@ export function embroiderySize(chart: Chart, o: Pick<EmbroideryStyle, 'stitch' |
   return { width: chart.w * o.stitch + 2 * o.frame, height: chart.h * o.stitch + 2 * o.frame };
 }
 
-export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: EmbroideryStyle) {
+const MAX_SUPERSAMPLE = 2.5; // beyond this, shrinking a detailed render shows no further gain
+
+// Cloth and stitches render at full detail (stitch size) and are shrunk by zoom, which keeps
+// their character. The frame is drawn straight at the final size: its grain is procedural, so
+// there's nothing to gain from supersampling and it's the expensive part.
+export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: EmbroideryStyle, zoom = 1) {
   const { width: W, height: H } = embroiderySize(chart, o);
-  canvas.width = Math.round(W * o.dpr);
-  canvas.height = Math.round(H * o.dpr);
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(o.dpr, o.dpr);
   const L = localLight(o.lightDeg, o.tiltDeg);
-  const rand = rng(chart.w * 1000 + chart.h);
-  ctx.save();
-  ctx.translate(o.frame, o.frame);
-  cloth(ctx, chart, o.stitch, o);
-  stitches(ctx, chart, o.stitch, o, L, rand);
-  ctx.restore();
-  innerShadow(ctx, W, H, o.frame, L);
-  frame(ctx, W, H, o.frame, o, L, rand);
+  const f = o.frame, cw = chart.w * o.stitch, ch = chart.h * o.stitch;
+  const final = o.dpr * zoom;
+  const detail = Math.min(o.dpr * Math.max(1, zoom), final * MAX_SUPERSAMPLE);
+
+  let cloth_ = document.createElement('canvas');
+  cloth_.width = Math.round(cw * detail);
+  cloth_.height = Math.round(ch * detail);
+  const cctx = cloth_.getContext('2d')!;
+  cctx.scale(detail, detail);
+  cloth(cctx, chart, o.stitch, o);
+  stitches(cctx, chart, o.stitch, o, L, rng(chart.w * 1000 + chart.h));
+  if (zoom < 1) cloth_ = downscale(cloth_, Math.max(1, Math.round(cw * final)), Math.max(1, Math.round(ch * final)));
+
+  canvas.width = Math.max(1, Math.round(W * final));
+  canvas.height = Math.max(1, Math.round(H * final));
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(final, final); // layout units from here on
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(cloth_, f, f, cw, ch);
+  innerShadow(ctx, W, H, f, L);
+  frame(ctx, W, H, f, o, L, final);
 }
 
 // High-quality shrink: halve repeatedly, then a final step to the target. One big bilinear step

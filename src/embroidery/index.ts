@@ -1,8 +1,9 @@
 // The framed sampler as a cached canvas: redrawn only when its size or settings change, so
 // resizes and window moves just re-attach it.
 import type { Config } from '../config';
+import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
-import { downscale, drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
+import { drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
 export const SAMPLER_LINES = ['Snickers', 'McNoose'];
 
@@ -24,7 +25,19 @@ export function embroidery(c: Config, tile: number): { canvas: HTMLCanvasElement
   const style: EmbroideryStyle = {
     stitch: c.EMBROIDERY_STITCH_SIZE * tile,
     frame: c.EMBROIDERY_FRAME * tile,
-    colors: { cloth: c.EMBROIDERY_CLOTH, T: c.EMBROIDERY_THREAD, P: c.EMBROIDERY_PETAL, L: c.EMBROIDERY_LEAF, wood: c.EMBROIDERY_WOOD },
+    colors: { cloth: c.EMBROIDERY_CLOTH, T: c.EMBROIDERY_THREAD, P: c.EMBROIDERY_PETAL, L: c.EMBROIDERY_LEAF },
+    wood: {
+      early: hexToRgb(c.EMBROIDERY_WOOD),
+      late: hexToRgb(c.EMBROIDERY_WOOD_LATE),
+      ring: c.EMBROIDERY_WOOD_RINGS * tile,
+      figure: c.EMBROIDERY_WOOD_FIGURE,
+      pores: c.EMBROIDERY_WOOD_PORES,
+      drift: c.EMBROIDERY_WOOD_DRIFT,
+      variation: c.EMBROIDERY_WOOD_VARIATION,
+      depth: c.EMBROIDERY_WOOD_DEPTH,
+      sheen: c.EMBROIDERY_WOOD_SHEEN,
+      gloss: c.EMBROIDERY_WOOD_GLOSS,
+    },
     lightDeg: c.WALLPAPER_LIGHT_DEG,
     tiltDeg: c.EMBROIDERY_TILT_DEG,
     dpr,
@@ -33,14 +46,8 @@ export function embroidery(c: Config, tile: number): { canvas: HTMLCanvasElement
   const size = { width: natural.width * zoom, height: natural.height * zoom };
   const next = JSON.stringify([style, zoom, chartKey]);
   if (!canvas || next !== key) {
-    if (zoom >= 1) {
-      canvas = document.createElement('canvas');
-      drawEmbroidery(canvas, chart, { ...style, dpr: dpr * zoom }); // crisp at the larger size
-    } else {
-      const full = document.createElement('canvas');
-      drawEmbroidery(full, chart, style);
-      canvas = downscale(full, Math.max(1, Math.round(size.width * dpr)), Math.max(1, Math.round(size.height * dpr)));
-    }
+    canvas = document.createElement('canvas');
+    drawEmbroidery(canvas, chart, style, zoom);
     canvas.className = 'embroidery';
     canvas.setAttribute('aria-hidden', 'true');
     key = next;

@@ -39,6 +39,9 @@ Cooper Hewitt scan 1939-45-7 (CC0, ca. 1875). `npm run prepare:wallpaper` (scrip
 ## Embroidery (`src/embroidery/`)
 Hand-charted sampler (`chart.ts`: glyphs for the letters used, corner sprig, auto layout) painted on canvas (`draw.ts`: aida, X stitches, mitred wood frame) lit from `WALLPAPER_LIGHT_DEG` rotated into the frame's tilt. Size = `EMBROIDERY_STITCH_SIZE` × chart. New letters need new glyphs. Site title is a visually hidden h1.
 
+## Wood (`src/wood/`)
+Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings with cathedral figure, pores, colour drift → albedo/gloss/relief (optionally periodic along the length). `board.ts`: lights a board from a cross-section profile + grain relief; finish sheen is scaled by the gloss map and streaks along the grain. Light from `src/light.ts`.
+
 ## Halftone
 Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
 
