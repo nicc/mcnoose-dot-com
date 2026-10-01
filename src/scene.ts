@@ -5,6 +5,7 @@ import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
 import { lightsAt, pxPerCm, roomFromConfig } from './room';
+import { drawAgeing, grimeLevel } from './tiles/glaze';
 import { groutTexture } from './tiles/grout';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { hexToRgb } from './wallpaper/relief';
@@ -165,11 +166,38 @@ function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
 
 const GROUT_RECESS_CM = 0.15; // grout sits this far behind the tile faces
 
+// Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
+const ageing = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
+
+function tileAgeing(c: Config, a: Anchor, rows: number) {
+  const dpr = Math.min(1.5, devicePixelRatio || 1); // soft detail: no need for full density
+  return (row: number, col: number): HTMLCanvasElement => {
+    const level = grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS);
+    const age = {
+      crazing: c.TILE_CRAZING,
+      spots: c.TILE_SPOTS + (c.TILE_SPOTS_LOW - c.TILE_SPOTS) * level,
+      limescale: c.TILE_LIMESCALE * level,
+      spotSize: c.WATER_SPOT_SIZE * a.tile,
+    };
+    const key = JSON.stringify([a.tile, dpr, age]);
+    const id = `${col}:${row}`;
+    let hit = ageing.get(id);
+    if (!hit || hit.key !== key) {
+      const canvas = el('canvas', 'tile-age');
+      canvas.setAttribute('aria-hidden', 'true');
+      drawAgeing(canvas, a.tile, dpr, age, Math.imul(col + 1000, 7919) ^ Math.imul(row + 1000, 104729));
+      ageing.set(id, (hit = { key, canvas }));
+    }
+    return hit.canvas;
+  };
+}
+
 function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface): HTMLElement {
   const g = el('div', 'grid');
   const slot = new Map(cols.full.map((k, i) => [k, i]));
   const n = Math.max(1, cols.full.length);
   const rows = rowCount(projects.length, n, c.TRAILING_ROWS);
+  const aged = tileAgeing(c, a, rows);
   const now = performance.now();
   const tiles = new Map<string, HTMLElement>();
   for (let r = 0; r < rows; r++) {
@@ -179,6 +207,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
       const key = `${r}:${k}`;
       const t = p ? projectTile(c, a.tile, p, key, now, pending) : el('div', 'tile');
       Object.assign(t.style, surface(r, k));
+      t.append(aged(r, k));
       tiles.set(key, t);
       g.append(t);
     }

@@ -17,6 +17,11 @@ export const CONFIG = {
   TILE_TONE: 0.012, // glaze tone variation between tiles
   TILE_EDGE_CM: 0.35, // cushion edge radius
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
+  TILE_CRAZING: 0.3, // hairline crack network in the old glaze
+  TILE_SPOTS: 0.12, // dried water marks on tiles high up
+  TILE_SPOTS_LOW: 0.6, // … and on the bottom row
+  TILE_LIMESCALE: 0.7, // limescale reached on the bottom row
+  TILE_GRIME_ROWS: 5, // how many rows up from the skirting the marks build
   GROUT_TEXTURE: 0.5, // sand grain in the grout
   GROUT_RECESS: 0.5, // shadow tiles cast onto the recessed grout
 
