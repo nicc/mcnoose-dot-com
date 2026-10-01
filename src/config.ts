@@ -33,7 +33,7 @@ export const CONFIG = {
 
   // Header wallpaper
   HEADER_HEIGHT: 1.4,
-  WALLPAPER_ZOOM: 2.1, // pattern repeat width, in tiles (~32cm at real scale)
+  WALLPAPER_ZOOM: 2, // pattern repeat width, in tiles (~32cm at real scale)
   // Ink colours (defaults: the 1875 scan's own)
   WALLPAPER_GROUND: '#beb091', // ink: ground
   WALLPAPER_FOLIAGE: '#a3a28d', // ink: foliage
@@ -41,7 +41,7 @@ export const CONFIG = {
   WALLPAPER_PETAL: '#c1ab83', // ink: petal
   WALLPAPER_BERRY: '#a68d6e', // ink: berry
   WALLPAPER_OUTLINE: '#817462', // ink: outline
-  WALLPAPER_RELIEF: 0.6, // pebble emboss depth
+  WALLPAPER_RELIEF: 0.62, // pebble emboss depth
   WALLPAPER_PEBBLE_PX: 3, // pebble size
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
   WALLPAPER_LIGHT_DEG: 125, // direction light comes from: 90 = above, 180 = left
