@@ -127,6 +127,16 @@ body {
   position: relative;
 }
 
+/* The room reflected in the glaze: a tiny traced image, smoothly scaled up (old glaze blurs it) */
+.tile-reflect {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: blur(var(--reflect-blur));
+}
+
 /* Crazing and dried water marks, over the print (which sits under the glaze) */
 .tile-age {
   position: absolute;

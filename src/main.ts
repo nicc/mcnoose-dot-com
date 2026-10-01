@@ -4,7 +4,7 @@ import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
 import { resetReflection, updateReflection } from './embroidery';
-import { renderScene, type Frame, type Viewport } from './scene';
+import { renderScene, updateTileReflections, type Frame, type Viewport } from './scene';
 
 const root = document.getElementById('app')!;
 const probe = document.getElementById('svh-probe')!;
@@ -69,6 +69,11 @@ function render(force = false): Frame {
   return frame;
 }
 
+const reflect = () => {
+  updateReflection(shown);
+  updateTileReflections();
+};
+
 // Reflections slide as the view scrolls; one update per frame at most.
 let reflecting = false;
 addEventListener(
@@ -78,7 +83,7 @@ addEventListener(
     reflecting = true;
     requestAnimationFrame(() => {
       reflecting = false;
-      updateReflection(shown);
+      reflect();
     });
   },
   { passive: true },

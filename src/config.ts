@@ -17,6 +17,9 @@ export const CONFIG = {
   TILE_TONE: 0.012, // glaze tone variation between tiles
   TILE_EDGE_CM: 0.35, // cushion edge radius
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
+  TILE_REFLECTION: 0.07, // how strongly the room shows in the glaze
+  TILE_TILT_DEG: 1.5, // tiles sit at slightly different angles, breaking reflections at the grout
+  TILE_WAVINESS: 1, // glaze undulation: reflections wobble softly within a tile
   TILE_CRAZING: 0.3, // hairline crack network in the old glaze
   TILE_SPOTS: 0.12, // dried water marks on tiles high up
   TILE_SPOTS_LOW: 0.6, // … and on the bottom row
@@ -57,6 +60,10 @@ export const CONFIG = {
   ROOM_WINDOW_WIDTH_CM: 70,
   ROOM_WINDOW_HEIGHT_CM: 110,
   ROOM_FILL: 0.35, // ceiling light strength relative to the window
+  ROOM_EYE_FOLLOW: 0.4, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
+  ROOM_WALL_COLOR: '#e4dccb', // walls reflected in the tiles
+  ROOM_CEILING_COLOR: '#f1efe9',
+  ROOM_FLOOR_COLOR: '#8b8478',
 
   // Bathroom: shared by every glossy surface so droplets are the same physical size everywhere
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
@@ -106,7 +113,6 @@ export const CONFIG = {
   // Glass over the cloth
   EMBROIDERY_GLASS_TINT: 0.45, // slight green colour cast
   EMBROIDERY_GLASS_REFLECTION: 0.24, // crisp window reflection
-  EMBROIDERY_GLASS_PARALLAX: 0.4, // how far the reflection slides as you scroll: 1 = physically correct
   EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
   // Bull-nose row

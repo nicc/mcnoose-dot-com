@@ -85,7 +85,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
   const inset = style.frame * zoom;
   const gw = chart.w * style.stitch * zoom, gh = chart.h * style.stitch * zoom;
   margin = Math.max(gw, gh) * 0.5;
-  parallax = c.EMBROIDERY_GLASS_PARALLAX * parallaxFactor(room);
+  parallax = c.ROOM_EYE_FOLLOW * parallaxFactor(room);
   tilt = c.EMBROIDERY_TILT_DEG;
   Object.assign(glass.style, { left: `${inset}px`, top: `${inset}px`, width: `${gw}px`, height: `${gh}px` });
   const rKey = JSON.stringify([gw, gh, dpr, tile, c.EMBROIDERY_GLASS_REFLECTION, room, tilt]);

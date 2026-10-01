@@ -45,6 +45,9 @@ Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings wit
 ## Surfaces (`src/surface/`)
 Shared by glass now and tile glaze later. `spots.ts`: dried water, `limescale` 0 (droplet rings) → 1 (crust + drips); seeded per surface and clustered like splashes, so never a repeating texture. Size from shared `WATER_SPOT_SIZE` (same physical droplets everywhere). `reflection.ts`: crisp daylit-window reflection placed by the scene light, on its own screen-blended layer, slid with parallax as the view scrolls (`parallaxOffset`; window moves under screen pinning don't count). Dried marks are stains, not wet: never light them.
 
+## Tiles (`src/tiles/`)
+`surface.ts`: page px → wall cm (`WallMap`), per-tile glaze tone, cushion-edge CSS shadows per room light. `glaze.ts`: per-tile ageing canvas (crazing + dried marks, worse over the bottom `TILE_GRIME_ROWS`). `reflect.ts`: each tile traces the room (plain floor, window wall, walls, ceiling — no floor pattern) through its own tilt + waviness; 20×20 canvas, blurred, re-traced on scroll for on-screen tiles only, from the eye (`ROOM_EYE_FOLLOW`, shared with the glass). Per-tile seeds from wall position: nothing repeats.
+
 ## Halftone
 Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
 
