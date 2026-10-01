@@ -33,7 +33,7 @@ export const CONFIG = {
 
   // Header wallpaper
   HEADER_HEIGHT: 1.4,
-  WALLPAPER_ZOOM: 1, // pattern repeat width, in tiles
+  WALLPAPER_ZOOM: 0.35, // pattern repeat width, in tiles
   WALLPAPER_COLOR: '#efe6cf',
   WALLPAPER_RELIEF: 1, // emboss depth
   WALLPAPER_SOFTNESS: 0.006, // edge rounding (paint build-up), fraction of repeat width
