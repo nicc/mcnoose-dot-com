@@ -1,6 +1,8 @@
 // Paints the framed sampler: aida cloth, X stitches with thread sheen, and a mitred wooden frame,
 // all lit from the wallpaper's light direction (rotated into the tilted frame's own coordinates).
 import { AMBIENT, LIGHT_ELEVATION_DEG } from '../light';
+import { drawGlaze } from '../surface/glaze';
+import { drawSpots, spotLayout } from '../surface/spots';
 import { frameProfile, shadeBoard } from '../wood/board';
 import { grainMaps, type RGB } from '../wood/grain';
 import { weather } from '../wood/wear';
@@ -23,11 +25,19 @@ export interface WoodStyle {
   patches: number;
 }
 
+export interface GlassStyle {
+  tint: number; // 0–1 grey-green darkening of what's behind
+  reflection: number; // 0–1
+  spots: number; // 0–1 dried water spots
+  spotSize: number; // droplet radius, layout units
+}
+
 export interface EmbroideryStyle {
   stitch: number; // CSS px per stitch
   frame: number; // CSS px moulding width
   colors: Record<Ink, string> & { cloth: string };
   wood: WoodStyle;
+  glass: GlassStyle;
   lightDeg: number; // direction light comes from, screen space
   tiltDeg: number; // frame rotation, clockwise
   dpr: number;
@@ -216,7 +226,35 @@ export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: Embro
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(cloth_, f, f, cw, ch);
   innerShadow(ctx, W, H, f, L);
+  glass(ctx, f, f, cw, ch, o.glass, L);
   frame(ctx, W, H, f, o, L, final);
+}
+
+// Glass over the cloth, under the frame lip: a faint tint, reflection from the scene light, and
+// dried water spots (it's a bathroom). Its own seed: no other surface shares its spots.
+function glass(ctx: Ctx, x: number, y: number, w: number, h: number, g: GlassStyle, L: V) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = `rgba(70,85,80,${(0.18 * g.tint).toFixed(3)})`;
+  ctx.fillRect(x, y, w, h);
+  drawGlaze(ctx, x, y, w, h, { reflection: g.reflection, light: L });
+  // The cut edge of the glass catches the light along the sides facing it.
+  ctx.lineWidth = Math.max(0.6, Math.min(w, h) * 0.006);
+  for (const [nx, ny, x0, y0, x1, y1] of [[0, -1, x, y, x + w, y], [-1, 0, x, y, x, y + h], [1, 0, x + w, y, x + w, y + h], [0, 1, x, y + h, x + w, y + h]]) {
+    const k = Math.max(0, nx * L[0] + ny * L[1]);
+    if (!k) continue;
+    ctx.strokeStyle = `rgba(255,255,255,${(0.5 * k * g.reflection).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.moveTo(x0 - nx * ctx.lineWidth, y0 - ny * ctx.lineWidth);
+    ctx.lineTo(x1 - nx * ctx.lineWidth, y1 - ny * ctx.lineWidth);
+    ctx.stroke();
+  }
+  const spotOpts = { amount: g.spots, size: g.spotSize, limescale: 0, seed: 9001 };
+  ctx.translate(x, y);
+  drawSpots(ctx, spotLayout(w, h, spotOpts), spotOpts);
+  ctx.restore();
 }
 
 // High-quality shrink: halve repeatedly, then a final step to the target. One big bilinear step

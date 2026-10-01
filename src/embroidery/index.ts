@@ -41,6 +41,12 @@ export function embroidery(c: Config, tile: number): { canvas: HTMLCanvasElement
       grime: c.EMBROIDERY_WOOD_GRIME,
       patches: c.EMBROIDERY_WOOD_PATCHES,
     },
+    glass: {
+      tint: c.EMBROIDERY_GLASS_TINT,
+      reflection: c.EMBROIDERY_GLASS_REFLECTION,
+      spots: c.EMBROIDERY_GLASS_SPOTS,
+      spotSize: (c.WATER_SPOT_SIZE * tile) / c.EMBROIDERY_ZOOM, // same physical droplets as every other surface
+    },
     lightDeg: c.WALLPAPER_LIGHT_DEG,
     tiltDeg: c.EMBROIDERY_TILT_DEG,
     dpr,

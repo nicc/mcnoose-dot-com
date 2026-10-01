@@ -31,6 +31,9 @@ export const CONFIG = {
   HALFTONE_BLUR_PX: 0.4, // ink bleed under the glaze
   HALFTONE_OPACITY: 0.8,
 
+  // Bathroom: shared by every glossy surface so droplets are the same physical size everywhere
+  WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
+
   // Header wallpaper
   HEADER_HEIGHT: 1.4,
   WALLPAPER_ZOOM: 2, // pattern repeat width, in tiles (~32cm at real scale)
@@ -74,6 +77,10 @@ export const CONFIG = {
   EMBROIDERY_WOOD_WEAR: 0.15, // finish rubbed off raised edges
   EMBROIDERY_WOOD_GRIME: 0.25, // dirt in hollows and corner joints
   EMBROIDERY_WOOD_PATCHES: 0.5, // how unevenly wear and grime vary along each board
+  // Glass over the cloth
+  EMBROIDERY_GLASS_TINT: 0.3, // grey-green darkening
+  EMBROIDERY_GLASS_REFLECTION: 0.5, // glare bands from the scene light
+  EMBROIDERY_GLASS_SPOTS: 0.4, // dried water spots
 
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,

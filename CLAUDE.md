@@ -42,6 +42,9 @@ Hand-charted sampler (`chart.ts`: glyphs for the letters used, corner sprig, aut
 ## Wood (`src/wood/`)
 Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings with cathedral figure, pores, colour drift → albedo/gloss/relief (optionally periodic along the length). `board.ts`: lights a board from a cross-section profile + grain relief; finish sheen is scaled by the gloss map and streaks along the grain. `wear.ts`: rubbing on convex/high profile, grime in hollows and mitre joints, patchy along the length. Light from `src/light.ts`.
 
+## Surfaces (`src/surface/`)
+Shared by glass now and tile glaze later. `spots.ts`: dried water, `limescale` 0 (droplet rings) → 1 (crust + drips); seeded per surface and clustered like splashes, so never a repeating texture. Size from shared `WATER_SPOT_SIZE` (same physical droplets everywhere). `glaze.ts`: reflection bands from the scene light.
+
 ## Halftone
 Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
 
