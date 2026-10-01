@@ -3,6 +3,7 @@ import { CONFIG, type Config } from './config';
 import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
+import { resetReflection, updateReflection } from './embroidery';
 import { renderScene, type Frame, type Viewport } from './scene';
 
 const root = document.getElementById('app')!;
@@ -46,6 +47,7 @@ function render(force = false): Frame {
   if (!wall || geometry !== anchorKey || !anchorFits(wall, vp.width, vp.height, state.MIN_PEEK)) {
     wall = anchor = initialAnchor({ ...vp, tileMax: state.TILE_MAX_PX, grout: state.GROUT_PX, minPeek: state.MIN_PEEK });
     anchorKey = geometry;
+    resetReflection(); // the wall moved: the reflection starts at rest again
     anchorScreenX = pos.x;
     lastScreenY = pos.y;
     topExtra = 0;
@@ -63,8 +65,24 @@ function render(force = false): Frame {
   if (force || key !== last) frame = renderScene(root, state, vp, wall, topExtra, projects);
   last = key;
   if (scrollTarget !== undefined) scrollTo(scrollX, scrollTarget);
+  updateReflection(shown);
   return frame;
 }
+
+// Reflections slide as the view scrolls; one update per frame at most.
+let reflecting = false;
+addEventListener(
+  'scroll',
+  () => {
+    if (reflecting) return;
+    reflecting = true;
+    requestAnimationFrame(() => {
+      reflecting = false;
+      updateReflection(shown);
+    });
+  },
+  { passive: true },
+);
 
 render();
 addEventListener('resize', () => render());

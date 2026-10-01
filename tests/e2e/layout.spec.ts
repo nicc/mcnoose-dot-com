@@ -242,3 +242,14 @@ test('the embroidery is drawn and the site title is an accessible h1', async ({ 
   });
   expect(inked).toBeGreaterThan(500);
 });
+
+test('the glass reflection slides as the page scrolls and returns at rest', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('canvas.reflection');
+  const y = () => page.$eval('canvas.reflection', (c) => new DOMMatrix(getComputedStyle(c).transform).m42);
+  expect(await y()).toBeCloseTo(0, 1);
+  await page.evaluate(() => scrollTo(0, 100));
+  await expect.poll(y).toBeGreaterThan(5);
+  await page.evaluate(() => scrollTo(0, 0));
+  await expect.poll(y).toBeCloseTo(0, 1);
+});

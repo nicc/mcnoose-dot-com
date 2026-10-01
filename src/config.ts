@@ -78,14 +78,15 @@ export const CONFIG = {
   EMBROIDERY_WOOD_GRIME: 0.25, // dirt in hollows and corner joints
   EMBROIDERY_WOOD_PATCHES: 0.5, // how unevenly wear and grime vary along each board
   // Glass over the cloth
-  EMBROIDERY_GLASS_TINT: 0.3, // grey-green darkening
-  EMBROIDERY_GLASS_REFLECTION: 0.23, // glare bands from the scene light
+  EMBROIDERY_GLASS_TINT: 0.3, // slight green colour cast
+  EMBROIDERY_GLASS_REFLECTION: 0.6, // crisp window reflection
+  EMBROIDERY_GLASS_PARALLAX: 0.2, // how far the reflection slides as you scroll (0 = still, ~0.7 = physical)
   EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,
   BULLNOSE_HEIGHT: 0.25,
-  BULLNOSE_OFFSET: 0.2, // 0–1 of a bull-nose tile: where joints fall relative to page centre
+  BULLNOSE_OFFSET: 0.3, // 0–1 of a bull-nose tile: where joints fall relative to page centre
 
   // Skirting
   SKIRTING_HEIGHT: 0.55,

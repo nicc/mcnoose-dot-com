@@ -45,7 +45,8 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
 // The site title is the embroidery; the h1 carries it for screen readers and search.
 function header(c: Config, tile: number): HTMLElement {
   const title = el('h1', 'sr-only', [document.createTextNode(SAMPLER_LINES.join(' '))]);
-  const frame = el('figure', 'frame', [embroidery(c, tile).canvas]);
+  const e = embroidery(c, tile);
+  const frame = el('figure', 'frame', [e.canvas, e.glass]);
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame])]);
 }
 

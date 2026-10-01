@@ -48,7 +48,21 @@ body {
 }
 
 .frame {
+  position: relative;
   transform: rotate(var(--frame-tilt));
+}
+
+/* Glass reflection: its own layer, screen-blended so it brightens without greying, slid by JS. */
+.glass {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.reflection {
+  position: absolute;
+  mix-blend-mode: screen;
+  will-change: transform;
 }
 
 .embroidery {
