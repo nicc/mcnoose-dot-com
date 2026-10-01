@@ -13,7 +13,12 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   REFLOW_FADE_MS: [0, 1500, 10],
   PIN_SMOOTH_MS: [0, 300, 1],
   HEADER_HEIGHT: [0.25, 3, 0.05],
-  WALLPAPER_ZOOM: [0.25, 4, 0.05],
+  WALLPAPER_ZOOM: [0.2, 4, 0.05],
+  WALLPAPER_RELIEF: [0, 4, 0.05],
+  WALLPAPER_SOFTNESS: [0, 0.05, 0.001],
+  WALLPAPER_LIGHT_DEG: [0, 360, 1],
+  WALLPAPER_AMBIENT: [0, 1, 0.01],
+  WALLPAPER_SHEEN: [0, 1, 0.01],
   EMBROIDERY_WIDTH: [0.2, 1.4, 0.01],
   EMBROIDERY_TEXT_SIZE: [0.02, 0.3, 0.002],
   EMBROIDERY_STITCH_SIZE: [0.003, 0.05, 0.001],
@@ -38,7 +43,8 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
 };
 
 export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
-  const gui = new GUI({ title: 'config' });
+  const gui = new GUI({ title: 'config', closeFolders: true });
+  gui.close(); // starts collapsed; click the title to open
   const values = state as Record<string, number | string>;
   const readout = { tile: '', columns: 0, peek: '' }; // peek: left / right edge tiles, in tiles
 

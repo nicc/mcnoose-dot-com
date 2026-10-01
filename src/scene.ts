@@ -2,6 +2,7 @@
 import type { Config } from './config';
 import { computeStrip, rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
+import { wallpaper, wallpaperReady, type Wallpaper } from './wallpaper';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -15,6 +16,19 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, kids: No
   n.append(...kids);
   return n;
 };
+
+// Pattern anchored to the wall's world origin so it stays put under resizes and window moves.
+function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[]) {
+  const apply = (wp: Wallpaper) => {
+    el.style.backgroundImage = `url("${wp.url}")`;
+    el.style.backgroundSize = `${wp.width}px ${wp.height}px`;
+    el.style.backgroundPosition = `${a.originX}px ${topExtra}px`;
+  };
+  const p = wallpaper(c, a.tile);
+  const ready = wallpaperReady();
+  if (ready) apply(ready);
+  else pending.push(p.then((wp) => el.isConnected && apply(wp), (e) => console.warn(e)));
+}
 
 function header(): HTMLElement {
   const name = el('div', 'stitch', [el('span', '', [document.createTextNode('Snickers')]), el('span', '', [document.createTextNode('McNoose')])]);
@@ -166,7 +180,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--stitch-size': `${c.EMBROIDERY_STITCH_SIZE * a.tile}px`,
     '--accent-size': `${c.EMBROIDERY_FLORAL_SIZE * a.tile}px`,
     '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
-    '--wallpaper-zoom': String(c.WALLPAPER_ZOOM),
     '--bn-h': `${c.BULLNOSE_HEIGHT * a.tile}px`,
     '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
@@ -184,7 +197,9 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
-  root.replaceChildren(header(), bullnose(c, vp, a), grid(c, a, cols, projects, pending), el('footer', 'skirting'));
+  const top = header();
+  hangWallpaper(top, c, a, topExtra, pending);
+  root.replaceChildren(top, bullnose(c, vp, a), grid(c, a, cols, projects, pending), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
 

@@ -164,6 +164,7 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
     tile: document.querySelector('.grid > .tile')!.getBoundingClientRect().left,
     frame: document.querySelector('.frame')!.getBoundingClientRect(),
     bullnose: document.querySelector('.bullnose-tile')!.getBoundingClientRect().left,
+    wallpaperX: parseFloat((document.querySelector('.wallpaper') as HTMLElement).style.backgroundPositionX),
     scrollY,
   }));
   const before = await at();
@@ -177,6 +178,7 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
   const out = await at();
   const lattice = (x: number, ref: number) => Math.abs(((x - ref) / pitch) - Math.round((x - ref) / pitch)) < 0.01;
   expect(lattice(out.tile, before.tile + 200)).toBe(true);
+  expect(out.wallpaperX).toBeCloseTo(before.wallpaperX + 200, 0); // pattern moves with the wall, not the window
   // Within 1px: eased corrections end on sub-pixel scroll positions.
   expect(Math.abs(out.frame.left - (before.frame.left + 200))).toBeLessThan(1);
   expect(Math.abs(out.frame.top - (before.frame.top + 80))).toBeLessThan(1); // wallpaper grew upwards
@@ -221,4 +223,11 @@ test('no tile is left showing two prints once a re-flow fade ends', async ({ pag
     ).length,
   );
   expect(doubled).toBe(0);
+});
+
+test('wallpaper is an embossed pattern image', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('html[data-printed="true"]');
+  const bg = await page.$eval('.wallpaper', (el) => getComputedStyle(el).backgroundImage);
+  expect(bg).toMatch(/^url\("blob:/);
 });

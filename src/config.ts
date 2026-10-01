@@ -33,8 +33,13 @@ export const CONFIG = {
 
   // Header wallpaper
   HEADER_HEIGHT: 1.4,
-  WALLPAPER_ZOOM: 2.5,
+  WALLPAPER_ZOOM: 1, // pattern repeat width, in tiles
   WALLPAPER_COLOR: '#efe6cf',
+  WALLPAPER_RELIEF: 1, // emboss depth
+  WALLPAPER_SOFTNESS: 0.006, // edge rounding (paint build-up), fraction of repeat width
+  WALLPAPER_LIGHT_DEG: 125, // direction light comes from: 90 = above, 180 = left
+  WALLPAPER_AMBIENT: 0.7, // how dark shadowed slopes get (1 = no shadow)
+  WALLPAPER_SHEEN: 0.15, // satin paint highlight
 
   // Embroidery (framed cross-stitch on the wallpaper)
   EMBROIDERY_WIDTH: 0.92, // outer frame width
