@@ -38,13 +38,9 @@ describe('edgeShadows', () => {
 });
 
 describe('roundedTop', () => {
-  it('lightens the curve under a light from above and fades out where it meets the face', () => {
-    const g = roundedTop([{ dir: [0, -0.8, 0.6], weight: 1 }], 10, 0.5);
-    expect(g).toMatch(/^linear-gradient\(to bottom, rgba\(255,255,255/);
-    expect(g).toMatch(/rgba\(0,0,0,0\) 10\.00px\)$/);
-  });
-
-  it('darkens the very top under light from below the curve', () => {
-    expect(roundedTop([{ dir: [0, 0.6, 0.8], weight: 1 }], 10, 0)).toMatch(/^linear-gradient\(to bottom, rgba\(0,0,0/);
+  it('shades the curve, tucks a shadow into the top corner, and eases out to nothing at the face', () => {
+    const g = roundedTop([{ dir: [0, -0.8, 0.6], weight: 1 }], 10);
+    expect(g).toMatch(/^linear-gradient\(to bottom, rgba\(0,0,0,0\.16\) 0px/);
+    expect(g).toMatch(/rgba\([\d,]+,0\.00\) 10\.00px\)$/);
   });
 });

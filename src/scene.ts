@@ -8,7 +8,10 @@ import { lightsAt, pxPerCm, roomFromConfig, type Room, type Vec3 } from './room'
 import { drawAgeing, grimeLevel, type Ageing } from './tiles/glaze';
 import { groutTexture } from './tiles/grout';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
+import { loadPaper, paperAt } from './tiles/paper';
 import { edgeShadows, roundedTop, tileTone, wallPoint, type WallMap } from './tiles/surface';
+import { ASPECT as WALLPAPER_ASPECT } from './wallpaper/render';
+import { fbm } from './wood/noise';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
 
@@ -30,6 +33,7 @@ const live = import.meta.env.DEV ? import('./wallpaper') : undefined;
 // Pattern anchored to the wall's world origin so it stays put under resizes and window moves.
 function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[]) {
   const apply = (url: string, width: number, height: number) => {
+    loadPaper(url, () => updateTileReflections()); // curved tiles reflect the actual pattern
     el.style.backgroundImage = `url("${url}")`;
     el.style.backgroundSize = `${width}px ${height}px`;
     el.style.backgroundPosition = `${a.originX}px ${topExtra}px`;
@@ -53,7 +57,7 @@ function header(c: Config, tile: number): HTMLElement {
   const title = el('h1', 'sr-only', [document.createTextNode(SAMPLER_LINES.join(' '))]);
   const e = embroidery(c, tile);
   const frame = el('figure', 'frame', [e.canvas, e.glass]);
-  return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame])]);
+  return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 
 // The capping row: same glaze, crazing, marks and reflections as the field tiles, plus the
@@ -72,17 +76,47 @@ function bullnose(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLEle
     const lights = lightsAt(room, at);
     const t = el('i', 'bullnose-tile');
     t.style.left = `${left}px`;
-    t.style.background = `${roundedTop(lights, c.BULLNOSE_ROUND_CM * ppc, c.TILE_EDGE_SHEEN)}, ${tileTone(base, c.TILE_TONE, index, -1)}`;
+    t.style.background = `${roundedTop(lights, c.BULLNOSE_ROUND_CM * ppc)}, ${tileTone(base, c.TILE_TONE, index, -1)}`;
     t.style.boxShadow = edgeShadows(lights, edge);
     const seed = tileSeed(index, -1);
-    t.append(
-      reflectionLayer(`bn:${index}`, top, { centre: at, wCm: s.width / ppc, hCm: h / ppc, roundTopCm: c.BULLNOSE_ROUND_CM, tiltDeg: c.TILE_TILT_DEG, waviness: c.TILE_WAVINESS, strength: c.TILE_REFLECTION, seed }),
-      ageLayer(`bn:${index}`, s.width, h, ageAt(c, a.tile, 0), seed),
+    // Fine sampling down the short tile so the curve gets real rows; less blur than the field.
+    const reflection = reflectionLayer(
+      `bn:${index}`,
+      top,
+      { centre: at, wCm: s.width / ppc, hCm: h / ppc, roundTopCm: c.BULLNOSE_ROUND_CM, tiltDeg: c.TILE_TILT_DEG, waviness: c.TILE_WAVINESS, strength: c.TILE_REFLECTION, curveStrength: c.BULLNOSE_REFLECTION, seed },
+      12,
+      32,
     );
+    reflection.classList.add('bullnose-reflect');
+    t.append(reflection, ageLayer(`bn:${index}`, s.width, h, { ...ageAt(c, a.tile, 0), dust: c.BULLNOSE_DUST }, seed));
     row.append(t);
   }
+  row.append(seamLine(c, vp, a));
   row.style.setProperty('--bn-w', `${s.width}px`);
   return row;
+}
+
+// The joint where tile meets paper: a thin, slightly wavering shadow line with the caulk's lit
+// lip just below it. Wobble keyed to wall position, so it holds still under resizes.
+function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
+  const dpr = Math.min(2, devicePixelRatio || 1), hpx = 4;
+  const canvas = el('canvas', 'seam-line');
+  canvas.width = Math.ceil(vp.width * dpr);
+  canvas.height = hpx * dpr;
+  canvas.setAttribute('aria-hidden', 'true');
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  const y = (x: number) => 1 + 0.6 * fbm((x - a.originX) / 40, 0.5, 17, 3);
+  const line = (dy: number, colour: string, width: number) => {
+    ctx.beginPath();
+    for (let x = 0; x <= vp.width; x += 3) x ? ctx.lineTo(x, y(x) + dy) : ctx.moveTo(x, y(x) + dy);
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  };
+  line(0, `rgba(55,45,35,${(0.5 * c.SEAM_LINE).toFixed(3)})`, 1);
+  line(1, `rgba(255,255,255,${(0.45 * c.SEAM_LINE).toFixed(3)})`, 0.6);
+  return canvas;
 }
 
 // Prints are cached per project so resizes and re-flows move canvases instead of re-printing.
@@ -195,18 +229,18 @@ const tileSeed = (col: number, row: number) => Math.imul(col + 1000, 7919) ^ Mat
 // moves (scrolling), only for tiles on or near the screen. See tiles/reflect.ts.
 const REFLECT_SAMPLES = 20;
 const reflectCanvases = new Map<string, HTMLCanvasElement>();
-let reflecting: { canvas: HTMLCanvasElement; tile: TileReflection; top: number }[] = []; // top: page px
+let reflecting: { canvas: HTMLCanvasElement; tile: TileReflection; top: number; nx: number; ny: number }[] = []; // top: page px
 let reflectScene: { room: Room; look: RoomLook; ppc: number; follow: number; size: number } | undefined;
 
-function reflectionLayer(id: string, top: number, tile: TileReflection): HTMLCanvasElement {
+function reflectionLayer(id: string, top: number, tile: TileReflection, nx = REFLECT_SAMPLES, ny = REFLECT_SAMPLES): HTMLCanvasElement {
   let canvas = reflectCanvases.get(id);
   if (!canvas) {
     canvas = el('canvas', 'tile-reflect');
-    canvas.width = canvas.height = REFLECT_SAMPLES;
     canvas.setAttribute('aria-hidden', 'true');
     reflectCanvases.set(id, canvas);
   }
-  reflecting.push({ canvas, tile, top });
+  if (canvas.width !== nx || canvas.height !== ny) [canvas.width, canvas.height] = [nx, ny];
+  reflecting.push({ canvas, tile, top, nx, ny });
   return canvas;
 }
 
@@ -215,20 +249,33 @@ export function updateTileReflections(scroll = scrollY) {
   const { room, look, ppc, follow, size } = reflectScene;
   const eye: Vec3 = [room.embroidery.x, room.eyeCm - (follow * scroll) / ppc, room.viewCm];
   const lo = scroll - size, hi = scroll + innerHeight + size; // the rest keep their last image
-  for (const { canvas, tile, top } of reflecting) {
+  for (const { canvas, tile, top, nx, ny } of reflecting) {
     if (top + size < lo || top > hi) continue;
-    const px = reflectTile(room, look, tile, eye, REFLECT_SAMPLES);
-    canvas.getContext('2d')!.putImageData(new ImageData(px as Uint8ClampedArray<ArrayBuffer>, REFLECT_SAMPLES, REFLECT_SAMPLES), 0, 0);
+    const px = reflectTile(room, look, tile, eye, nx, ny);
+    canvas.getContext('2d')!.putImageData(new ImageData(px as Uint8ClampedArray<ArrayBuffer>, nx, ny), 0, 0);
   }
 }
 
-const roomLook = (c: Config): RoomLook => ({
-  wall: hexToRgb(c.ROOM_WALL_COLOR),
-  ceiling: hexToRgb(c.ROOM_CEILING_COLOR),
-  floor: hexToRgb(c.ROOM_FLOOR_COLOR),
-  sky: [[205, 222, 240], [236, 241, 244]],
-  sash: [220, 218, 211],
-});
+// The room as reflections see it, including the wallpaper above the tiles: wall cm → page px →
+// position in the pattern repeat, sampled from the actual wallpaper image.
+function roomLook(c: Config, a: Anchor, topExtra: number): RoomLook {
+  const map = wallMap(c, a, topExtra), ppc = map.pxPerCm;
+  const repeatW = c.WALLPAPER_ZOOM * a.tile, repeatH = repeatW * (baked?.aspect ?? WALLPAPER_ASPECT);
+  const ground = hexToRgb(c.WALLPAPER_GROUND);
+  return {
+    wall: hexToRgb(c.ROOM_WALL_COLOR),
+    ceiling: hexToRgb(c.ROOM_CEILING_COLOR),
+    floor: hexToRgb(c.ROOM_FLOOR_COLOR),
+    sky: [[205, 222, 240], [236, 241, 244]],
+    sash: [220, 218, 211],
+    glaze: hexToRgb(c.TILE_COLOR),
+    seamCm: wallPoint(map, { x: 0, y: topExtra + c.HEADER_HEIGHT * a.tile }).y,
+    wallpaper: (x, y) => {
+      const px = map.embroideryPage.x + (x - map.embroidery.x) * ppc, py = map.embroideryPage.y - (y - map.embroidery.y) * ppc;
+      return paperAt((px - a.originX) / repeatW, (py - topExtra) / repeatH) ?? ground;
+    },
+  };
+}
 
 // Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
 const ageing = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
@@ -341,6 +388,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--bn-h': `${c.BULLNOSE_HEIGHT * a.tile}px`,
     '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
+    '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
+    '--seam-shadow-a': String(0.22 * c.SEAM_SHADOW),
     '--reflect-blur': `${(a.tile * 0.01 * (0.5 + c.TILE_WAVINESS)).toFixed(2)}px`, // wavy glaze blurs reflections
     '--halftone-blur': `${c.HALFTONE_BLUR_PX}px`,
     '--halftone-opacity': String(c.HALFTONE_OPACITY),
@@ -360,7 +409,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   hangWallpaper(top, c, a, topExtra, pending);
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
-  reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
+  reflectScene = { room, look: roomLook(c, a, topExtra), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
   root.replaceChildren(top, bullnose(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();

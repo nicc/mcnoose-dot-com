@@ -11,6 +11,7 @@ const room: Room = {
 const look: RoomLook = {
   wall: [200, 190, 170], ceiling: [240, 240, 235], floor: [120, 115, 105],
   sky: [[210, 225, 240], [235, 240, 244]], sash: [215, 215, 210],
+  glaze: [240, 238, 232], seamCm: 125, wallpaper: () => [190, 176, 145],
 };
 
 describe('roomColour', () => {
@@ -52,10 +53,24 @@ describe('reflectTile', () => {
 });
 
 describe('bull-nose', () => {
-  it('its rounded top reflects higher in the room than its flat face', () => {
-    const bn = { centre: { x: 130, y: 120 }, wCm: 22, hCm: 4, roundTopCm: 1.5, tiltDeg: 0, waviness: 0, strength: 0.2, seed: 5 };
-    const px = reflectTile(room, { ...look, ceiling: [255, 0, 0] }, bn, [130, 168, 150], 8);
-    const topRow = [...px.slice(0, 8 * 4)];
-    expect(topRow.some((v, i) => i % 4 === 0 && v === 255) && topRow.some((v, i) => i % 4 === 1 && v === 0)).toBe(true); // ceiling (red) at the top
+  const bn = { centre: { x: 130, y: 123 }, wCm: 22, hCm: 4, roundTopCm: 1.5, tiltDeg: 0, waviness: 0, strength: 0.2, seed: 5 };
+
+  it('the top of its curve reflects the wallpaper just above it, not the ceiling', () => {
+    const px = reflectTile(room, look, bn, [130, 168, 150], 4, 24);
+    expect([px[0], px[1], px[2]]).toEqual([190, 176, 145]); // first row, top of the curve
+  });
+
+  it('its flat face below the curve reflects the room in front, not the paper', () => {
+    const px = reflectTile(room, look, bn, [130, 168, 150], 4, 24);
+    const last = (24 * 4 - 1) * 4;
+    expect([px[last], px[last + 1], px[last + 2]]).not.toEqual([190, 176, 145]);
+  });
+});
+
+describe('ceiling lamp', () => {
+  it('is a bright fixture in the middle of the ceiling', () => {
+    const toLamp: [number, number, number] = [110 - 100, 240 - 200, 130 - 1];
+    const n = Math.hypot(...toLamp);
+    expect(roomColour(room, look, [100, 200, 1], [toLamp[0] / n, toLamp[1] / n, toLamp[2] / n])[0]).toBe(255);
   });
 });

@@ -1,6 +1,7 @@
 // Dev-only tweak panel. Every key in CONFIG gets a control; "save" writes them to src/config.ts.
 import GUI from 'lil-gui';
 import type { Config } from '../config';
+import { groupOf, ORDER } from '../config-groups';
 import type { Frame } from '../scene';
 
 type Range = [min: number, max: number, step: number];
@@ -100,16 +101,21 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
     readout.peek = `${(l.peekLeft / l.tile).toFixed(2)} / ${(l.peekRight / l.tile).toFixed(2)}`;
   };
 
+  // One folder per config section (src/config-groups.ts), in config.ts order, all starting closed.
+  const folders = new Map<string, GUI>();
+  for (const name of ORDER) folders.set(name, gui.addFolder(name));
   for (const key of Object.keys(values)) {
     const v = values[key];
+    const folder = folders.get(groupOf(key))!;
     const c =
       typeof v === 'string'
         ? v.startsWith('#')
-          ? gui.addColor(values, key)
-          : gui.add(values, key)
-        : gui.add(values, key, ...(RANGES[key as keyof Config] ?? [0, Math.max(1, v * 4), 0.01]));
+          ? folder.addColor(values, key)
+          : folder.add(values, key)
+        : folder.add(values, key, ...(RANGES[key as keyof Config] ?? [0, Math.max(1, v * 4), 0.01]));
     c.onChange(() => update());
   }
+  for (const f of folders.values()) if (!f.controllers.length) f.destroy();
 
   const out = gui.addFolder('layout (read-only)');
   for (const k of Object.keys(readout)) out.add(readout, k as keyof typeof readout).disable().listen();

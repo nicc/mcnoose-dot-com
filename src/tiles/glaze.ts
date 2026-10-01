@@ -9,6 +9,7 @@ export interface Ageing {
   spots: number; // 0–1 water marks on this tile
   limescale: number; // 0–1 on this tile
   spotSize: number; // px
+  dust?: number; // 0–1 dust settled along the top edge (a ledge, like the bull-nose)
 }
 
 // How bad a tile is by its distance above the skirting: worst on the bottom row, easing to the
@@ -54,6 +55,22 @@ export function drawAgeing(canvas: HTMLCanvasElement, w: number, h: number, dpr:
   drawCrazing(ctx, w, h, a.crazing, seed);
   const spots = { amount: a.spots, size: a.spotSize, limescale: a.limescale, seed: seed + 11 };
   drawSpots(ctx, spotLayout(w, h, spots), spots);
+  if (a.dust) {
+    // Dust settles on the ledge: fine specks thickest at the very top, a faint grey haze.
+    const band = h * 0.14;
+    const haze = ctx.createLinearGradient(0, 0, 0, band);
+    haze.addColorStop(0, `rgba(120,110,95,${(0.16 * a.dust).toFixed(3)})`);
+    haze.addColorStop(1, 'rgba(120,110,95,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, w, band);
+    const specks = Math.round(w * 1.2 * a.dust);
+    for (let i = 0; i < specks; i++) {
+      const y = band * Math.pow(hash2(i, 1, seed + 23), 2); // most near the top
+      ctx.fillStyle = `rgba(95,85,70,${(0.2 + 0.35 * hash2(i, 2, seed + 23)).toFixed(3)})`;
+      const r = 0.3 + 0.7 * hash2(i, 3, seed + 23);
+      ctx.fillRect(hash2(i, 4, seed + 23) * w, y, r, r);
+    }
+  }
   if (a.limescale > 0.3) {
     // Drips stop at the grout below: a faint crust along the tile's bottom edge.
     const g = ctx.createLinearGradient(0, h, 0, h - h * 0.08);

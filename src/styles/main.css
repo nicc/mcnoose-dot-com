@@ -77,6 +77,26 @@ body {
   background: var(--grout-color);
 }
 
+/* Where paper meets tile: contact shadow on the paper, joint line along the bull-nose top */
+.seam-shadow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--seam-shadow-h);
+  background: linear-gradient(to top, rgb(0 0 0 / var(--seam-shadow-a)), rgb(0 0 0 / 0));
+  pointer-events: none;
+}
+
+.seam-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  pointer-events: none;
+}
+
 .bullnose-tile {
   position: absolute;
   top: 0;
@@ -133,6 +153,10 @@ body {
   height: 100%;
   pointer-events: none;
   filter: blur(var(--reflect-blur));
+}
+
+.bullnose-reflect {
+  filter: blur(calc(var(--reflect-blur) * 0.25)); /* the curve's reflection is a sharp, narrow band */
 }
 
 /* Crazing and dried water marks, over the print (which sits under the glaze) */

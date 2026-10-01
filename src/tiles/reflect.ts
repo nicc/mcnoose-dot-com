@@ -13,9 +13,15 @@ export interface RoomLook {
   floor: RGB;
   sky: [RGB, RGB]; // window panes, top → bottom
   sash: RGB; // painted window frame and bars
+  glaze: RGB; // the tiles themselves, seen in a curved tile's reflection
+  seamCm: number; // height where the tiles stop and the wallpaper starts
+  wallpaper: (x: number, y: number) => RGB; // the paper above the tiles, wall cm
 }
 
 const SASH_CM = 5;
+const GLAZE_R0 = 0.04; // reflectance of glaze head-on (glass-like)
+export const TILE_THICK_CM = 0.9; // tile faces stand this far proud of the wallpaper
+const LAMP = { radiusCm: 14, colour: [255, 248, 232] as RGB }; // the ceiling light, mid-room
 
 function inWindow(r: Room, x: number, y: number): 'pane' | 'sash' | null {
   const w = r.window;
@@ -28,23 +34,29 @@ function inWindow(r: Room, x: number, y: number): 'pane' | 'sash' | null {
 
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-// Colour seen along a ray from point p (on or near the tiled wall) in direction d.
+// Colour seen along a ray from point p (on a tile face) in direction d. Rays bent back towards the
+// wall (off a bull-nose's curve) land on the wallpaper above the tiles, or the tiles below.
 export function roomColour(r: Room, look: RoomLook, p: Vec3, d: Vec3): RGB {
-  let best = Infinity, hit: 'back' | 'floor' | 'ceiling' | 'side' | null = null;
+  let best = Infinity, hit: 'back' | 'floor' | 'ceiling' | 'side' | 'tiled' | null = null;
   const plane = (axis: number, at: number, name: typeof hit) => {
     if (Math.abs(d[axis]) < 1e-9) return;
     const t = (at - p[axis]) / d[axis];
     if (t > 1e-6 && t < best) [best, hit] = [t, name];
   };
   plane(2, r.depthCm, 'back');
+  if (d[2] < 0) plane(2, 0, 'tiled');
   plane(1, 0, 'floor');
   plane(1, r.ceilingCm, 'ceiling');
   plane(0, 0, 'side');
   plane(0, r.widthCm, 'side');
   if (!hit) return look.wall;
   if (hit === 'floor') return look.floor;
-  if (hit === 'ceiling') return look.ceiling;
   const x = p[0] + d[0] * best, y = p[1] + d[1] * best;
+  if (hit === 'tiled') return y > look.seamCm ? look.wallpaper(x, y) : look.glaze;
+  if (hit === 'ceiling') {
+    const z = p[2] + d[2] * best;
+    return Math.hypot(x - r.widthCm / 2, z - r.depthCm / 2) < LAMP.radiusCm ? LAMP.colour : look.ceiling;
+  }
   if (hit === 'back') {
     const w = inWindow(r, x, y);
     if (w === 'pane') return mix(look.sky[1], look.sky[0], (y - r.window.bottom) / r.window.height);
@@ -58,6 +70,7 @@ export interface TileReflection {
   wCm: number;
   hCm: number;
   roundTopCm?: number; // bull-nose: the top edge curves back over this radius, its normal turning up
+  curveStrength?: number; // strength on that curve (it concentrates the room); the face keeps `strength`
   tiltDeg: number; // max per-tile tilt
   waviness: number; // 0–1 glaze undulation
   strength: number; // 0–1
@@ -70,35 +83,38 @@ export function tileTilt(seed: number, maxDeg: number): [number, number] {
   return [(hash2(seed, 1, 301) - 0.5) * 2 * r, (hash2(seed, 2, 301) - 0.5) * 2 * r];
 }
 
-// n×n RGBA: reflected room colour, alpha = strength boosted at glancing angles (Fresnel).
-export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec3, n: number): Uint8ClampedArray {
-  const out = new Uint8ClampedArray(n * n * 4);
+// nx×ny RGBA: reflected room colour, alpha = strength boosted at glancing angles (Fresnel).
+export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec3, nx: number, ny = nx): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(nx * ny * 4);
   const [ax, ay] = tileTilt(t.seed, t.tiltDeg);
   const wave = t.waviness * 0.06;
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      const u = (i + 0.5) / n - 0.5, v = (j + 0.5) / n - 0.5;
-      const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, 0];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const u = (i + 0.5) / nx - 0.5, v = (j + 0.5) / ny - 0.5;
+      const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, TILE_THICK_CM];
       // Tilt + low-frequency waviness (+ a bull-nose's curve) → this sample's surface normal.
-      const nx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
-      let ny = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
+      const sx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
+      let sy = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
       const fromTop = (v + 0.5) * t.hCm;
-      if (t.roundTopCm && fromTop < t.roundTopCm) ny += Math.tan(Math.asin(1 - fromTop / t.roundTopCm) * 0.95); // turns up towards the ceiling
-      const nl = Math.hypot(nx, ny, 1);
-      const N: Vec3 = [nx / nl, ny / nl, 1 / nl];
+      const onCurve = !!t.roundTopCm && fromTop < t.roundTopCm;
+      if (onCurve) sy += Math.tan(Math.asin(1 - fromTop / t.roundTopCm!) * 0.95); // turns up towards the ceiling
+      const nl = Math.hypot(sx, sy, 1);
+      const N: Vec3 = [sx / nl, sy / nl, 1 / nl];
       let dx = p[0] - eye[0], dy = p[1] - eye[1], dz = p[2] - eye[2];
       const dl = Math.hypot(dx, dy, dz);
       [dx, dy, dz] = [dx / dl, dy / dl, dz / dl];
       const dn = dx * N[0] + dy * N[1] + dz * N[2];
       const R: Vec3 = [dx - 2 * dn * N[0], dy - 2 * dn * N[1], dz - 2 * dn * N[2]];
       const c = roomColour(r, look, p, R);
+      // Schlick's Fresnel relative to head-on: flat tiles seen near straight-on stay at ~1×,
+      // glancing surfaces (the top of a bull-nose) reflect ten times as much or more.
       const cos = Math.min(1, Math.abs(dn));
-      const fresnel = 0.6 + 2 * (1 - cos) ** 3;
-      const k = (j * n + i) * 4;
+      const fresnel = (GLAZE_R0 + (1 - GLAZE_R0) * (1 - cos) ** 5) / GLAZE_R0;
+      const k = (j * nx + i) * 4;
       out[k] = c[0];
       out[k + 1] = c[1];
       out[k + 2] = c[2];
-      out[k + 3] = Math.min(255, 255 * t.strength * fresnel);
+      out[k + 3] = Math.min(255, 255 * (onCurve ? (t.curveStrength ?? t.strength) : t.strength) * fresnel);
     }
   }
   return out;
