@@ -22,7 +22,7 @@ function header(): HTMLElement {
 }
 
 function bullnose(c: Config, vp: Viewport, l: Layout): HTMLElement {
-  const s = computeStrip({ width: vp.width, tile: l.tile, grout: c.GROUT, widthRatio: c.BULLNOSE_WIDTH_RATIO, offset: c.BULLNOSE_OFFSET });
+  const s = computeStrip({ width: vp.width, tile: l.tile, grout: c.GROUT_PX, widthRatio: c.BULLNOSE_WIDTH, offset: c.BULLNOSE_OFFSET });
   const row = el('div', 'bullnose');
   for (let i = 0; i < s.count; i++) {
     const t = el('i', 'bullnose-tile');
@@ -57,22 +57,22 @@ function grid(c: Config, l: Layout, projects: Project[]): HTMLElement {
 }
 
 export function renderScene(root: HTMLElement, c: Config, vp: Viewport, projects: Project[]): Layout {
-  const l = computeLayout({ width: vp.width, height: vp.height, tileMax: c.TILE_MAX, grout: c.GROUT, minPeek: c.MIN_PEEK });
+  const l = computeLayout({ width: vp.width, height: vp.height, tileMax: c.TILE_MAX_PX, grout: c.GROUT_PX, minPeek: c.MIN_PEEK });
   const vars: Record<string, string> = {
     '--tile': `${l.tile}px`,
-    '--grout': `${c.GROUT}px`,
+    '--grout': `${c.GROUT_PX}px`,
     '--cols-total': String(l.columns + 2),
     '--grid-w': `${l.gridWidth}px`,
     '--grid-left': `${l.gridLeft}px`,
-    '--header-h': `${c.HEADER_HEIGHT_TILES * l.tile}px`,
-    '--frame-w': `${c.FRAME_WIDTH_TILES * l.tile}px`,
-    '--stitch-text': `${c.STITCH_TEXT_TILES * l.tile}px`,
-    '--stitch-size': `${c.STITCH_SIZE_TILES * l.tile}px`,
-    '--accent-size': `${c.ACCENT_SIZE_TILES * l.tile}px`,
-    '--frame-tilt': `${c.FRAME_TILT_DEG}deg`,
+    '--header-h': `${c.HEADER_HEIGHT * l.tile}px`,
+    '--frame-w': `${c.EMBROIDERY_WIDTH * l.tile}px`,
+    '--stitch-text': `${c.EMBROIDERY_TEXT_SIZE * l.tile}px`,
+    '--stitch-size': `${c.EMBROIDERY_STITCH_SIZE * l.tile}px`,
+    '--accent-size': `${c.EMBROIDERY_FLORAL_SIZE * l.tile}px`,
+    '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
     '--wallpaper-zoom': String(c.WALLPAPER_ZOOM),
-    '--bn-h': `${c.BULLNOSE_HEIGHT_RATIO * l.tile}px`,
-    '--skirting-h': `${c.SKIRTING_HEIGHT_TILES * l.tile}px`,
+    '--bn-h': `${c.BULLNOSE_HEIGHT * l.tile}px`,
+    '--skirting-h': `${c.SKIRTING_HEIGHT * l.tile}px`,
     '--tile-color': c.TILE_COLOR,
     '--grout-color': c.GROUT_COLOR,
     '--print-color': c.PRINT_COLOR,

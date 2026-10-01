@@ -16,10 +16,10 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - Every tweakable value lives in `src/config.ts` → CSS vars set in `src/scene.ts`. No magic numbers in CSS/TS.
 - One `KEY: value,` per line: the dev panel's save rewrites them in place (`tools/config-writer.ts`).
 - New keys appear in the panel automatically; add a slider range in `src/dev/panel.ts` `RANGES`.
-- Units: px unless named `*_TILES` (× tile size) or `*_RATIO`.
+- Units: sizes in tiles (1 = one tile edge) unless suffixed `_PX` / `_DEG`. Group keys by prefix (`EMBROIDERY_*`, `BULLNOSE_*`).
 
 ## Layout rules (tested in `src/layout.test.ts`, `tests/e2e/`)
-- Tiles square, ≤ `TILE_MAX`; one full tile + `MIN_PEEK` of each neighbour fits both axes (height = svh).
+- Tiles square, ≤ `TILE_MAX_PX`; one full tile + `MIN_PEEK` of each neighbour fits both axes (height = svh).
 - Column added only if it still leaves `MIN_PEEK` visible each side; grout counted once per joint.
 - Edge partial columns always blank; last project row padded with blanks; `TRAILING_ROWS` after; page ends at skirting.
 - Bull-nose joints anchored at page centre + `BULLNOSE_OFFSET` — deliberately not centred.
