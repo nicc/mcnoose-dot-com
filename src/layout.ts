@@ -54,6 +54,19 @@ export function initialAnchor(input: LayoutInput): Anchor {
   return { tile: l.tile, grout: input.grout, pitch: l.pitch, originX: l.gridLeft, centreX: input.width / 2 };
 }
 
+// Screen pinning: the viewport moved dx px right on the physical screen, so the wall
+// appears dx px further left within it.
+export function shiftAnchor(a: Anchor, dx: number): Anchor {
+  return { ...a, originX: a.originX - dx, centreX: a.centreX - dx };
+}
+
+// Keeps content still on screen when the viewport's top edge moves dy px (down = +):
+// scroll by dy, and when that would pass the top, grow wallpaper upwards instead.
+export function compensateTop(scrollY: number, dy: number, topExtra: number): { scrollY: number; topExtra: number } {
+  const target = scrollY + dy;
+  return target >= 0 ? { scrollY: target, topExtra } : { scrollY: 0, topExtra: topExtra - target };
+}
+
 export interface Columns {
   first: number; // leftmost column index (relative to origin) with any part visible
   count: number;

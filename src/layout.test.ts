@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorFits, computeLayout, computeStrip, initialAnchor, rowCount, visibleColumns } from './layout';
+import { anchorFits, compensateTop, computeLayout, computeStrip, initialAnchor, rowCount, shiftAnchor, visibleColumns } from './layout';
 
 const base = { height: 2000, tileMax: 400, grout: 0, minPeek: 0.25 };
 
@@ -112,5 +112,22 @@ describe('anchor', () => {
     const c = visibleColumns(narrow, 1600);
     expect(narrow.originX + c.first * narrow.pitch).toBeLessThanOrEqual(0);
     expect(narrow.originX + (c.first + c.count) * narrow.pitch).toBeGreaterThanOrEqual(1600);
+  });
+});
+
+describe('screen pinning', () => {
+  it('shifts the wall opposite to the viewport moving on screen, keeping the same columns in world terms', () => {
+    const a = initialAnchor({ ...base, grout: 4, width: 1440 });
+    const moved = shiftAnchor(a, -300); // left edge dragged 300px left
+    expect(moved.originX).toBe(a.originX + 300);
+    expect(moved.centreX).toBe(a.centreX + 300);
+    const c = visibleColumns(moved, 1740);
+    expect(c.first).toBeLessThan(0); // new columns revealed on the left
+  });
+
+  it('scrolls to compensate a top-edge move, growing wallpaper only past the top', () => {
+    expect(compensateTop(500, 120, 0)).toEqual({ scrollY: 620, topExtra: 0 });
+    expect(compensateTop(500, -120, 0)).toEqual({ scrollY: 380, topExtra: 0 });
+    expect(compensateTop(50, -120, 10)).toEqual({ scrollY: 0, topExtra: 80 });
   });
 });

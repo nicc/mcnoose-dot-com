@@ -21,6 +21,9 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 
 ## Layout rules (tested in `src/layout.test.ts`, `tests/e2e/`)
 - Portal, not responsive: the wall is anchored once (centred) and stays put across resizes. Tiles, grout, bull-nose joints, embroidery and any wall texture never move; resizing reveals/hides wall. Anchor textures to `--wall-x`, never the viewport.
+- Desktop (`hover: hover` + `pointer: fine`): also pinned to the physical screen via `screenX/Y` (polled per frame; no move event). Left-edge drags/window moves reveal wall; top-edge moves scroll to compensate, growing wallpaper upwards (`--wall-y`) past the top.
+- Projects crossfade (`REFLOW_FADE_MS`) when they change tiles; fades resume across re-renders via negative `animation-delay`.
+- Tests wait on `html[data-rendered-width]` after resizes (resize event lags the viewport change in Chromium).
 - Re-anchor only when tile geometry config changes or one full tile + `MIN_PEEK` either side no longer fits (`anchorFits`).
 - Tiles square, ≤ `TILE_MAX_PX`; sized at anchor time to fit width and height (svh) with `MIN_PEEK` peeks. Never grow back until re-anchor.
 - Projects fill fully visible tiles row by row; partial tiles blank; `TRAILING_ROWS` after; page ends at skirting.

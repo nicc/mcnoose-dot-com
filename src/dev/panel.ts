@@ -10,6 +10,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   GROUT_PX: [0, 24, 0.5],
   MIN_PEEK: [0, 0.5, 0.01],
   TRAILING_ROWS: [0, 15, 1],
+  REFLOW_FADE_MS: [0, 1500, 10],
   HEADER_HEIGHT: [0.25, 3, 0.05],
   WALLPAPER_ZOOM: [0.25, 4, 0.05],
   EMBROIDERY_WIDTH: [0.2, 1.4, 0.01],

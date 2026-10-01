@@ -8,6 +8,7 @@ export const CONFIG = {
   GROUT_PX: 4,
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
   TRAILING_ROWS: 6, // blank rows after the last project row
+  REFLOW_FADE_MS: 220, // crossfade when projects move tiles as columns appear/disappear
   TILE_COLOR: '#fbfbf9',
   GROUT_COLOR: '#d4d4d0',
 

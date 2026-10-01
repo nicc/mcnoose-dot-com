@@ -15,6 +15,7 @@ html {
 
 body {
   overflow-x: hidden;
+  overflow-anchor: none; /* top-edge compensation scrolls explicitly; don't let the browser adjust too */
   font-family: Georgia, 'Times New Roman', serif;
 }
 
@@ -39,7 +40,7 @@ body {
 /* Fixed at its first-render position (--frame-x), not re-centred on resize */
 .frame {
   position: absolute;
-  top: 50%;
+  top: var(--frame-y);
   left: var(--frame-x);
   display: grid;
   place-items: center;
@@ -113,10 +114,6 @@ body {
   text-decoration: none;
 }
 
-.tile-project {
-  position: relative;
-}
-
 .tile-print {
   position: absolute;
   inset: 0;
@@ -125,6 +122,28 @@ body {
   opacity: var(--halftone-opacity);
   filter: blur(var(--halftone-blur));
   mix-blend-mode: multiply;
+}
+
+.tile {
+  position: relative;
+}
+
+/* Re-flow crossfade: print fades in at its new tile, a copy fades out at the old one */
+.tile-arrive .tile-print {
+  animation: print-in var(--reflow-fade) ease-out both;
+}
+
+.tile-ghost {
+  pointer-events: none;
+  animation: print-out var(--reflow-fade) ease-in both;
+}
+
+@keyframes print-in {
+  from { opacity: 0; }
+}
+
+@keyframes print-out {
+  to { opacity: 0; }
 }
 
 .tile-title {

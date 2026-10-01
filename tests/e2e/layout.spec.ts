@@ -95,7 +95,7 @@ test('the wall stays where it first rendered while the window resizes', async ({
 
   for (const size of [{ width: 1100, height: 900 }, { width: 1800, height: 700 }, { width: 900, height: 1000 }]) {
     await page.setViewportSize(size);
-    await page.waitForFunction((w) => document.documentElement.clientWidth === w, size.width);
+    await page.waitForSelector(`html[data-rendered-width="${size.width}"]`);
     const now = await page.evaluate(wallState);
     expect(now.tile).toBeCloseTo(first.tile);
     expect(onLattice(now.tiles, first.tiles[0], first.pitch)).toBe(true);
@@ -103,7 +103,7 @@ test('the wall stays where it first rendered while the window resizes', async ({
     expect(now.frameX).toBeCloseTo(first.frameX, 0);
     expect(now.projectsShown).toBe(first.projectsShown); // every project still on the wall
     // Prints are moved, not redrawn.
-    expect(await page.$$eval('canvas.tile-print', (cs) => cs.every((c) => (c as HTMLElement).dataset.mark === '1'))).toBe(true);
+    expect(await page.$$eval('canvas.tile-print:not(.tile-ghost)', (cs) => cs.every((c) => (c as HTMLElement).dataset.mark === '1'))).toBe(true);
   }
 });
 
@@ -111,7 +111,7 @@ test('projects fill exactly the fully visible tiles of the first row', async ({ 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.setViewportSize({ width: 1000, height: 900 });
-  await page.waitForFunction(() => document.documentElement.clientWidth === 1000);
+  await page.waitForSelector('html[data-rendered-width="1000"]');
   const { full, projectInFull, partialsBlank } = await page.evaluate(() => {
     const vw = document.documentElement.clientWidth;
     const cols = Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total'));
@@ -132,10 +132,75 @@ test('re-anchors, centred, only when a full tile with peeks no longer fits', asy
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.waitForFunction(() => document.documentElement.clientWidth === 360);
+  await page.waitForSelector('html[data-rendered-width="360"]');
   const s = await page.evaluate(wallState);
   expect(s.fullTiles.length).toBeGreaterThanOrEqual(1);
   const left = s.tiles[0] + s.tile; // visible part of the leftmost tile
   expect(left).toBeGreaterThanOrEqual(0.25 * s.tile - 0.5);
   expect(s.frameX).toBeCloseTo(180, 0);
+});
+
+// Simulates the window moving on screen (or its left/top edge being dragged) by faking its screen position.
+const moveWindowBy = (page: import('@playwright/test').Page, dx: number, dy: number) =>
+  page.evaluate(
+    ([dx, dy]) => {
+      const w = window as unknown as Record<string, number>;
+      for (const [k, d] of [['screenX', dx], ['screenY', dy], ['mozInnerScreenX', dx], ['mozInnerScreenY', dy]] as const) {
+        if (!(k in w)) continue;
+        const v = w[k] + d;
+        Object.defineProperty(window, k, { get: () => v, configurable: true });
+      }
+      return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    },
+    [dx, dy],
+  );
+
+test('pinned to the screen: left/top edge moves reveal wall instead of moving it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  test.skip(!(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)), 'desktop only');
+  await page.waitForSelector('html[data-printed="true"]');
+  const at = () => page.evaluate(() => ({
+    tile: document.querySelector('.grid > .tile')!.getBoundingClientRect().left,
+    frame: document.querySelector('.frame')!.getBoundingClientRect(),
+    bullnose: document.querySelector('.bullnose-tile')!.getBoundingClientRect().left,
+    scrollY,
+  }));
+  const before = await at();
+  const pitch = await page.evaluate(() => {
+    const [a, b] = document.querySelectorAll('.grid > .tile');
+    return b.getBoundingClientRect().left - a.getBoundingClientRect().left;
+  });
+
+  // Viewport moves 200 left and 80 up on screen (e.g. left and top edges dragged outwards).
+  await moveWindowBy(page, -200, -80);
+  const out = await at();
+  const lattice = (x: number, ref: number) => Math.abs(((x - ref) / pitch) - Math.round((x - ref) / pitch)) < 0.01;
+  expect(lattice(out.tile, before.tile + 200)).toBe(true);
+  expect(out.frame.left).toBeCloseTo(before.frame.left + 200, 0);
+  expect(out.frame.top).toBeCloseTo(before.frame.top + 80, 0); // wallpaper grew upwards
+  expect(out.scrollY).toBe(0);
+
+  // Viewport moves 160 down: the page scrolls so the wall stays put on screen.
+  await moveWindowBy(page, 0, 160);
+  const down = await at();
+  expect(down.scrollY).toBeCloseTo(160, 0);
+  expect(down.frame.top).toBeCloseTo(before.frame.top - 80, 0);
+});
+
+test('projects crossfade when they move tiles', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.waitForSelector('html[data-printed="true"]');
+  await page.evaluate(() => {
+    const seen = ((window as unknown as { seen: Set<string> }).seen = new Set());
+    new MutationObserver(() => {
+      if (document.querySelector('.tile-arrive')) seen.add('arrive');
+      if (document.querySelector('.tile-ghost')) seen.add('ghost');
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  await page.setViewportSize({ width: 800, height: 900 }); // fewer full columns: projects move
+  await page.waitForSelector('html[data-rendered-width="800"]');
+  const seen = await page.evaluate(() => [...(window as unknown as { seen: Set<string> }).seen].sort());
+  expect(seen).toEqual(['arrive', 'ghost']);
 });

@@ -42,13 +42,51 @@ interface Print {
 const prints = new Map<string, Print>();
 let printsKey = '';
 
+// Re-flow crossfade. The DOM is rebuilt every render, so fades are tracked by start time
+// and resumed with a negative animation-delay rather than living on elements.
+const placements = new Map<string, string>(); // project id → "row:column"
+const arrivals = new Map<string, number>(); // project id → fade-in start
+let ghosts: { slot: string; canvas: HTMLCanvasElement; at: number }[] = []; // fading copies at old tiles
+
+const projectId = (p: Project) => `${p.title}\n${p.logoUrl}`;
+
+function ghostOf(canvas: HTMLCanvasElement): HTMLCanvasElement | undefined {
+  if (!canvas.width || !canvas.height) return;
+  const g = el('canvas', 'tile-print tile-ghost');
+  g.width = canvas.width;
+  g.height = canvas.height;
+  g.getContext('2d')!.drawImage(canvas, 0, 0);
+  g.setAttribute('aria-hidden', 'true');
+  return g;
+}
+
+function place(p: Project, slot: string, canvas: HTMLCanvasElement, now: number) {
+  const id = projectId(p);
+  const prev = placements.get(id);
+  placements.set(id, slot);
+  if (prev === undefined || prev === slot) return;
+  arrivals.set(id, now);
+  const g = ghostOf(canvas);
+  if (g) ghosts.push({ slot: prev, canvas: g, at: now });
+}
+
+const fading = (el: HTMLElement, at: number, now: number, ms: number) => {
+  const t = now - at;
+  if (t >= ms) return false;
+  el.style.animationDelay = `${-t}ms`;
+  return true;
+};
+
 function printFor(c: Config, tile: number, p: Project): Print {
   const key = JSON.stringify([tile, devicePixelRatio, Object.entries(c).filter(([k]) => /^(TILE_|HALFTONE_|PRINT_)/.test(k))]);
   if (key !== printsKey) {
     prints.clear();
+    placements.clear(); // new prints: nothing to crossfade from
+    arrivals.clear();
+    ghosts = [];
     printsKey = key;
   }
-  const id = `${p.title}\n${p.logoUrl}`;
+  const id = projectId(p);
   let pr = prints.get(id);
   if (!pr) {
     const canvas = el('canvas', 'tile-print');
@@ -64,10 +102,13 @@ function printFor(c: Config, tile: number, p: Project): Print {
 }
 
 // Title stays in the DOM for screen readers; the canvas carries the visible print.
-function projectTile(c: Config, tile: number, p: Project, pending: Promise<unknown>[]): HTMLElement {
+function projectTile(c: Config, tile: number, p: Project, slot: string, now: number, pending: Promise<unknown>[]): HTMLElement {
   const a = el('a', 'tile tile-project');
   a.href = p.url;
   const pr = printFor(c, tile, p);
+  place(p, slot, pr.canvas, now);
+  const arrived = arrivals.get(projectId(p));
+  if (arrived !== undefined && fading(pr.canvas, arrived, now, c.REFLOW_FADE_MS)) a.classList.add('tile-arrive');
   const title = el('span', 'tile-title sr-only', [document.createTextNode(p.title)]);
   a.append(pr.canvas, title);
   pending.push(pr.done.then((ok) => ok || title.classList.remove('sr-only'))); // plain-text fallback
@@ -80,13 +121,20 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
   const slot = new Map(cols.full.map((k, i) => [k, i]));
   const n = Math.max(1, cols.full.length);
   const rows = rowCount(projects.length, n, c.TRAILING_ROWS);
+  const now = performance.now();
+  const tiles = new Map<string, HTMLElement>();
   for (let r = 0; r < rows; r++) {
     for (let k = cols.first; k < cols.first + cols.count; k++) {
       const i = slot.get(k);
       const p = i === undefined ? undefined : projects[r * n + i];
-      g.append(p ? projectTile(c, a.tile, p, pending) : el('div', 'tile'));
+      const key = `${r}:${k}`;
+      const t = p ? projectTile(c, a.tile, p, key, now, pending) : el('div', 'tile');
+      tiles.set(key, t);
+      g.append(t);
     }
   }
+  ghosts = ghosts.filter((gh) => fading(gh.canvas, gh.at, now, c.REFLOW_FADE_MS));
+  for (const gh of ghosts) tiles.get(gh.slot)?.append(gh.canvas);
   return el('main', 'wall', [g]);
 }
 
@@ -99,7 +147,7 @@ export interface Frame {
 
 let generation = 0;
 
-export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, projects: Project[]): Frame {
+export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[]): Frame {
   const cols = visibleColumns(a, vp.width);
   const gridLeft = a.originX + cols.first * a.pitch;
   const vars: Record<string, string> = {
@@ -109,8 +157,10 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--grid-w': `${cols.count * a.pitch - c.GROUT_PX}px`,
     '--grid-left': `${gridLeft}px`,
     '--wall-x': `${a.originX}px`, // world origin: anchor any future wall texture here, not to the viewport
+    '--wall-y': `${topExtra}px`, // wallpaper grown above the original top edge
     '--frame-x': `${a.centreX}px`,
-    '--header-h': `${c.HEADER_HEIGHT * a.tile}px`,
+    '--frame-y': `${topExtra + (c.HEADER_HEIGHT * a.tile) / 2}px`,
+    '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
     '--frame-w': `${c.EMBROIDERY_WIDTH * a.tile}px`,
     '--stitch-text': `${c.EMBROIDERY_TEXT_SIZE * a.tile}px`,
     '--stitch-size': `${c.EMBROIDERY_STITCH_SIZE * a.tile}px`,
@@ -119,6 +169,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--wallpaper-zoom': String(c.WALLPAPER_ZOOM),
     '--bn-h': `${c.BULLNOSE_HEIGHT * a.tile}px`,
     '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
+    '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--halftone-blur': `${c.HALFTONE_BLUR_PX}px`,
     '--halftone-opacity': String(c.HALFTONE_OPACITY),
     '--tile-color': c.TILE_COLOR,
@@ -132,6 +183,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const pending: Promise<unknown>[] = [];
   const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
+  document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
   root.replaceChildren(header(), bullnose(c, vp, a), grid(c, a, cols, projects, pending), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
