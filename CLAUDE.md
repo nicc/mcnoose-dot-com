@@ -21,7 +21,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 
 ## Layout rules (tested in `src/layout.test.ts`, `tests/e2e/`)
 - Portal, not responsive: the wall is anchored once (centred) and stays put across resizes. Tiles, grout, bull-nose joints, embroidery and any wall texture never move; resizing reveals/hides wall. Anchor textures to `--wall-x`, never the viewport.
-- Desktop (`hover: hover` + `pointer: fine`): also pinned to the physical screen via `screenX/Y` (polled per frame; no move event), smoothed by `PinFilter` (`src/pin.ts`: velocity prediction `PIN_PREDICT_MS` + easing `PIN_SMOOTH_MS`). Tests wait on `html[data-pin=settled]`. Left-edge drags/window moves reveal wall; top-edge moves scroll to compensate, growing wallpaper upwards (`--wall-y`) past the top.
+- Desktop (`hover: hover` + `pointer: fine`): also pinned to the physical screen via `screenX/Y` (polled per frame; no move event), smoothed by `PinFilter` (`src/pin.ts`: easing `PIN_SMOOTH_MS`, steady-drag lag cancelled). Tests wait on `html[data-pin=settled]`. Left-edge drags/window moves reveal wall; top-edge moves scroll to compensate, growing wallpaper upwards (`--wall-y`) past the top.
 - Projects crossfade (`REFLOW_FADE_MS`) when they change tiles; fades resume across re-renders via negative `animation-delay`.
 - Tests wait on `html[data-rendered-width]` after resizes (resize event lags the viewport change in Chromium).
 - Re-anchor only when tile geometry config changes or one full tile + `MIN_PEEK` either side no longer fits (`anchorFits`).

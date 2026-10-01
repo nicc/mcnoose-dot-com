@@ -11,7 +11,6 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   MIN_PEEK: [0, 0.5, 0.01],
   TRAILING_ROWS: [0, 15, 1],
   REFLOW_FADE_MS: [0, 1500, 10],
-  PIN_PREDICT_MS: [0, 100, 1],
   PIN_SMOOTH_MS: [0, 300, 1],
   HEADER_HEIGHT: [0.25, 3, 0.05],
   WALLPAPER_ZOOM: [0.25, 4, 0.05],

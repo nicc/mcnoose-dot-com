@@ -73,7 +73,7 @@ addEventListener('resize', () => render());
 // data-pin tells tests when the smoothed position has caught up.
 if (pinToScreen) {
   const watch = (t: number) => {
-    const { pos, settled } = pin.step(screenPos(), t, state.PIN_PREDICT_MS, state.PIN_SMOOTH_MS);
+    const { pos, settled } = pin.step(screenPos(), t, state.PIN_SMOOTH_MS);
     if (pos.x !== shown.x || pos.y !== shown.y) {
       shown = pos;
       render();

@@ -11,8 +11,7 @@ export const CONFIG = {
   REFLOW_FADE_MS: 220, // crossfade when projects move tiles as columns appear/disappear
 
   // Screen pinning (desktop): smooths the wall's correction while the window moves
-  PIN_PREDICT_MS: 24, // lead the reported window position by ~display latency during drags
-  PIN_SMOOTH_MS: 60, // easing time constant; absorbs overshoot when a drag stops
+  PIN_SMOOTH_MS: 35, // easing time constant
   TILE_COLOR: '#fbfbf9',
   GROUT_COLOR: '#d4d4d0',
 
