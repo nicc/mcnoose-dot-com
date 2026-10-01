@@ -5,6 +5,9 @@ import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
 import { lightsAt, pxPerCm, roomFromConfig } from './room';
+import { groutTexture } from './tiles/grout';
+import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
+import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -145,7 +148,24 @@ function projectTile(c: Config, tile: number, p: Project, slot: string, now: num
 }
 
 // Projects fill fully visible tiles row by row; partly visible tiles stay blank.
-function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[]): HTMLElement {
+// Each tile's glaze tone and cushion-edge lighting, from where it sits in the room.
+type TileSurface = (row: number, col: number) => { background: string; boxShadow: string };
+
+function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
+  const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile);
+  const map: WallMap = { pxPerCm: ppc, embroidery: room.embroidery, embroideryPage: { x: a.centreX, y: topExtra + (c.HEADER_HEIGHT * a.tile) / 2 } };
+  const firstTileTop = topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX;
+  const base = hexToRgb(c.TILE_COLOR);
+  const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
+  return (row, col) => {
+    const at = wallPoint(map, { x: a.originX + col * a.pitch + a.tile / 2, y: firstTileTop + row * a.pitch + a.tile / 2 });
+    return { background: tileTone(base, c.TILE_TONE, col, row), boxShadow: edgeShadows(lightsAt(room, at), edge) };
+  };
+}
+
+const GROUT_RECESS_CM = 0.15; // grout sits this far behind the tile faces
+
+function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface): HTMLElement {
   const g = el('div', 'grid');
   const slot = new Map(cols.full.map((k, i) => [k, i]));
   const n = Math.max(1, cols.full.length);
@@ -158,13 +178,17 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
       const p = i === undefined ? undefined : projects[r * n + i];
       const key = `${r}:${k}`;
       const t = p ? projectTile(c, a.tile, p, key, now, pending) : el('div', 'tile');
+      Object.assign(t.style, surface(r, k));
       tiles.set(key, t);
       g.append(t);
     }
   }
   ghosts = ghosts.filter((gh) => fading(gh.canvas, gh.at, now, c.REFLOW_FADE_MS));
   for (const gh of ghosts) tiles.get(gh.slot)?.append(gh.canvas);
-  return el('main', 'wall', [g]);
+  const wall = el('main', 'wall', [g]);
+  wall.style.backgroundImage = `url("${groutTexture(c.GROUT_TEXTURE, Math.min(2, devicePixelRatio || 1))}")`;
+  wall.style.backgroundPosition = `${a.originX}px 0`; // anchored to the wall, not the window
+  return wall;
 }
 
 export interface Frame {
@@ -225,7 +249,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
   const top = header(c, a.tile);
   hangWallpaper(top, c, a, topExtra, pending);
-  root.replaceChildren(top, bullnose(c, vp, a), grid(c, a, cols, projects, pending), el('footer', 'skirting'));
+  root.replaceChildren(top, bullnose(c, vp, a), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra)), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
 

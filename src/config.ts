@@ -12,8 +12,13 @@ export const CONFIG = {
 
   // Screen pinning (desktop): smooths the wall's correction while the window moves
   PIN_SMOOTH_MS: 35, // easing time constant
-  TILE_COLOR: '#fbfbf9',
+  TILE_COLOR: '#f1efe9', // warm white glaze, a little below pure white so rims can catch the light
   GROUT_COLOR: '#d4d4d0',
+  TILE_TONE: 0.012, // glaze tone variation between tiles
+  TILE_EDGE_CM: 0.35, // cushion edge radius
+  TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
+  GROUT_TEXTURE: 0.5, // sand grain in the grout
+  GROUT_RECESS: 0.5, // shadow tiles cast onto the recessed grout
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
