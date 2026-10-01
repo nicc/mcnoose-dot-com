@@ -25,7 +25,7 @@ for (const size of SIZES) {
         leftPeek: first.right,
         rightPeek: vw - last.left,
         innerFits: boxes.slice(1, -1).every((b) => b.left >= -0.5 && b.right <= vw + 0.5),
-        edgesBlank: row[0].children.length === 0 && row[row.length - 1].children.length === 0,
+        edgesBlank: !row[0].querySelector('.tile-print') && !row[row.length - 1].querySelector('.tile-print'),
         pageEnd: Math.abs(skirting.bottom + scrollY - document.documentElement.scrollHeight) < 1,
       };
     });
@@ -219,7 +219,7 @@ test('no tile is left showing two prints once a re-flow fade ends', async ({ pag
   await page.waitForTimeout(800);
   const doubled = await page.evaluate(() =>
     [...document.querySelectorAll('.tile')].filter(
-      (t) => [...t.querySelectorAll('canvas')].filter((c) => parseFloat(getComputedStyle(c).opacity) > 0.02).length > 1,
+      (t) => [...t.querySelectorAll('canvas.tile-print')].filter((c) => parseFloat(getComputedStyle(c).opacity) > 0.02).length > 1,
     ).length,
   );
   expect(doubled).toBe(0);

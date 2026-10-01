@@ -59,4 +59,4 @@ Beads (`bd`); run `bd prime` for commands (auto-run at session start). `bd ready
 Issues live in local Dolt, not git; sync with `bd dolt push`.
 
 ## Done = committed + pushed
-When work is done and typecheck, unit and e2e tests pass: commit, `git push`, `bd dolt push`. Ask before ever committing a broken state.
+When work is done and typecheck, unit and e2e tests pass: commit, `git push`, `bd dolt push`. Ask before ever committing a broken state. Gate commits on each test command's exit code (`cmd && git commit`), never on grepped output: grep succeeds when it finds "failed".
