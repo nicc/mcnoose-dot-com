@@ -69,8 +69,8 @@ export const CONFIG = {
   EMBROIDERY_WOOD_DRIFT: 0.4, // colour variation along each board
   EMBROIDERY_WOOD_VARIATION: 0.2, // tone difference between the four boards
   EMBROIDERY_WOOD_DEPTH: 0.35, // moulding profile depth
-  EMBROIDERY_WOOD_SHEEN: 0.35, // finish highlight strength, broken up by the grain
-  EMBROIDERY_WOOD_GLOSS: 0.45, // highlight tightness
+  EMBROIDERY_WOOD_SHEEN: 0.5, // finish highlight strength, broken up by the grain
+  EMBROIDERY_WOOD_GLOSS: 0.44, // highlight tightness
 
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,
