@@ -11,6 +11,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - `?fixtures` (dev only) swaps in `src/dev/fixtures/` test logos: solid, fine lines, tone, small text, colour, moiré, no-size SVG, PNGs.
 - Communicate in felt terms first (what it's like to look at), then mechanism. Show screenshots.
 - Name register conflicts early; don't split the difference.
+- One coherent scene: every surface (wallpaper, embroidery, frame, tiles, bull-nose, skirting, prints) shares one light — `WALLPAPER_LIGHT_DEG` from the upper left, room light from above — and must read as the same physical place. New surfaces derive shading and shadows from it; never light anything independently.
 - Expect many rounds, especially halftone print, wallpaper, skirting, hover effects.
 
 ## Constants
