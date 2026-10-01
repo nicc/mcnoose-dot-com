@@ -71,8 +71,8 @@ export const CONFIG = {
   EMBROIDERY_WOOD_DEPTH: 0.35, // moulding profile depth
   EMBROIDERY_WOOD_SHEEN: 0.5, // finish highlight strength, broken up by the grain
   EMBROIDERY_WOOD_GLOSS: 0.44, // highlight tightness
-  EMBROIDERY_WOOD_WEAR: 0.4, // finish rubbed off raised edges
-  EMBROIDERY_WOOD_GRIME: 0.35, // dirt in hollows and corner joints
+  EMBROIDERY_WOOD_WEAR: 0.15, // finish rubbed off raised edges
+  EMBROIDERY_WOOD_GRIME: 0.25, // dirt in hollows and corner joints
   EMBROIDERY_WOOD_PATCHES: 0.5, // how unevenly wear and grime vary along each board
 
   // Bull-nose row
