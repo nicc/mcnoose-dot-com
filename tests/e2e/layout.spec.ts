@@ -204,3 +204,21 @@ test('projects crossfade when they move tiles', async ({ page }) => {
   const seen = await page.evaluate(() => [...(window as unknown as { seen: Set<string> }).seen].sort());
   expect(seen).toEqual(['arrive', 'ghost']);
 });
+
+test('no tile is left showing two prints once a re-flow fade ends', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.waitForSelector('html[data-printed="true"]');
+  // Two column changes within one fade, so a print arrives where another's ghost is still fading.
+  for (const width of [1300, 1000, 760]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.waitForSelector(`html[data-rendered-width="${width}"]`);
+  }
+  await page.waitForTimeout(800);
+  const doubled = await page.evaluate(() =>
+    [...document.querySelectorAll('.tile')].filter(
+      (t) => [...t.querySelectorAll('canvas')].filter((c) => parseFloat(getComputedStyle(c).opacity) > 0.02).length > 1,
+    ).length,
+  );
+  expect(doubled).toBe(0);
+});

@@ -129,7 +129,8 @@ body {
 }
 
 /* Re-flow crossfade: print fades in at its new tile, a copy fades out at the old one */
-.tile-arrive .tile-print {
+/* :not() matters: a ghost can share a tile with an arriving print and must still fade out */
+.tile-arrive .tile-print:not(.tile-ghost) {
   animation: print-in var(--reflow-fade) ease-out both;
 }
 
