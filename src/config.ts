@@ -57,7 +57,7 @@ export const CONFIG = {
   EMBROIDERY_CLOTH_W: 76, // cloth size in stitches; florals stay in the corners
   EMBROIDERY_CLOTH_H: 53,
   EMBROIDERY_FRAME: 0.2, // moulding width
-  EMBROIDERY_TILT_DEG: 3, // clockwise
+  EMBROIDERY_TILT_DEG: 1, // clockwise
   EMBROIDERY_SHADOW: 0.012, // cast-shadow distance, away from WALLPAPER_LIGHT_DEG
   EMBROIDERY_CLOTH: '#f6f3ea',
   EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
@@ -79,8 +79,8 @@ export const CONFIG = {
   EMBROIDERY_WOOD_PATCHES: 0.5, // how unevenly wear and grime vary along each board
   // Glass over the cloth
   EMBROIDERY_GLASS_TINT: 0.3, // grey-green darkening
-  EMBROIDERY_GLASS_REFLECTION: 0.5, // glare bands from the scene light
-  EMBROIDERY_GLASS_SPOTS: 0.4, // dried water spots
+  EMBROIDERY_GLASS_REFLECTION: 0.23, // glare bands from the scene light
+  EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
   // Bull-nose row
   BULLNOSE_WIDTH: 1.25,
