@@ -27,10 +27,10 @@ export const CONFIG = {
   ROOM_WINDOW_WIDTH_CM: 70,
   ROOM_WINDOW_HEIGHT_CM: 110,
   ROOM_FILL: 0.35, // ceiling light strength relative to the window
-  ROOM_EYE_FOLLOW: 0.4, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
+  ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
   ROOM_WALL_COLOR: '#e4dccb', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
-  ROOM_FLOOR_COLOR: '#8b8478',
+  ROOM_FLOOR_COLOR: '#9d624d',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
@@ -114,9 +114,9 @@ export const CONFIG = {
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
 
   // Tiles: the room reflected in the glaze
-  TILE_REFLECTION: 0.07, // how strongly the room shows in the glaze
+  TILE_REFLECTION: 0.06, // how strongly the room shows in the glaze
   TILE_TILT_DEG: 1.5, // tiles sit at slightly different angles, breaking reflections at the grout
-  TILE_WAVINESS: 1, // glaze undulation: reflections wobble softly within a tile
+  TILE_WAVINESS: 0.89, // glaze undulation: reflections wobble softly within a tile
 
   // Tiles: ageing (crazing, dried water marks)
   TILE_CRAZING: 0.3, // hairline crack network in the old glaze
