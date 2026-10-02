@@ -4,6 +4,7 @@ import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
 import { resetReflection, updateReflection } from './embroidery';
+import { startClouds } from './clouds';
 import { showNotice } from './notice';
 import { renderScene, updateTileReflections, type Frame, type Viewport } from './scene';
 
@@ -92,6 +93,7 @@ addEventListener(
 
 render();
 addEventListener('resize', () => render());
+startClouds(() => state);
 showNotice();
 
 // No event fires when a window moves, so watch its screen position each frame.

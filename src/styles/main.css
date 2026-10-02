@@ -220,6 +220,16 @@ body {
   background: var(--skirting-color);
 }
 
+/* Clouds passing the sun: dims the whole scene by the window's share of the light (clouds.ts) */
+.cloud-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Work-in-progress notice */
 .notice {
   position: fixed;

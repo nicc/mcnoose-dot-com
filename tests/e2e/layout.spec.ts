@@ -282,3 +282,13 @@ test('the glass reflection slides as the page scrolls and returns at rest', asyn
   await page.evaluate(() => scrollTo(0, 0));
   await expect.poll(y).toBeCloseTo(0, 1);
 });
+
+test('passing clouds shade the scene without getting in the way of the pointer', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  const shade = page.locator('.cloud-shade');
+  await expect(shade).toHaveCSS('pointer-events', 'none');
+  const opacity = Number(await shade.evaluate((e) => getComputedStyle(e).opacity));
+  expect(opacity).toBeGreaterThanOrEqual(0);
+  expect(opacity).toBeLessThan(0.3);
+});

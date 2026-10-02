@@ -18,8 +18,9 @@ export interface Room {
   viewCm: number; // how far from the wall the viewer stands
   embroidery: { x: number; y: number }; // centre on the wall; the viewer stands in front of it
   window: { x: number; bottom: number; width: number; height: number }; // on the wall behind the viewer
-  fill: number; // ceiling light strength relative to the window
-  bounce: number; // light bounced off the floor, relative to the window
+  sun: number; // window light strength
+  fill: number; // ceiling light strength
+  bounce: number; // light bounced off the floor, as a share of the window light (so it follows the sun)
 }
 
 export function roomFromConfig(c: Config): Room {
@@ -32,6 +33,7 @@ export function roomFromConfig(c: Config): Room {
     viewCm: c.ROOM_VIEW_CM,
     embroidery: { x: c.ROOM_EMBROIDERY_X_CM, y: c.ROOM_EMBROIDERY_Y_CM },
     window: { x: c.ROOM_WINDOW_X_CM, bottom: c.ROOM_WINDOW_BOTTOM_CM, width: c.ROOM_WINDOW_WIDTH_CM, height: c.ROOM_WINDOW_HEIGHT_CM },
+    sun: c.ROOM_SUN,
     fill: c.ROOM_FILL,
     bounce: c.ROOM_BOUNCE,
   };
@@ -57,10 +59,10 @@ export function lightsAt(r: Room, p: { x: number; y: number }): Light[] {
   const ceiling: Vec3 = [r.widthCm / 2 - p.x, r.ceilingCm - p.y, r.depthCm / 2];
   const floor: Vec3 = [0, -1, 1];
   const lights: Light[] = [
-    { dir: unitScreen(win), weight: 1 },
+    { dir: unitScreen(win), weight: r.sun },
     { dir: unitScreen(ceiling), weight: r.fill },
   ];
-  if (r.bounce > 0) lights.push({ dir: unitScreen(floor), weight: r.bounce, diffuse: true });
+  if (r.bounce > 0) lights.push({ dir: unitScreen(floor), weight: r.bounce * r.sun, diffuse: true });
   return lights;
 }
 
@@ -94,4 +96,11 @@ export function reflectedWindow(r: Room, eye = { x: r.embroidery.x, y: r.eyeCm }
 // How far the reflection moves across the wall per unit of eye movement.
 export function parallaxFactor(r: Room): number {
   return 1 - mirrorT(r);
+}
+
+// How bright the room is when the window light is at `sun` × k (clouds: k < 1), relative to full
+// sun. The fill doesn't change; the floor bounce is window light, so it dims with it.
+export function exposure(r: Room, k: number): number {
+  const window = r.sun * (1 + r.bounce);
+  return (window * k + r.fill) / (window + r.fill || 1);
 }

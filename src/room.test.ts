@@ -5,6 +5,7 @@ const room: Room = {
   tileCm: 15, widthCm: 220, depthCm: 260, ceilingCm: 240, eyeCm: 168, viewCm: 150,
   embroidery: { x: 130, y: 132 },
   window: { x: 90, bottom: 80, width: 70, height: 110 },
+  sun: 1,
   fill: 0.35,
   bounce: 0.25,
 };

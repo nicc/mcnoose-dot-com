@@ -26,8 +26,12 @@ export const CONFIG = {
   ROOM_WINDOW_BOTTOM_CM: 80, // sill
   ROOM_WINDOW_WIDTH_CM: 70,
   ROOM_WINDOW_HEIGHT_CM: 110,
-  ROOM_FILL: 0.35, // ceiling light strength relative to the window
-  ROOM_BOUNCE: 0.25, // daylight bounced up off the floor: lifts undersides
+  ROOM_SUN: 1, // window light strength
+  ROOM_CLOUD_DEPTH: 0.15, // how far passing clouds dim the window light (0 = clear sky)
+  ROOM_CLOUD_RATE_HZ: 0.08, // how often the cloud cover changes
+  ROOM_CLOUD_SMOOTH: 0.85, // 0 = sudden changes, 1 = slow glides between them
+  ROOM_FILL: 0.35, // ceiling light strength relative to full sun
+  ROOM_BOUNCE: 0.25, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
   ROOM_WALL_COLOR: '#beae90', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
