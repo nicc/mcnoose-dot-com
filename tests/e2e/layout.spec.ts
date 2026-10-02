@@ -299,3 +299,17 @@ test('the rail casts its shadow onto the top row of tiles', async ({ page }) => 
   const bg = await page.locator('.rail-shadow').evaluate((e) => getComputedStyle(e).backgroundImage);
   expect(bg).toContain('gradient');
 });
+
+test('the wallpaper has aged: wall-anchored layers under the frame that never catch the pointer', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  const age = page.locator('header .paper-age');
+  if (!(await age.count())) return; // PAPER_AGE toggled off
+  await expect(age).toHaveCSS('pointer-events', 'none');
+  await expect(age).toHaveCSS('mix-blend-mode', 'multiply');
+  const underFrame = await page.evaluate(() => {
+    const kids = [...document.querySelector('header')!.children];
+    return kids.findIndex((k) => k.classList.contains('paper-age')) < kids.findIndex((k) => k.classList.contains('frame-shadow'));
+  });
+  expect(underFrame).toBe(true);
+});

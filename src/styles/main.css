@@ -37,6 +37,17 @@ body {
   background: var(--wallpaper-color);
 }
 
+/* The paper's age (wallpaper/age.ts): a multiplied tint and the seams, wall-anchored. */
+.paper-age,
+.paper-seam {
+  position: absolute;
+  pointer-events: none;
+}
+
+.paper-age {
+  mix-blend-mode: multiply;
+}
+
 /* Fixed at its first-render position (--frame-x/y), not re-centred on resize. The shadow
    wrapper isn't rotated, so its drop-shadows (one per room light) fall in screen space. */
 .frame-shadow {

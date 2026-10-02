@@ -9,6 +9,7 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
+import { ageLayers } from './wallpaper/age';
 import { fitNote, handReady, noteNodes } from './about';
 import { isFallen, resetFall } from './fall';
 import { bindFrame, frameTilt } from './frame';
@@ -57,6 +58,16 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
 
 // The site title is the embroidery; the h1 carries it for screen readers and search.
 const NAIL_CM = 0.35; // head diameter
+
+// The wallpaper's age (wallpaper/age.ts): its own wall-anchored layers over the pattern. The frame's
+// mark is where it hangs at 0°, its top centre on the nail.
+function paperAge(c: Config, a: Anchor, topExtra: number, vp: Viewport): HTMLElement[] {
+  const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), e = embroidery(c, a.tile);
+  const frame = { wCm: e.width / ppc, hCm: e.height / ppc, nail: { x: room.embroidery.x, y: room.embroidery.y + e.height / ppc / 2 } };
+  const style = { yellowing: c.PAPER_AGE_YELLOWING, stains: c.PAPER_AGE_STAINS, seams: c.PAPER_AGE_SEAMS, halo: c.PAPER_AGE_HALO, haloSpreadDeg: c.PAPER_AGE_HALO_SPREAD_DEG };
+  const light = blendedLight(lightsAt(room, room.embroidery));
+  return ageLayers(wallMap(c, a, topExtra), vp.width, topExtra + c.HEADER_HEIGHT * a.tile, style, frame, light, Math.min(2, devicePixelRatio || 1));
+}
 
 // Click the frame to turn it over: on the back, the about note (about.ts).
 function header(c: Config, tile: number, about: string): HTMLElement {
@@ -505,6 +516,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   document.documentElement.dataset.printed = 'false';
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
   const top = header(c, a.tile, about);
+  if (c.PAPER_AGE) top.firstElementChild!.after(...paperAge(c, a, topExtra, vp)); // under the frame
   hangWallpaper(top, c, a, topExtra, pending);
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
