@@ -455,6 +455,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--frame-tilt': `${frameTilt(c)}deg`,
     '--flip-ms': `${c.ABOUT_FLIP_MS}ms`,
     '--hover-fade': `${c.PRINT_HOVER_FADE_MS}ms`,
+    // The logo's centre in the print layout (halftone/print.ts): where the hover reveal opens from.
+    '--logo-y': `${(50 * (1 - c.TILE_TITLE_SIZE - c.TILE_TITLE_GAP)).toFixed(2)}%`,
     '--about-ink': c.ABOUT_INK,
     ...frameShadow(c, a.tile),
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
@@ -472,6 +474,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--notice-ink': c.NOTICE_INK,
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
+  document.documentElement.toggleAttribute('data-reveal', c.PRINT_HOVER_REVEAL);
 
   const pending: Promise<unknown>[] = [];
   const gen = ++generation;

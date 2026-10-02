@@ -28,7 +28,7 @@ export const CONFIG = {
   ROOM_WINDOW_HEIGHT_CM: 110,
   ROOM_SUN: 1, // window light strength
   ROOM_CLOUD_DEPTH: 0.15, // how far passing clouds dim the window light (0 = clear sky)
-  ROOM_CLOUD_RATE_HZ: 0.08, // how often the cloud cover changes
+  ROOM_CLOUD_RATE_HZ: 0.225, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.85, // 0 = sudden changes, 1 = slow glides between them
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
   ROOM_BOUNCE: 0.25, // window light bounced up off the floor, as a share of it: lifts undersides
@@ -151,7 +151,8 @@ export const CONFIG = {
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
-  PRINT_HOVER_FADE_MS: 350, // hover: how fast the original logo opens out from the centre
+  PRINT_HOVER_REVEAL: true, // hover shows the original logo
+  PRINT_HOVER_FADE_MS: 350, // how fast it opens out from the logo's centre
   TILE_LOGO_SIZE: 0.32,
   TILE_TITLE_SIZE: 0.075,
   TILE_TITLE_GAP: 0.06,

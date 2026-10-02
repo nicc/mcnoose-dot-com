@@ -28,3 +28,11 @@ test('hovering a project tile opens the original logo out from the centre', asyn
   await page.mouse.move(5, 5);
   await expect.poll(reveal).toBe(0);
 });
+
+test('the reveal opens from the logo, not the tile centre', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  const y = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--logo-y')));
+  expect(y).toBeGreaterThan(30);
+  expect(y).toBeLessThan(50); // the logo sits above the title
+});

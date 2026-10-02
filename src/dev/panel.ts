@@ -131,7 +131,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
 export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
   const gui = new GUI({ title: 'config', closeFolders: true });
   gui.close(); // starts collapsed; click the title to open
-  const values = state as Record<string, number | string>;
+  const values = state as Record<string, number | string | boolean>;
   const readout = { tile: '', columns: 0, peek: '' }; // peek: left / right edge tiles, in tiles
 
   const update = (force = true) => {
@@ -148,7 +148,9 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
     const v = values[key];
     const folder = folders.get(groupOf(key))!;
     const c =
-      typeof v === 'string'
+      typeof v === 'boolean'
+        ? folder.add(values, key)
+        : typeof v === 'string'
         ? v.startsWith('#')
           ? folder.addColor(values, key)
           : folder.add(values, key)

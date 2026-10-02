@@ -7,6 +7,7 @@ const src = `export const CONFIG = {
   GROUT_COLOR: '#d4d4d0',
   FONT: 'Georgia, serif', // note
   AFTER: 1,
+  REVEAL: true, // toggle
 };`;
 
 describe('rewriteConfig', () => {
@@ -21,6 +22,10 @@ describe('rewriteConfig', () => {
     const out = rewriteConfig(src, { FONT: "Baskerville, 'Times New Roman', $1 serif", AFTER: 2 });
     expect(out).toContain("FONT: 'Baskerville, \\'Times New Roman\\', $1 serif', // note");
     expect(out).toContain('AFTER: 2,');
+  });
+
+  it('writes toggles as bare booleans', () => {
+    expect(rewriteConfig(src, { REVEAL: false })).toContain('REVEAL: false, // toggle');
   });
 
   it('throws on unknown keys', () => {

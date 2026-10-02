@@ -2,10 +2,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 
-export type Values = Record<string, number | string>;
+export type Values = Record<string, number | string | boolean>;
 
-const format = (v: number | string) =>
-  typeof v === 'number' ? String(Number(v.toFixed(4))) : `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+const format = (v: number | string | boolean) =>
+  typeof v === 'boolean' ? String(v) : typeof v === 'number' ? String(Number(v.toFixed(4))) : `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 export function rewriteConfig(source: string, values: Values): string {
   let out = source;
