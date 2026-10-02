@@ -3,7 +3,7 @@
 // inside the frame's edge. The paper has aged: darker and ragged at the edges where it has been
 // handled, mottled, cockled, with water tide-marks and foxing. Lit by the room through the frame's
 // tilt, like the front.
-import { AMBIENT, type Light } from '../room';
+import { AMBIENT, type Light, type Vec3 } from '../room';
 import type { RGB } from '../wood/grain';
 import { fbm, hash2 } from '../wood/noise';
 import { frame, toLocal, type EmbroideryStyle } from './draw';
@@ -12,6 +12,8 @@ export interface BackStyle {
   paper: RGB;
   stains: number; // 0–1 water marks and foxing
   wear: number; // 0–1 edges darkened, rubbed and torn
+  tarnish: number; // 0–1 the hanger's brass: bright → dark patina and verdigris
+  pxPerCm: number; // room scale, for the hanger's real size
 }
 
 const PAPER_INSET = 0.3; // of the frame width: bare wood showing round the paper
@@ -105,5 +107,102 @@ export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: num
     }
   }
   ctx.putImageData(img, x0, y0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  hanger(ctx, W / 2, f * 0.15, b, lights, toLocal(o.view, o.tiltDeg), dpr);
   return { x: p, y: p, w: W - 2 * p, h: H - 2 * p };
+}
+
+// A sawtooth hanger: a pressed brass strip, its lower edge cut into teeth for the nail to catch in,
+// fixed with two brads at the top centre of the back. (Sawtooth hangers are early-1900s: a later
+// re-hang of an 1870s piece, which is why the brass has had time to tarnish.) Lit from the room:
+// the strip is pressed slightly convex, so its shading and highlight move with the light.
+const HANGER_W_CM = 4.4, HANGER_H_CM = 0.85, TEETH = 27, BRAD_CM = 0.12;
+const BRASS: RGB = [190, 152, 84], PATINA: RGB = [72, 62, 40], VERDIGRIS: RGB = [112, 140, 112], BRAD: RGB = [104, 100, 94];
+
+function hanger(ctx: CanvasRenderingContext2D, cx: number, top: number, b: BackStyle, lights: Light[], view: Vec3, dpr: number) {
+  const ppc = b.pxPerCm, hw = HANGER_W_CM * ppc, hh = HANGER_H_CM * ppc, x0 = cx - hw / 2, tooth = hh * 0.22;
+  const body = new Path2D();
+  body.moveTo(x0 + hh * 0.2, top);
+  body.lineTo(x0 + hw - hh * 0.2, top);
+  body.quadraticCurveTo(x0 + hw, top, x0 + hw, top + hh * 0.25);
+  body.lineTo(x0 + hw, top + hh - tooth);
+  for (let i = TEETH; i >= 0; i--) body.lineTo(x0 + (hw * i) / TEETH, top + hh - (i % 2 ? 0 : tooth)); // the teeth
+  body.lineTo(x0, top + hh * 0.25);
+  body.quadraticCurveTo(x0, top, x0 + hh * 0.2, top);
+  body.closePath();
+
+  // Cast shadow: it stands off the wood by its own thickness, away from the light.
+  const L = lights.reduce<Vec3>((s, { dir, weight }) => [s[0] + dir[0] * weight, s[1] + dir[1] * weight, s[2] + dir[2] * weight], [0, 0, 0]);
+  const lift = 0.08 * ppc;
+  ctx.save();
+  ctx.shadowColor = 'rgba(30,20,10,0.45)';
+  ctx.shadowBlur = 1.5 * dpr;
+  ctx.shadowOffsetX = (-L[0] / L[2]) * lift * dpr;
+  ctx.shadowOffsetY = (-L[1] / L[2]) * lift * dpr;
+  ctx.fillStyle = '#000';
+  ctx.fill(body);
+  ctx.restore();
+
+  // Shading down the convex pressing: normals tilt from facing up (top) to facing down (teeth).
+  const flat = lights.reduce((s, l) => s + l.weight * l.dir[2], 0) || 1;
+  const H = lights.map(({ dir, weight }) => {
+    const h: Vec3 = [dir[0] + view[0], dir[1] + view[1], dir[2] + view[2]], n = Math.hypot(...h);
+    return { h: [h[0] / n, h[1] / n, h[2] / n] as Vec3, weight };
+  });
+  const shine = 0.9 * (1 - 0.85 * b.tarnish);
+  const metal = BRASS.map((c, k) => c + (PATINA[k] - c) * 0.45 * b.tarnish);
+  const grad = ctx.createLinearGradient(0, top, 0, top + hh);
+  for (let s = 0; s <= 8; s++) {
+    const t = s / 8, a = (0.5 - t) * 1.1, n: Vec3 = [0, -Math.sin(a), Math.cos(a)];
+    const lambert = lights.reduce((acc, { dir, weight }) => acc + weight * Math.max(0, dir[0] * n[0] + dir[1] * n[1] + dir[2] * n[2]), 0) / flat;
+    const spec = H.reduce((acc, { h, weight }) => acc + weight * Math.max(0, h[0] * n[0] + h[1] * n[1] + h[2] * n[2]) ** 60, 0) * shine;
+    const k = AMBIENT + (1 - AMBIENT) * lambert;
+    grad.addColorStop(t, `rgb(${metal.map((c) => Math.min(255, Math.round(c * k + 255 * spec))).join(',')})`);
+  }
+  ctx.save();
+  ctx.clip(body);
+  ctx.fillStyle = grad;
+  ctx.fillRect(x0, top, hw, hh);
+
+  // Tarnish: an even darkening with soft blotches; verdigris only in the crevices, along the
+  // teeth and round the brads, where moisture sits.
+  if (b.tarnish > 0) {
+    const tw = Math.ceil(hw * dpr), th = Math.ceil(hh * dpr), t = document.createElement('canvas');
+    t.width = tw;
+    t.height = th;
+    const tc = t.getContext('2d')!, img = tc.createImageData(tw, th);
+    const brads = [hw * 0.1 * dpr, hw * 0.9 * dpr], bradY = hh * 0.38 * dpr, toothY = (hh - tooth) * dpr;
+    for (let y = 0; y < th; y++) {
+      for (let x = 0; x < tw; x++) {
+        const i = (y * tw + x) * 4, n = fbm(x / (3 * dpr), y / (3 * dpr), 131, 3) + 0.5;
+        const crevice = Math.max(clamp01((y - toothY) / (tooth * dpr)), ...brads.map((bx) => clamp01(1 - Math.hypot(x - bx, y - bradY) / (BRAD_CM * ppc * 2.2 * dpr))));
+        const green = clamp01((fbm(x / (1.2 * dpr), y / (1.2 * dpr), 137, 2) + 0.5) * crevice * 2 - (1 - b.tarnish) * 1.2) * b.tarnish;
+        const col = PATINA.map((c, k) => c + (VERDIGRIS[k] - c) * clamp01(green * 2));
+        img.data[i] = col[0];
+        img.data[i + 1] = col[1];
+        img.data[i + 2] = col[2];
+        img.data[i + 3] = 255 * clamp01(b.tarnish * (0.45 + 0.35 * n) + green * 0.35);
+      }
+    }
+    tc.putImageData(img, 0, 0);
+    ctx.drawImage(t, x0, top, hw, hh);
+  }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(40,30,15,0.5)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke(body);
+
+  // Two brads through the strip's ends.
+  const r = BRAD_CM * ppc;
+  for (const bx of [x0 + hw * 0.1, x0 + hw * 0.9]) {
+    const by = top + hh * 0.38;
+    const g = ctx.createRadialGradient(bx - (L[0] / L[2]) * -r * 0.4, by - (L[1] / L[2]) * -r * 0.4, 0, bx, by, r);
+    const lit = BRAD.map((c) => Math.round(c * (1 - 0.3 * b.tarnish)));
+    g.addColorStop(0, `rgb(${lit.map((c) => Math.min(255, c + 70 * (1 - b.tarnish))).join(',')})`);
+    g.addColorStop(1, `rgb(${lit.map((c) => Math.round(c * 0.6)).join(',')})`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }

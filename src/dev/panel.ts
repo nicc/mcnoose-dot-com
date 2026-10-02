@@ -90,6 +90,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   ABOUT_FLIP_MS: [100, 3000, 10],
   ABOUT_STAINS: [0, 1, 0.01],
   ABOUT_EDGE_WEAR: [0, 1, 0.01],
+  ABOUT_HANGER_TARNISH: [0, 1, 0.01],
   PRINT_HOVER_FADE_MS: [0, 2000, 10],
   WIPE_WIDTH_CM: [0.3, 6, 0.05],
   WIPE_LIMESCALE_STUBBORN: [0, 0.98, 0.01],

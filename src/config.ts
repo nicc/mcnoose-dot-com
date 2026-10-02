@@ -98,6 +98,7 @@ export const CONFIG = {
   ABOUT_STAINS: 0.45, // water tide-marks and foxing
   ABOUT_EDGE_WEAR: 0.5, // edges darkened, rubbed and torn back
   ABOUT_INK: '#2b2420', // the handwriting
+  ABOUT_HANGER_TARNISH: 0.6, // the sawtooth hanger's brass: 0 bright, 1 dark patina and verdigris
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#bfb093',

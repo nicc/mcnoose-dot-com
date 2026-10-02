@@ -95,7 +95,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
   canvas.style.height = `${size.height}px`;
 
   // The back: drawn at its finished size (it has no fine detail to supersample).
-  const backStyle = { paper: hexToRgb(c.ABOUT_PAPER), stains: c.ABOUT_STAINS, wear: c.ABOUT_EDGE_WEAR };
+  const backStyle = { paper: hexToRgb(c.ABOUT_PAPER), stains: c.ABOUT_STAINS, wear: c.ABOUT_EDGE_WEAR, tarnish: c.ABOUT_HANGER_TARNISH, pxPerCm: pxPerCm(room, tile) };
   const nextBack = JSON.stringify([style, zoom, size, backStyle]);
   if (!back || nextBack !== backKey) {
     back = document.createElement('canvas');
