@@ -82,7 +82,7 @@ const wallState = () => {
   const lefts = (sel: string) => [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect().left);
   const cols = Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total'));
   const row = [...document.querySelectorAll('.grid > .tile')].slice(0, cols);
-  const f = document.querySelector('.frame')!.getBoundingClientRect();
+  const f = document.querySelector('.frame-shadow')!.getBoundingClientRect(); // unturned: where it hangs
   const vw = document.documentElement.clientWidth;
   return {
     tile: row[0].getBoundingClientRect().width,

@@ -9,7 +9,8 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
-import { bindFrame, fitNote, handReady, noteNodes } from './about';
+import { fitNote, handReady, noteNodes } from './about';
+import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
 import { trimLength, type TrimStyle } from './trim/length';
@@ -65,7 +66,7 @@ function header(c: Config, tile: number, about: string): HTMLElement {
   const back = el('div', 'frame-face frame-back', [e.back, note]);
   const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back]);
   const frame = el('figure', 'frame', [card]);
-  bindFrame(frame, card, back);
+  bindFrame(frame, card, back, c);
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 
@@ -444,7 +445,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--frame-x': `${a.centreX}px`,
     '--frame-y': `${topExtra + (c.HEADER_HEIGHT * a.tile) / 2}px`,
     '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
-    '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
+    '--frame-tilt': `${frameTilt(c)}deg`,
     '--flip-ms': `${c.ABOUT_FLIP_MS}ms`,
     '--about-ink': c.ABOUT_INK,
     ...frameShadow(c, a.tile),

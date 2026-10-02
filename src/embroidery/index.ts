@@ -6,6 +6,7 @@ import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig, vie
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
+import { frameTilt } from '../frame';
 import { drawBack } from './back';
 import { drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
@@ -73,7 +74,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
     lights: lightsAt(room, room.embroidery),
     view: viewAt(room, room.embroidery),
     dust: { top: c.EMBROIDERY_DUST_TOP, inner: c.EMBROIDERY_DUST_INNER, shade: c.DUST_SHADE },
-    tiltDeg: c.EMBROIDERY_TILT_DEG,
+    tiltDeg: frameTilt(c),
     dpr,
   };
   const natural = embroiderySize(chart, style);
@@ -108,7 +109,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
   const gw = chart.w * style.stitch * zoom, gh = chart.h * style.stitch * zoom;
   margin = Math.max(gw, gh) * 0.5;
   parallax = c.ROOM_EYE_FOLLOW * parallaxFactor(room);
-  tilt = c.EMBROIDERY_TILT_DEG;
+  tilt = frameTilt(c);
   Object.assign(glass.style, { left: `${inset}px`, top: `${inset}px`, width: `${gw}px`, height: `${gh}px` });
   const rKey = JSON.stringify([gw, gh, dpr, tile, c.EMBROIDERY_GLASS_REFLECTION, room, tilt]);
   if (!reflection || rKey !== reflectionKey) {

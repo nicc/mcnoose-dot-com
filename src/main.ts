@@ -6,6 +6,7 @@ import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } fr
 import { PinFilter, type Point } from './pin';
 import { resetReflection, updateReflection } from './embroidery';
 import { startClouds } from './clouds';
+import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
 import { renderScene, updateTileReflections, type Frame, type Viewport } from './scene';
@@ -97,6 +98,7 @@ addEventListener(
 
 render();
 addEventListener('resize', () => render());
+onFrameTurned(() => render(true)); // re-light the frame at its new angle
 startClouds(() => state);
 startWiping(() => state);
 showNotice();

@@ -51,6 +51,10 @@ body {
   position: relative;
   margin: 0;
   transform: rotate(var(--frame-tilt));
+  transform-origin: 50% 0; /* it hangs from a nail at the top centre */
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   perspective: 1600px;
   cursor: pointer;
   outline: none;
@@ -96,6 +100,8 @@ body {
 /* The note: ink sinks into the paper (multiply), so it takes the paper's light and stains. */
 .note {
   position: absolute;
+  user-select: text;
+  -webkit-user-select: text;
   overflow: hidden;
   color: var(--about-ink);
   font-family: 'Homemade Apple', cursive;

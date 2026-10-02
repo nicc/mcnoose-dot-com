@@ -1,5 +1,5 @@
-// The about page: a note handwritten on the back of the framed sampler. Click (or tap, or Enter)
-// anywhere on the frame to turn it over; again to turn it back. The text is about.md beside
+// The about page: a note handwritten on the back of the framed sampler (turned over by frame.ts).
+// The text is about.md beside
 // index.html, fetched at load like projects.json, so it can be edited on the server. A small,
 // forgiving subset of markdown: blank lines separate paragraphs, single line breaks are kept,
 // "# " makes a heading, "- " lines a list, [text](https://…) a link. Built as DOM, never as HTML.
@@ -91,41 +91,4 @@ export function fitNote(note: HTMLElement): void {
     else hi = mid;
   }
   note.style.fontSize = `${lo}px`;
-}
-
-// Flip state outlives re-renders (which rebuild the frame's DOM).
-let flipped = false;
-export const isFlipped = () => flipped;
-
-// Wires a freshly built frame: a click or tap that doesn't move turns it over (links on the note
-// work as links); keyboard: Enter or Space.
-export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLElement): void {
-  const sync = () => {
-    card.classList.toggle('flipped', flipped);
-    frame.setAttribute('aria-pressed', String(flipped));
-    back.setAttribute('aria-hidden', String(!flipped));
-  };
-  frame.tabIndex = 0;
-  frame.setAttribute('role', 'button');
-  frame.setAttribute('aria-label', 'Turn the sampler over to read the note on the back');
-  sync();
-  const flip = () => {
-    flipped = !flipped;
-    sync();
-  };
-  let down: { x: number; y: number } | undefined;
-  frame.addEventListener('pointerdown', (e) => (down = { x: e.clientX, y: e.clientY }));
-  frame.addEventListener('pointercancel', () => (down = undefined)); // the browser took it for a scroll
-  frame.addEventListener('pointerup', (e) => {
-    if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return void (down = undefined);
-    down = undefined;
-    if ((e.target as Element).closest('a')) return;
-    flip();
-  });
-  frame.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    if ((e.target as Element).closest('a')) return;
-    e.preventDefault();
-    flip();
-  });
 }
