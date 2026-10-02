@@ -150,7 +150,7 @@ export const CONFIG = {
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
-  PRINT_HOVER_FADE_MS: 350, // hover: the print fades to the original logo
+  PRINT_HOVER_FADE_MS: 350, // hover: how fast the original logo opens out from the centre
   TILE_LOGO_SIZE: 0.32,
   TILE_TITLE_SIZE: 0.075,
   TILE_TITLE_GAP: 0.06,
@@ -178,7 +178,7 @@ export const CONFIG = {
   SKIRTING_DUST: 0.75, // dust along the top
 
   // Wiping with a finger (mouse): dust on the rail and skirting, limescale and marks on the tiles
-  WIPE_WIDTH_CM: 1.6, // brush width: about a fingertip
+  WIPE_WIDTH_CM: 2, // brush width: about a fingertip
   WIPE_LIMESCALE_STUBBORN: 0.6, // 0 = one pass clears it, towards 1 = rub and rub
 
   // Work-in-progress notice, shown once per browser

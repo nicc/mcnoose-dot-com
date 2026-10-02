@@ -8,7 +8,7 @@ test('project links open in a new tab', async ({ page }) => {
   await expect(link).toHaveAttribute('rel', /noopener/);
 });
 
-test('hovering a project tile fades the print to the original logo', async ({ page, isMobile }) => {
+test('hovering a project tile opens the original logo out from the centre', async ({ page, isMobile }) => {
   test.skip(isMobile, 'no hover on touch');
   await page.goto('/');
   await page.waitForSelector('html[data-printed="true"]');
@@ -21,10 +21,10 @@ test('hovering a project tile fades the print to the original logo', async ({ pa
     return n;
   });
   expect(inked).toBeGreaterThan(500);
-  await expect(tile.locator('.tile-clean')).toHaveCSS('opacity', '0');
+  const reveal = () => tile.evaluate((t) => parseFloat(getComputedStyle(t).getPropertyValue('--reveal')));
+  expect(await reveal()).toBe(0);
   await tile.hover();
-  await expect(tile.locator('.tile-clean')).toHaveCSS('opacity', '1');
-  await expect(tile.locator('.tile-ink')).toHaveCSS('opacity', '0');
+  await expect.poll(reveal).toBe(120); // opened out past the corners
   await page.mouse.move(5, 5);
-  await expect(tile.locator('.tile-ink')).toHaveCSS('opacity', '1');
+  await expect.poll(reveal).toBe(0);
 });
