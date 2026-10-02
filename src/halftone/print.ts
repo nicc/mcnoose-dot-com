@@ -15,13 +15,14 @@ const TITLE_MAX_WIDTH = 0.86; // of tile; longer titles shrink to fit
 
 export interface PrintJob {
   canvas: HTMLCanvasElement;
+  clean?: HTMLCanvasElement; // the same layout unprinted: the logo in its own colours (hover)
   title: string;
   logoUrl: string;
   tile: number; // CSS px
 }
 
-function drawSource(c: Config, logo: HTMLImageElement, title: string, size: number): CanvasRenderingContext2D {
-  const src = document.createElement('canvas');
+function drawSource(c: Config, logo: HTMLImageElement, title: string, size: number, ink = '#000', into?: HTMLCanvasElement): CanvasRenderingContext2D {
+  const src = into ?? document.createElement('canvas');
   src.width = src.height = size;
   const ctx = src.getContext('2d')!;
 
@@ -44,7 +45,7 @@ function drawSource(c: Config, logo: HTMLImageElement, title: string, size: numb
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = ink;
   ctx.fillText(title, size / 2, top + box + gap + font * 0.8);
   return ctx;
 }
@@ -70,4 +71,5 @@ export async function printTile(c: Config, job: PrintJob): Promise<void> {
     seed: job.title,
     color: c.PRINT_COLOR,
   });
+  if (job.clean) drawSource(c, logo, job.title, Math.round(job.tile * Math.min(3, devicePixelRatio || 1)), c.PRINT_COLOR, job.clean);
 }

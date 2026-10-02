@@ -59,8 +59,9 @@ test('limescale on the tiles takes more than one pass, and a wipe is not a click
   // A stroke that ends on a project tile doesn't follow its link.
   await page.evaluate(() => scrollTo(0, 0));
   const project = (await page.locator('.tile-project').first().boundingBox())!;
-  const url = page.url();
+  let opened = 0;
+  page.context().on('page', () => opened++);
   await drag(page, project.y + project.height / 2, project.x - 40, project.x + project.width / 2);
   await page.waitForTimeout(300);
-  expect(page.url()).toBe(url);
+  expect(opened).toBe(0);
 });

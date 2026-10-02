@@ -286,6 +286,42 @@ body {
   to { opacity: 0; }
 }
 
+/* Hover (and keyboard focus): the print fades to the original logo. Not on touch screens, where a
+   tap simply opens the link. */
+.tile-ink {
+  position: absolute;
+  inset: 0;
+  transition: opacity var(--hover-fade) ease;
+}
+
+.tile-clean {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hover-fade) ease;
+}
+
+@media (hover: hover) {
+  .tile-project:hover .tile-ink {
+    opacity: 0;
+  }
+
+  .tile-project:hover .tile-clean {
+    opacity: 1;
+  }
+}
+
+.tile-project:focus-visible .tile-ink {
+  opacity: 0;
+}
+
+.tile-project:focus-visible .tile-clean {
+  opacity: 1;
+}
+
 .tile-title {
   font-size: calc(var(--tile) * 0.075);
 }

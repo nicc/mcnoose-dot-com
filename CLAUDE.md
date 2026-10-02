@@ -59,7 +59,7 @@ Painted dado rail capping the tiles and the skirting the page ends on; one pipel
 Mouse only (touch drags scroll). Round soft brush `WIPE_WIDTH_CM`; dust on rail/skirting clears in one pass, tile marks/limescale per `WIPE_LIMESCALE_STUBBORN`. Dabs logged in wall cm and replayed onto freshly drawn canvases (`beginSurfaces`/`wipeable` at render); tile ageing is two canvases (fixed: crazing + grout; marks: wipeable). Frame dust isn't wipeable (frame drags rotate). A drag that wiped swallows the next click.
 
 ## Halftone
-Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
+Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle. Each print also draws a clean canvas (original logo, solid title); hover/focus crossfades to it (`PRINT_HOVER_FADE_MS`, `@media (hover: hover)`), fading a `.tile-ink` wrapper so the re-flow animation on the print itself is untouched. Project links open in new tabs.
 
 ## Browser support
 Chrome, Firefox, Safari on desktop and mobile, always. Check support before using new CSS/JS. `npm run test:e2e` covers chromium/firefox/webkit + Pixel/iPhone emulation; Playwright WebKit ≠ real iOS Safari.

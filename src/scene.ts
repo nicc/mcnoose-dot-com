@@ -181,6 +181,7 @@ function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
 // Prints are cached per project so resizes and re-flows move canvases instead of re-printing.
 interface Print {
   canvas: HTMLCanvasElement;
+  clean: HTMLCanvasElement; // shown on hover: the original logo
   done: Promise<boolean>; // false if printing failed
 }
 const prints = new Map<string, Print>();
@@ -222,7 +223,7 @@ const fading = (el: HTMLElement, at: number, now: number, ms: number) => {
 };
 
 function printFor(c: Config, tile: number, p: Project): Print {
-  const key = JSON.stringify([tile, devicePixelRatio, Object.entries(c).filter(([k]) => /^(TILE_|HALFTONE_|PRINT_)/.test(k))]);
+  const key = JSON.stringify([tile, devicePixelRatio, Object.entries(c).filter(([k]) => /^(TILE_|HALFTONE_|PRINT_)/.test(k) && k !== 'PRINT_HOVER_FADE_MS')]);
   if (key !== printsKey) {
     prints.clear();
     placements.clear(); // new prints: nothing to crossfade from
@@ -233,28 +234,33 @@ function printFor(c: Config, tile: number, p: Project): Print {
   const id = projectId(p);
   let pr = prints.get(id);
   if (!pr) {
-    const canvas = el('canvas', 'tile-print');
+    const canvas = el('canvas', 'tile-print'), clean = el('canvas', 'tile-clean');
     canvas.setAttribute('aria-hidden', 'true');
-    const done = printTile(c, { canvas, title: p.title, logoUrl: p.logoUrl, tile }).then(
+    clean.setAttribute('aria-hidden', 'true');
+    const done = printTile(c, { canvas, clean, title: p.title, logoUrl: p.logoUrl, tile }).then(
       () => true,
       (e) => (console.warn(e), false),
     );
-    pr = { canvas, done };
+    pr = { canvas, clean, done };
     prints.set(id, pr);
   }
   return pr;
 }
 
-// Title stays in the DOM for screen readers; the canvas carries the visible print.
+// Title stays in the DOM for screen readers; the canvas carries the visible print. On hover the
+// print fades to the original logo (its wrapper fades, so the re-flow crossfade on the print itself
+// is untouched). Links open in a new tab.
 function projectTile(c: Config, tile: number, p: Project, slot: string, now: number, pending: Promise<unknown>[]): HTMLElement {
   const a = el('a', 'tile tile-project');
   a.href = p.url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
   const pr = printFor(c, tile, p);
   place(p, slot, pr.canvas, now);
   const arrived = arrivals.get(projectId(p));
   if (arrived !== undefined && fading(pr.canvas, arrived, now, c.REFLOW_FADE_MS)) a.classList.add('tile-arrive');
   const title = el('span', 'tile-title sr-only', [document.createTextNode(p.title)]);
-  a.append(pr.canvas, title);
+  a.append(el('div', 'tile-ink', [pr.canvas]), pr.clean, title);
   pending.push(pr.done.then((ok) => ok || title.classList.remove('sr-only'))); // plain-text fallback
   return a;
 }
@@ -447,6 +453,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
     '--frame-tilt': `${frameTilt(c)}deg`,
     '--flip-ms': `${c.ABOUT_FLIP_MS}ms`,
+    '--hover-fade': `${c.PRINT_HOVER_FADE_MS}ms`,
     '--about-ink': c.ABOUT_INK,
     ...frameShadow(c, a.tile),
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,

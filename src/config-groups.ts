@@ -13,7 +13,7 @@ export const GROUPS: [string, (key: string) => boolean][] = [
   ['Tiles: reflections', (k) => ['TILE_REFLECTION', 'TILE_TILT_DEG', 'TILE_WAVINESS'].includes(k)],
   ['Tiles: ageing', (k) => ['TILE_CRAZING', 'TILE_SPOTS', 'TILE_SPOTS_LOW', 'TILE_LIMESCALE', 'TILE_GRIME_ROWS'].includes(k)],
   ['Grout', (k) => k.startsWith('GROUT_')],
-  ['Tile print', (k) => k === 'PRINT_COLOR' || k.startsWith('TILE_LOGO') || k.startsWith('TILE_TITLE') || k.startsWith('HALFTONE_')],
+  ['Tile print', (k) => k.startsWith('PRINT_') || k.startsWith('TILE_LOGO') || k.startsWith('TILE_TITLE') || k.startsWith('HALFTONE_')],
   ['Tiles: glaze', (k) => k.startsWith('TILE_')],
   ['Skirting', (k) => k.startsWith('SKIRTING_')],
   ['Wiping', (k) => k.startsWith('WIPE_')],

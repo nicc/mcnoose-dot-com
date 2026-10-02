@@ -150,6 +150,7 @@ export const CONFIG = {
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
+  PRINT_HOVER_FADE_MS: 350, // hover: the print fades to the original logo
   TILE_LOGO_SIZE: 0.32,
   TILE_TITLE_SIZE: 0.075,
   TILE_TITLE_GAP: 0.06,
