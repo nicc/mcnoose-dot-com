@@ -320,3 +320,42 @@ export function downscale(src: HTMLCanvasElement, w: number, h: number): HTMLCan
   if (cur.width !== w || cur.height !== h) step(w, h);
   return cur;
 }
+
+// The frame's outer edges, so it's a solid when it turns over: four strips of the same oak as the
+// front, varnished, each lit by how it faces the room (the top catches light, the underside only
+// the floor's bounce). W, H, depth in css px; lights in screen coords, turned into the frame's tilt.
+// Returns canvases sized len × depth (top, bottom) and depth × len (left, right).
+export function drawEdges(o: Pick<EmbroideryStyle, 'wood' | 'lights' | 'view' | 'tiltDeg'>, W: number, H: number, depth: number, dpr: number): Record<'top' | 'bottom' | 'left' | 'right', HTMLCanvasElement> {
+  const lights = o.lights.map((l) => ({ dir: toLocal(l.dir, o.tiltDeg), weight: l.weight }));
+  const view = toLocal(o.view, o.tiltDeg), w = o.wood;
+  const facing = (n: Vec3) => lights.reduce((s, { dir, weight }) => s + weight * Math.max(0, dir[0] * n[0] + dir[1] * n[1] + dir[2] * n[2]), 0);
+  const front = facing([0, 0, 1]) || 1;
+  const edge = (len: number, n: Vec3, along: Vec3, seed: number, vertical: boolean) => {
+    const across: Vec3 = [0, 0, -1]; // front → back
+    const lp = Math.max(2, Math.round(len * dpr)), wp = Math.max(2, Math.round(depth * dpr));
+    const maps = grainMaps(lp, wp, { early: w.early, late: w.late, ringPx: w.ring * dpr, figure: w.figure, pores: w.pores, drift: w.drift, seed });
+    const toBoard = (d: Vec3): Vec3 => [d[0] * along[0] + d[1] * along[1] + d[2] * along[2], d[0] * across[0] + d[1] * across[1] + d[2] * across[2], d[0] * n[0] + d[1] * n[1] + d[2] * n[2]];
+    const rgba = shadeBoard(maps, lp, wp, { profile: () => 0.5, profileDepth: 0, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, lights.map(({ dir, weight }) => ({ dir: toBoard(dir), weight })), toBoard(view));
+    const k = AMBIENT + (1 - AMBIENT) * (facing(n) / front); // relative to the front, which shows its albedo
+    for (let i = 0; i < rgba.length; i += 4) for (let c = 0; c < 3; c++) rgba[i + c] *= k;
+    const strip = document.createElement('canvas');
+    strip.width = lp;
+    strip.height = wp;
+    strip.getContext('2d')!.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, lp, wp), 0, 0);
+    if (!vertical) return strip;
+    const turned = document.createElement('canvas'); // grain runs down a side
+    turned.width = wp;
+    turned.height = lp;
+    const ctx = turned.getContext('2d')!;
+    ctx.translate(wp, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(strip, 0, 0);
+    return turned;
+  };
+  return {
+    top: edge(W, [0, -1, 0], [1, 0, 0], 61, false),
+    bottom: edge(W, [0, 1, 0], [1, 0, 0], 67, false),
+    left: edge(H, [-1, 0, 0], [0, 1, 0], 71, true),
+    right: edge(H, [1, 0, 0], [0, 1, 0], 73, true),
+  };
+}

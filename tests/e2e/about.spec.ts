@@ -38,3 +38,12 @@ test('the note fits its paper', async ({ page }) => {
   const fits = await page.locator('.note').evaluate((n) => n.scrollHeight <= n.clientHeight + 1 && parseFloat(getComputedStyle(n).fontSize) > 4);
   expect(fits).toBe(true);
 });
+
+test('the frame is a solid: four wooden sides as deep as it stands off the wall', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  await expect(page.locator('.frame-card .frame-edge')).toHaveCount(4);
+  const depth = await page.locator('.frame-card').evaluate((c) => parseFloat(getComputedStyle(c).getPropertyValue('--frame-depth')));
+  expect(depth).toBeGreaterThan(0);
+  expect(await page.locator('.frame-edge-top').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(0);
+});

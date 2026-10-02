@@ -64,7 +64,7 @@ export const CONFIG = {
   EMBROIDERY_CLOTH_H: 53,
   EMBROIDERY_FRAME: 0.2, // moulding width
   EMBROIDERY_TILT_DEG: 1, // clockwise
-  EMBROIDERY_STANDOFF_CM: 2, // how far the frame sits off the wall: sets its cast shadows
+  EMBROIDERY_STANDOFF_CM: 2, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
   EMBROIDERY_DUST_TOP: 1.28, // dust on the frame's upper moulding
   EMBROIDERY_DUST_INNER: 1.46, // dust on the inner bottom lip, against the glass
   EMBROIDERY_CLOTH: '#f6f3ea',

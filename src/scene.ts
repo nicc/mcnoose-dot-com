@@ -64,7 +64,8 @@ function header(c: Config, tile: number, about: string): HTMLElement {
   const pad = Math.min(e.paper.w, e.paper.h) * 0.08;
   Object.assign(note.style, { left: `${e.paper.x + pad}px`, top: `${e.paper.y + pad}px`, width: `${e.paper.w - 2 * pad}px`, height: `${e.paper.h - 2 * pad}px` });
   const back = el('div', 'frame-face frame-back', [e.back, note]);
-  const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back]);
+  const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back, ...e.edges]);
+  card.style.setProperty('--frame-depth', `${e.depth}px`);
   const frame = el('figure', 'frame', [card]);
   bindFrame(frame, card, back, c);
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
