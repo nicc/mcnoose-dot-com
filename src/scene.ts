@@ -1,17 +1,17 @@
 // Builds the wall: wallpaper header, bull-nose row, tile grid, skirting.
 import type { Config } from './config';
-import { computeStrip, rowCount, visibleColumns, type Anchor, type Columns } from './layout';
+import { rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
-import { lightsAt, pxPerCm, roomFromConfig, type Room, type Vec3 } from './room';
+import { lightsAt, pxPerCm, roomFromConfig, viewAt, type Room, type Vec3 } from './room';
 import { drawAgeing, grimeLevel, type Ageing } from './tiles/glaze';
 import { groutTexture } from './tiles/grout';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
-import { loadPaper, paperAt } from './tiles/paper';
-import { edgeShadows, roundedTop, tileTone, wallPoint, type WallMap } from './tiles/surface';
-import { ASPECT as WALLPAPER_ASPECT } from './wallpaper/render';
-import { fbm } from './wood/noise';
+import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
+import { fbm, hash2 } from './wood/noise';
+import { railLength, type RailStyle } from './rail';
+import { railProfile, type RailDims } from './rail/profile';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
 
@@ -33,7 +33,6 @@ const live = import.meta.env.DEV ? import('./wallpaper') : undefined;
 // Pattern anchored to the wall's world origin so it stays put under resizes and window moves.
 function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[]) {
   const apply = (url: string, width: number, height: number) => {
-    loadPaper(url, () => updateTileReflections()); // curved tiles reflect the actual pattern
     el.style.backgroundImage = `url("${url}")`;
     el.style.backgroundSize = `${width}px ${height}px`;
     el.style.backgroundPosition = `${a.originX}px ${topExtra}px`;
@@ -60,40 +59,70 @@ function header(c: Config, tile: number): HTMLElement {
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 
-// The capping row: same glaze, crazing, marks and reflections as the field tiles, plus the
-// rounded top where it meets the wallpaper, lit from the room. High on the wall: marks stay light.
-function bullnose(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
-  const s = computeStrip({ width: vp.width, origin: a.centreX, tile: a.tile, grout: c.GROUT_PX, widthRatio: c.BULLNOSE_WIDTH, offset: c.BULLNOSE_OFFSET });
+// The painted dado rail capping the tiles, in tile-wide lengths, each lit by the room at its own
+// place on the wall. It stands proud of the tiles, so it casts a soft shadow onto the top row.
+const railDims = (c: Config): RailDims => ({ depthCm: c.RAIL_DEPTH_CM, roundCm: c.RAIL_ROUND_CM, beadCm: c.RAIL_BEAD_CM, coveCm: c.RAIL_COVE_CM, flatCm: c.RAIL_FLAT_CM });
+const railHeight = (c: Config, tile: number) => railProfile(railDims(c)).heightCm * (tile / c.ROOM_TILE_CM);
+const TILE_FACE_CM = 0.9; // tile faces stand this far off the wall
+
+function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
-  const h = c.BULLNOSE_HEIGHT * a.tile, top = topExtra + c.HEADER_HEIGHT * a.tile;
-  const base = hexToRgb(c.TILE_COLOR);
-  const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
-  const row = el('div', 'bullnose');
-  for (let i = 0; i < s.count; i++) {
-    const left = s.start + i * s.pitch;
-    const index = Math.round((left - (a.centreX + c.BULLNOSE_OFFSET * s.pitch)) / s.pitch); // its place on the wall
-    const at = wallPoint(map, { x: left + s.width / 2, y: top + h / 2 });
-    const lights = lightsAt(room, at);
-    const t = el('i', 'bullnose-tile');
-    t.style.left = `${left}px`;
-    t.style.background = `${roundedTop(lights, c.BULLNOSE_ROUND_CM * ppc)}, ${tileTone(base, c.TILE_TONE, index, -1)}`;
-    t.style.boxShadow = edgeShadows(lights, edge);
-    const seed = tileSeed(index, -1);
-    // Fine sampling down the short tile so the curve gets real rows; less blur than the field.
-    const reflection = reflectionLayer(
-      `bn:${index}`,
-      top,
-      { centre: at, wCm: s.width / ppc, hCm: h / ppc, roundTopCm: c.BULLNOSE_ROUND_CM, tiltDeg: c.TILE_TILT_DEG, waviness: c.TILE_WAVINESS, strength: c.TILE_REFLECTION, curveStrength: c.BULLNOSE_REFLECTION, seed },
-      12,
-      32,
-    );
-    reflection.classList.add('bullnose-reflect');
-    t.append(reflection, ageLayer(`bn:${index}`, s.width, h, { ...ageAt(c, a.tile, 0), dust: c.BULLNOSE_DUST }, seed));
-    row.append(t);
+  const h = railHeight(c, a.tile), top = topExtra + c.HEADER_HEIGHT * a.tile, seg = a.tile;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const style: RailStyle = {
+    dims: railDims(c),
+    colour: hexToRgb(c.RAIL_COLOR),
+    paint: { grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, buildup: c.PAINT_BUILDUP, yellowing: c.PAINT_YELLOWING, sheen: c.PAINT_SHEEN, gloss: c.PAINT_GLOSS },
+    wear: c.RAIL_WEAR,
+    grime: c.RAIL_GRIME,
+  };
+  const row = el('div', 'rail');
+  row.style.height = `${h}px`;
+  const strip = el('div', 'rail-strip'); // clips the lengths to the window; the cast shadow spills below
+  const first = Math.floor(-a.originX / seg), last = Math.ceil((vp.width - a.originX) / seg);
+  for (let k = first; k <= last; k++) {
+    const left = a.originX + k * seg;
+    const at = wallPoint(map, { x: left + seg / 2, y: top + h / 2 });
+    const length = railLength(k, seg, h, ppc, dpr, lightsAt(room, at), viewAt(room, at), style);
+    Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
+    strip.append(length);
   }
-  row.append(seamLine(c, vp, a));
-  row.style.setProperty('--bn-w', `${s.width}px`);
+  // Its cast shadow on the tiles: how far the rail's bottom overhangs them, along each light's slant.
+  const overhang = Math.max(0, railProfile(style.dims).faceDepthCm - TILE_FACE_CM) * ppc;
+  const lights = lightsAt(room, wallPoint(map, { x: a.centreX, y: top + h }));
+  const total = lights.reduce((s, l) => s + l.weight, 0);
+  const reach = lights.reduce((s, { dir, weight }) => s + (Math.max(0, -dir[1]) / dir[2]) * overhang * (weight / total), 0);
+  const shadow = el('div', 'rail-shadow');
+  Object.assign(shadow.style, { height: `${(reach * 1.6 + 2).toFixed(1)}px`, '--rail-shadow-a': String(0.32 * c.RAIL_SHADOW) });
+  strip.append(seamLine(c, vp, a), railDust(c, vp, a, h));
+  row.append(strip, shadow);
   return row;
+}
+
+// Dust settled on the rail's top: specks keyed to wall position, so they never repeat.
+function railDust(c: Config, vp: Viewport, a: Anchor, h: number): HTMLCanvasElement {
+  const dpr = Math.min(2, devicePixelRatio || 1), band = Math.max(3, h * 0.18);
+  const canvas = el('canvas', 'rail-dust');
+  canvas.width = Math.ceil(vp.width * dpr);
+  canvas.height = Math.ceil(band * dpr);
+  canvas.setAttribute('aria-hidden', 'true');
+  Object.assign(canvas.style, { height: `${band}px` });
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  const haze = ctx.createLinearGradient(0, 0, 0, band);
+  haze.addColorStop(0, `rgba(120,110,95,${(0.18 * c.RAIL_DUST).toFixed(3)})`);
+  haze.addColorStop(1, 'rgba(120,110,95,0)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, vp.width, band);
+  const x0 = Math.floor(-a.originX), x1 = Math.ceil(vp.width - a.originX); // wall px
+  for (let x = x0; x <= x1; x++) {
+    if (hash2(x, 7, 431) > 0.55 * c.RAIL_DUST) continue;
+    const y = band * hash2(x, 8, 431) ** 2; // most near the top
+    ctx.fillStyle = `rgba(95,85,70,${(0.2 + 0.35 * hash2(x, 9, 431)).toFixed(3)})`;
+    const r = 0.3 + 0.7 * hash2(x, 10, 431);
+    ctx.fillRect(x + a.originX, y, r, r);
+  }
+  return canvas;
 }
 
 // The joint where tile meets paper: a thin, slightly wavering shadow line with the caulk's lit
@@ -212,7 +241,7 @@ const wallMap = (c: Config, a: Anchor, topExtra: number): WallMap => {
 function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile);
   const map = wallMap(c, a, topExtra);
-  const firstTileTop = topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX;
+  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + c.GROUT_PX;
   const base = hexToRgb(c.TILE_COLOR);
   const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
   return (row, col) => {
@@ -256,26 +285,13 @@ export function updateTileReflections(scroll = scrollY) {
   }
 }
 
-// The room as reflections see it, including the wallpaper above the tiles: wall cm → page px →
-// position in the pattern repeat, sampled from the actual wallpaper image.
-function roomLook(c: Config, a: Anchor, topExtra: number): RoomLook {
-  const map = wallMap(c, a, topExtra), ppc = map.pxPerCm;
-  const repeatW = c.WALLPAPER_ZOOM * a.tile, repeatH = repeatW * (baked?.aspect ?? WALLPAPER_ASPECT);
-  const ground = hexToRgb(c.WALLPAPER_GROUND);
-  return {
-    wall: hexToRgb(c.ROOM_WALL_COLOR),
-    ceiling: hexToRgb(c.ROOM_CEILING_COLOR),
-    floor: hexToRgb(c.ROOM_FLOOR_COLOR),
-    sky: [[205, 222, 240], [236, 241, 244]],
-    sash: [220, 218, 211],
-    glaze: hexToRgb(c.TILE_COLOR),
-    seamCm: wallPoint(map, { x: 0, y: topExtra + c.HEADER_HEIGHT * a.tile }).y,
-    wallpaper: (x, y) => {
-      const px = map.embroideryPage.x + (x - map.embroidery.x) * ppc, py = map.embroideryPage.y - (y - map.embroidery.y) * ppc;
-      return paperAt((px - a.originX) / repeatW, (py - topExtra) / repeatH) ?? ground;
-    },
-  };
-}
+const roomLook = (c: Config): RoomLook => ({
+  wall: hexToRgb(c.ROOM_WALL_COLOR),
+  ceiling: hexToRgb(c.ROOM_CEILING_COLOR),
+  floor: hexToRgb(c.ROOM_FLOOR_COLOR),
+  sky: [[205, 222, 240], [236, 241, 244]],
+  sash: [220, 218, 211],
+});
 
 // Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
 const ageing = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
@@ -385,7 +401,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
     '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
     ...frameShadow(c, a.tile),
-    '--bn-h': `${c.BULLNOSE_HEIGHT * a.tile}px`,
     '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
@@ -409,8 +424,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   hangWallpaper(top, c, a, topExtra, pending);
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
-  reflectScene = { room, look: roomLook(c, a, topExtra), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
-  root.replaceChildren(top, bullnose(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + (c.HEADER_HEIGHT + c.BULLNOSE_HEIGHT) * a.tile + c.GROUT_PX), el('footer', 'skirting'));
+  reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
+  root.replaceChildren(top, rail(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + c.GROUT_PX), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

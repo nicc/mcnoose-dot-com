@@ -37,6 +37,7 @@ export interface EmbroideryStyle {
   wood: WoodStyle;
   glass: GlassStyle;
   lights: Light[]; // the room's lights at the embroidery, screen coords
+  view: Vec3; // towards the viewer's eye, screen coords
   tiltDeg: number; // frame rotation, clockwise
   dpr: number;
 }
@@ -161,8 +162,9 @@ function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, li
     });
     weather(maps, len, wid, frameProfile, { wear: w.wear, grime: w.grime, patches: w.patches, mitres: true, seed: 77 + k });
     const inward: V = [-side.n[0], -side.n[1]];
-    const board = lights.map(({ dir: [x, y, z], weight }) => ({ dir: [x * side.along[0] + y * side.along[1], x * inward[0] + y * inward[1], z] as Vec3, weight }));
-    const rgba = shadeBoard(maps, len, wid, { profile: frameProfile, profileDepth: w.depth * wid, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, board);
+    const toBoard = ([x, y, z]: Vec3): Vec3 => [x * side.along[0] + y * side.along[1], x * inward[0] + y * inward[1], z];
+    const board = lights.map(({ dir, weight }) => ({ dir: toBoard(dir), weight }));
+    const rgba = shadeBoard(maps, len, wid, { profile: frameProfile, profileDepth: w.depth * wid, grainDepth: GRAIN_DEPTH * dpr, sheen: w.sheen, gloss: w.gloss, ambient: AMBIENT }, board, toBoard(toLocal(o.view, o.tiltDeg)));
     const boardCanvas = document.createElement('canvas');
     boardCanvas.width = len;
     boardCanvas.height = wid;

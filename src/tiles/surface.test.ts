@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Light } from '../room';
-import { edgeShadows, roundedTop, tileTone, wallPoint } from './surface';
+import { edgeShadows, tileTone, wallPoint } from './surface';
 
 describe('wallPoint', () => {
   const m = { pxPerCm: 10, embroidery: { x: 130, y: 132 }, embroideryPage: { x: 700, y: 200 } };
@@ -34,13 +34,5 @@ describe('edgeShadows', () => {
     const alpha = (s: string) => Number(s.match(/inset [-\d.]+px [-\d.]+px [\d.]+px rgba\(255,255,255,([\d.]+)\)/)![1]);
     const frontal = edgeShadows([{ dir: [-0.05, 0, 0.999], weight: 1 }], style);
     expect(alpha(frontal)).toBeLessThan(alpha(edgeShadows([fromLeft], style)));
-  });
-});
-
-describe('roundedTop', () => {
-  it('shades the curve, tucks a shadow into the top corner, and eases out to nothing at the face', () => {
-    const g = roundedTop([{ dir: [0, -0.8, 0.6], weight: 1 }], 10);
-    expect(g).toMatch(/^linear-gradient\(to bottom, rgba\(0,0,0,0\.16\) 0px/);
-    expect(g).toMatch(/rgba\([\d,]+,0\.00\) 10\.00px\)$/);
   });
 });

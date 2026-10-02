@@ -75,8 +75,8 @@ const wallState = () => {
     tile: row[0].getBoundingClientRect().width,
     pitch: row[1].getBoundingClientRect().left - row[0].getBoundingClientRect().left,
     tiles: lefts('.grid > .tile').slice(0, cols),
-    bullnose: lefts('.bullnose-tile'),
-    bullnosePitch: lefts('.bullnose-tile')[1] - lefts('.bullnose-tile')[0],
+    rail: lefts('.rail-length'),
+    railPitch: lefts('.rail-length')[1] - lefts('.rail-length')[0],
     frameX: f.left + f.width / 2,
     fullTiles: row.filter((t) => t.getBoundingClientRect().left >= -0.5 && t.getBoundingClientRect().right <= vw + 0.5),
     projectsShown: document.querySelectorAll('.tile-project').length,
@@ -99,7 +99,7 @@ test('the wall stays where it first rendered while the window resizes', async ({
     const now = await page.evaluate(wallState);
     expect(now.tile).toBeCloseTo(first.tile);
     expect(onLattice(now.tiles, first.tiles[0], first.pitch)).toBe(true);
-    expect(onLattice(now.bullnose, first.bullnose[0], first.bullnosePitch)).toBe(true);
+    expect(onLattice(now.rail, first.rail[0], first.railPitch)).toBe(true);
     expect(now.frameX).toBeCloseTo(first.frameX, 0);
     expect(now.projectsShown).toBe(first.projectsShown); // every project still on the wall
     // Prints are moved, not redrawn.
@@ -131,13 +131,16 @@ test('projects fill exactly the fully visible tiles of the first row', async ({ 
 test('re-anchors, centred, only when a full tile with peeks no longer fits', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-  await page.setViewportSize({ width: 360, height: 800 });
-  await page.waitForSelector('html[data-rendered-width="360"]');
+  // Narrower than one tile plus a quarter-tile peek each side (whatever TILE_MAX_PX is set to).
+  const tile = await page.evaluate(() => document.querySelectorAll('.grid > .tile')[1].getBoundingClientRect().width);
+  const width = Math.floor(tile * 1.45);
+  await page.setViewportSize({ width, height: 800 });
+  await page.waitForSelector(`html[data-rendered-width="${width}"]`);
   const s = await page.evaluate(wallState);
   expect(s.fullTiles.length).toBeGreaterThanOrEqual(1);
   const left = s.tiles[0] + s.tile; // visible part of the leftmost tile
   expect(left).toBeGreaterThanOrEqual(0.25 * s.tile - 0.5);
-  expect(s.frameX).toBeCloseTo(180, 0);
+  expect(s.frameX).toBeCloseTo(width / 2, 0);
 });
 
 // Simulates the window moving on screen (or its left/top edge being dragged) by faking its screen position.
@@ -163,7 +166,7 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
   const at = () => page.evaluate(() => ({
     tile: document.querySelector('.grid > .tile')!.getBoundingClientRect().left,
     frame: document.querySelector('.frame')!.getBoundingClientRect(),
-    bullnose: document.querySelector('.bullnose-tile')!.getBoundingClientRect().left,
+    rail: document.querySelector('.rail-length')!.getBoundingClientRect().left,
     wallpaperX: parseFloat((document.querySelector('.wallpaper') as HTMLElement).style.backgroundPositionX),
     scrollY,
   }));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorFits, compensateTop, computeLayout, computeStrip, initialAnchor, rowCount, shiftAnchor, visibleColumns } from './layout';
+import { anchorFits, compensateTop, computeLayout, initialAnchor, rowCount, shiftAnchor, visibleColumns } from './layout';
 
 const base = { height: 2000, tileMax: 400, grout: 0, minPeek: 0.25 };
 
@@ -49,23 +49,6 @@ describe('computeLayout', () => {
         }
       }
     }
-  });
-});
-
-describe('computeStrip', () => {
-  it('covers the viewport from a start at or left of 0', () => {
-    for (const offset of [0, 0.37, 0.99]) {
-      const s = computeStrip({ width: 1440, origin: 720, tile: 400, grout: 4, widthRatio: 1.6, offset });
-      expect(s.start).toBeLessThanOrEqual(0);
-      expect(s.start).toBeGreaterThan(-s.pitch);
-      expect(s.start + s.count * s.pitch).toBeGreaterThanOrEqual(1440);
-    }
-  });
-
-  it('puts a joint at page centre + offset·pitch', () => {
-    const s = computeStrip({ width: 1000, origin: 500, tile: 400, grout: 0, widthRatio: 1.6, offset: 0.25 });
-    const joint = 500 + 0.25 * 640;
-    expect(((joint - s.start) % s.pitch + s.pitch) % s.pitch).toBeCloseTo(0);
   });
 });
 

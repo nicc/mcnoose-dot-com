@@ -69,15 +69,7 @@ body {
   display: block;
 }
 
-/* Bull-nose row: position: absolute tiles, joints placed by computeStrip */
-.bullnose {
-  position: relative;
-  height: var(--bn-h);
-  overflow: hidden;
-  background: var(--grout-color);
-}
-
-/* Where paper meets tile: contact shadow on the paper, joint line along the bull-nose top */
+/* Where paper meets rail: contact shadow on the paper, joint line along the rail's top */
 .seam-shadow {
   position: absolute;
   left: 0;
@@ -97,12 +89,40 @@ body {
   pointer-events: none;
 }
 
-.bullnose-tile {
+/* Painted dado rail: tile-wide lengths, each lit at its own place on the wall. Above the
+   tiles in stacking order so its cast shadow falls onto them. */
+.rail {
+  position: relative;
+  z-index: 1;
+}
+
+.rail-strip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.rail-length {
   position: absolute;
   top: 0;
-  bottom: 0;
-  width: var(--bn-w);
-  background: var(--tile-color);
+  display: block;
+}
+
+.rail-shadow {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to bottom, rgb(0 0 0 / var(--rail-shadow-a)), rgb(0 0 0 / 0));
+  pointer-events: none;
+}
+
+.rail-dust {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
 }
 
 /* Tile wall */
@@ -153,10 +173,6 @@ body {
   height: 100%;
   pointer-events: none;
   filter: blur(var(--reflect-blur));
-}
-
-.bullnose-reflect {
-  filter: blur(calc(var(--reflect-blur) * 0.25)); /* the curve's reflection is a sharp, narrow band */
 }
 
 /* Crazing and dried water marks, over the print (which sits under the glaze) */

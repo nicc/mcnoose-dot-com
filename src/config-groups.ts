@@ -7,7 +7,8 @@ export const GROUPS: [string, (key: string) => boolean][] = [
   ['Embroidery: oak frame', (k) => k.startsWith('EMBROIDERY_WOOD')],
   ['Embroidery: glass', (k) => k.startsWith('EMBROIDERY_GLASS')],
   ['Embroidery', (k) => k.startsWith('EMBROIDERY_')],
-  ['Bull-nose', (k) => k.startsWith('BULLNOSE_')],
+  ['Rail', (k) => k.startsWith('RAIL_')],
+  ['Paint', (k) => k.startsWith('PAINT_')],
   ['Tiles: reflections', (k) => ['TILE_REFLECTION', 'TILE_TILT_DEG', 'TILE_WAVINESS'].includes(k)],
   ['Tiles: ageing', (k) => ['TILE_CRAZING', 'TILE_SPOTS', 'TILE_SPOTS_LOW', 'TILE_LIMESCALE', 'TILE_GRIME_ROWS'].includes(k)],
   ['Tile print', (k) => k === 'PRINT_COLOR' || k.startsWith('TILE_LOGO') || k.startsWith('TILE_TITLE') || k.startsWith('HALFTONE_')],
@@ -18,7 +19,7 @@ export const GROUPS: [string, (key: string) => boolean][] = [
 // Display order (config.ts follows it too). Tests match more specific groups first, so the
 // order shown differs from the matching order above.
 export const ORDER = [
-  'Layout', 'Room & light', 'Wallpaper', 'Embroidery', 'Embroidery: oak frame', 'Embroidery: glass', 'Bull-nose',
+  'Layout', 'Room & light', 'Wallpaper', 'Embroidery', 'Embroidery: oak frame', 'Embroidery: glass', 'Rail', 'Paint',
   'Tiles: glaze & grout', 'Tiles: reflections', 'Tiles: ageing', 'Tile print', 'Skirting', 'Other',
 ];
 

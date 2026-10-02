@@ -2,7 +2,7 @@
 // and window moves just re-attach them. The glass's window reflection is a separate layer that
 // slides with parallax as the view scrolls (updateReflection), which is what makes it read as glass.
 import type { Config } from '../config';
-import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig } from '../room';
+import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig, viewAt } from '../room';
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
@@ -65,6 +65,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
       spotSize: (c.WATER_SPOT_SIZE * tile) / zoom, // same physical marks as every other surface
     },
     lights: lightsAt(room, room.embroidery),
+    view: viewAt(room, room.embroidery),
     tiltDeg: c.EMBROIDERY_TILT_DEG,
     dpr,
   };

@@ -53,23 +53,3 @@ export function edgeShadows(lights: Light[], s: EdgeStyle): string {
   }
   return parts.join(', ');
 }
-
-// A bull-nose's rounded top: the surface turns from facing you (normal frontal) to facing the
-// ceiling (normal up) over radius px. Diffuse shading only, relative to the flat face, eased out
-// to nothing where the curve meets the face; the gloss comes from the traced reflection, not
-// from here. The very top, tucked against the wall, gets a little corner shadow.
-export function roundedTop(lights: Light[], radiusPx: number): string {
-  const flat = lights.reduce((s, l) => s + l.weight * l.dir[2], 0);
-  const stops: string[] = ['rgba(0,0,0,0.16) 0px'];
-  const STEPS = 12;
-  for (let k = 1; k <= STEPS; k++) {
-    const phi = (Math.PI / 2) * (1 - k / STEPS); // 90° at the very top → 0° where it meets the face
-    const n = [0, -Math.sin(phi), Math.cos(phi)];
-    let diffuse = 0;
-    for (const { dir, weight } of lights) diffuse += weight * Math.max(0, n[1] * dir[1] + n[2] * dir[2]);
-    const b = (diffuse / flat - 1) * Math.sin(phi); // eases to 0 at the face
-    const a = Math.min(1, Math.abs(b) * (b > 0 ? 0.35 : 0.3));
-    stops.push(`rgba(${b > 0 ? '255,255,255' : '0,0,0'},${f(a)}) ${f(radiusPx * (1 - Math.sin(phi)))}px`);
-  }
-  return `linear-gradient(to bottom, ${stops.join(', ')})`;
-}

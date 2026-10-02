@@ -1,6 +1,6 @@
 # mcnoose-dot-com
 
-Portfolio site: a bathroom wall. Wallpaper header with framed cross-stitch → bull-nose row → white tile grid (one project per tile) → skirting board. Builds to a single `dist/index.html`.
+Portfolio site: a bathroom wall. Wallpaper header with framed cross-stitch → painted dado rail → white tile grid (one project per tile) → skirting board. Builds to a single `dist/index.html`.
 
 ## Token efficiency
 Use tokens efficiently at all times — in this file, in replies, in tool use. Read only what the task needs; don't restate diffs.
@@ -11,7 +11,8 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - `?fixtures` (dev only) swaps in `src/dev/fixtures/` test logos: solid, fine lines, tone, small text, colour, moiré, no-size SVG, PNGs.
 - Communicate in felt terms first (what it's like to look at), then mechanism. Show screenshots.
 - Name register conflicts early; don't split the difference.
-- One coherent scene: every surface (wallpaper, embroidery, frame, tiles, bull-nose, skirting, prints) is lit by the same physical room (`src/room.ts`, `ROOM_*` in cm): a window on the wall behind the viewer (key) and a ceiling light (fill), via `lightsAt(room, point)`. Reflections come from the same window by mirror geometry. Never light anything independently.
+- One coherent scene: every surface (wallpaper, embroidery, frame, tiles, rail, skirting, prints) is lit by the same physical room (`src/room.ts`, `ROOM_*` in cm): a window on the wall behind the viewer (key) and a ceiling light (fill). Reflections come from the same window by mirror geometry.
+- **Always light dynamically — a must, for everything.** Every surface computes its shading from `lightsAt(room, its own wall position)`, so it responds to the room controls and varies across the wall. Never bake a fixed light direction, never paint highlights or shadows by hand, never share one lighting across a wide surface (split it into lengths/tiles lit at their own positions).
 - Expect many rounds, especially halftone print, wallpaper, skirting, hover effects.
 
 ## Constants
@@ -21,7 +22,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - Units: sizes in tiles (1 = one tile edge) unless suffixed `_PX` / `_DEG`. Group keys by prefix (`EMBROIDERY_*`, `BULLNOSE_*`).
 
 ## Layout rules (tested in `src/layout.test.ts`, `tests/e2e/`)
-- Portal, not responsive: the wall is anchored once (centred) and stays put across resizes. Tiles, grout, bull-nose joints, embroidery and any wall texture never move; resizing reveals/hides wall. Anchor textures to `--wall-x`, never the viewport.
+- Portal, not responsive: the wall is anchored once (centred) and stays put across resizes. Tiles, grout, rail lengths, embroidery and any wall texture never move; resizing reveals/hides wall. Anchor textures to `--wall-x`, never the viewport.
 - Desktop (`hover: hover` + `pointer: fine`): also pinned to the physical screen via `screenX/Y` (polled per frame; no move event), smoothed by `PinFilter` (`src/pin.ts`: easing `PIN_SMOOTH_MS`, steady-drag lag cancelled). Tests wait on `html[data-pin=settled]`. Left-edge drags/window moves reveal wall; top-edge moves scroll to compensate, growing wallpaper upwards (`--wall-y`) past the top.
 - Projects crossfade (`REFLOW_FADE_MS`) when they change tiles; fades resume across re-renders via negative `animation-delay`.
 - Tests wait on `html[data-rendered-width]` after resizes (resize event lags the viewport change in Chromium).
@@ -46,7 +47,10 @@ Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings wit
 Shared by glass now and tile glaze later. `spots.ts`: dried water, `limescale` 0 (droplet rings) → 1 (crust + drips); seeded per surface and clustered like splashes, so never a repeating texture. Size from shared `WATER_SPOT_SIZE` (same physical droplets everywhere). `reflection.ts`: crisp daylit-window reflection placed by the scene light, on its own screen-blended layer, slid with parallax as the view scrolls (`parallaxOffset`; window moves under screen pinning don't count). Dried marks are stains, not wet: never light them.
 
 ## Tiles (`src/tiles/`)
-`surface.ts`: page px → wall cm (`WallMap`), per-tile glaze tone, cushion-edge CSS shadows per room light. `glaze.ts`: per-tile ageing canvas (crazing + dried marks, worse over the bottom `TILE_GRIME_ROWS`). `reflect.ts`: each tile traces the room (plain floor, window wall, walls, ceiling — no floor pattern) through its own tilt + waviness; 20×20 canvas, blurred, re-traced on scroll for on-screen tiles only, from the eye (`ROOM_EYE_FOLLOW`, shared with the glass). Per-tile seeds from wall position: nothing repeats. Tiles stand `TILE_THICK_CM` proud of the wallpaper; rays bent back into the wall hit the paper above the seam (sampled from the real pattern, `tiles/paper.ts`). Fresnel is Schlick relative to head-on. Bull-nose row reuses all of it plus `roundedTop` (diffuse only; gloss comes from the trace), a fine 12×32 reflection on its curve (`BULLNOSE_REFLECTION`), dust on its top, and the seam (contact shadow on the paper, joint line).
+`surface.ts`: page px → wall cm (`WallMap`), per-tile glaze tone, cushion-edge CSS shadows per room light. `glaze.ts`: per-tile ageing canvas (crazing + dried marks, worse over the bottom `TILE_GRIME_ROWS`). `reflect.ts`: each tile traces the room (plain floor, window wall, walls, ceiling — no floor pattern) through its own tilt + waviness; 20×20 canvas, blurred, re-traced on scroll for on-screen tiles only, from the eye (`ROOM_EYE_FOLLOW`, shared with the glass). Per-tile seeds from wall position: nothing repeats. Tiles stand `TILE_THICK_CM` proud of the wallpaper; rays bent back into the wall hit the paper above the seam (sampled from the real pattern, `tiles/paper.ts`). Fresnel is Schlick relative to head-on. 
+
+## Rail (`src/rail/`)
+Painted dado rail capping the tiles. `profile.ts`: routed cross-section in cm (round top back to the wall, quirk + bead, cove, flat face `RAIL_FLAT_CM`, rounded bottom). `index.ts`: tile-wide lengths, each lit by `lightsAt` + `viewAt` at its own wall position, grain/paint/wear in wall coordinates so lengths join seamlessly; cached per length. Painted finish shared in `wood/paint.ts` (`PAINT_*`, for the skirting too). Highlights use the real eye direction (`viewAt`), so flat faces below eye level stay matte. Seam with the paper (contact shadow, joint line), dust (wall-seeded, never repeats), cast shadow onto the top tile row.
 
 ## Halftone
 Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.

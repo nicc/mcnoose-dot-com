@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blendedLight, lightsAt, parallaxFactor, reflectedWindow, type Room } from './room';
+import { blendedLight, lightsAt, parallaxFactor, reflectedWindow, viewAt, type Room } from './room';
 
 const room: Room = {
   tileCm: 15, widthCm: 220, depthCm: 260, ceilingCm: 240, eyeCm: 168, viewCm: 150,
@@ -46,5 +46,14 @@ describe('reflection', () => {
 
   it("moves about two-thirds of the eye's movement", () => {
     expect(parallaxFactor(room)).toBeCloseTo(260 / 410);
+  });
+});
+
+describe('viewAt', () => {
+  it('points up towards the eye from below it, mostly out of the wall', () => {
+    const [x, y, z] = viewAt(room, { x: 130, y: 120 });
+    expect(x).toBeCloseTo(0);
+    expect(y).toBeLessThan(-0.2); // screen up
+    expect(z).toBeGreaterThan(0.9);
   });
 });

@@ -21,11 +21,14 @@ export interface BoardLight {
 const SHEEN_TINT = [1, 0.95, 0.86]; // warm highlight from an amber finish
 const ALONG_GRAIN = 0.25; // how much along-grain tilt the highlight sees
 
-export function shadeBoard(maps: GrainMaps, len: number, wid: number, f: Finish, lights: BoardLight[]): Uint8ClampedArray {
+// view: unit vector towards the viewer's eye in board coordinates. Highlights land where the
+// geometry mirrors a light towards the eye, so a flat face below eye level stays matte while
+// upward-curving edges catch the window.
+export function shadeBoard(maps: GrainMaps, len: number, wid: number, f: Finish, lights: BoardLight[], view: [number, number, number] = [0, 0, 1]): Uint8ClampedArray {
   const flat = lights.reduce((s, l) => s + l.weight * l.dir[2], 0);
   const halves = lights.map(({ dir: [lx, ly, lz], weight }) => {
-    const hl = Math.hypot(lx, ly, lz + 1);
-    return { h: [lx / hl, ly / hl, (lz + 1) / hl], weight }; // half vector, viewer straight on
+    const h = [lx + view[0], ly + view[1], lz + view[2]], hl = Math.hypot(h[0], h[1], h[2]);
+    return { h: [h[0] / hl, h[1] / hl, h[2] / hl], weight };
   });
   const exponent = 6 + 120 * f.gloss * f.gloss;
   const height = (u: number, v: number) => {

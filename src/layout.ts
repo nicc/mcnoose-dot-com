@@ -92,32 +92,6 @@ export function anchorFits(a: Anchor, width: number, height: number, minPeek: nu
   return a.originX + k * a.pitch + a.tile <= width - margin;
 }
 
-export interface StripInput {
-  width: number;
-  origin: number; // fixed reference x for the joint pattern
-  tile: number;
-  grout: number;
-  widthRatio: number;
-  offset: number; // 0–1 of a bull-nose pitch
-}
-
-export interface Strip {
-  width: number; // one bull-nose tile
-  pitch: number;
-  start: number; // x of the first tile's left edge (≤ 0)
-  count: number;
-}
-
-// Bull-nose joints sit at a fixed origin plus an arbitrary offset, so the row reads
-// as a patch of wall rather than a centred composition.
-export function computeStrip({ width, origin, tile, grout, widthRatio, offset }: StripInput): Strip {
-  const w = tile * widthRatio;
-  const pitch = w + grout;
-  const anchor = origin + offset * pitch;
-  const start = (((anchor % pitch) + pitch) % pitch) - pitch;
-  return { width: w, pitch, start, count: Math.ceil((width - start) / pitch) };
-}
-
 export function rowCount(projects: number, columns: number, trailing: number): number {
   return Math.ceil(projects / columns) + trailing;
 }

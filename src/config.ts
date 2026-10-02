@@ -84,13 +84,25 @@ export const CONFIG = {
   EMBROIDERY_GLASS_REFLECTION: 0.24, // crisp window reflection
   EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
-  // Bull-nose row: capping tiles with a rounded top
-  BULLNOSE_WIDTH: 1.25,
-  BULLNOSE_HEIGHT: 0.25,
-  BULLNOSE_ROUND_CM: 1.2, // radius of the rounded top
-  BULLNOSE_REFLECTION: 0.35, // reflection on the rounded top: the curve concentrates the room, so glossier than the field
-  BULLNOSE_DUST: 0.4, // dust settled along the top edge
-  BULLNOSE_OFFSET: 0.3, // 0–1 of a bull-nose tile: where joints fall relative to page centre
+  // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
+  RAIL_COLOR: '#ece6d8',
+  RAIL_DEPTH_CM: 2.2, // how far it stands off the wall
+  RAIL_ROUND_CM: 0.8, // rounded top, falling back to the wall
+  RAIL_BEAD_CM: 0.6, // routed bead below the round
+  RAIL_COVE_CM: 0.7, // cove stepping back to the face
+  RAIL_FLAT_CM: 3, // flat face: extends the rail's height
+  RAIL_WEAR: 0.3, // chipped paint on the raised edges
+  RAIL_GRIME: 0.3, // dirt in the routing
+  RAIL_DUST: 0.4, // dust settled along the top
+  RAIL_SHADOW: 0.6, // shadow it casts onto the top row of tiles
+
+  // Paint: shared by every painted surface (rail now, skirting later)
+  PAINT_GRAIN: 0.15, // wood grain telegraphing through the paint
+  PAINT_BRUSH: 0.35, // brush-stroke ridges
+  PAINT_BUILDUP: 0.5, // layers of old paint softening the routing
+  PAINT_YELLOWING: 0.3, // aged oil paint, most in the recesses
+  PAINT_SHEEN: 0.12, // satin highlight: catches on the curved top and bead, not the flat face
+  PAINT_GLOSS: 0.6, // highlight tightness
 
   // Tiles: glaze and grout
   TILE_COLOR: '#f1efe9', // warm white glaze, a little below pure white so rims can catch the light

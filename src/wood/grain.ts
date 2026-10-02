@@ -22,7 +22,8 @@ export interface GrainMaps {
 }
 
 // len: px along the grain, wid: px across. periodLen > 0 makes the pattern repeat along the length.
-export function grainMaps(len: number, wid: number, s: GrainStyle, periodLen = 0): GrainMaps {
+// uOffset: where this piece starts along a longer board, so adjacent pieces join seamlessly.
+export function grainMaps(len: number, wid: number, s: GrainStyle, periodLen = 0, uOffset = 0): GrainMaps {
   const n = len * wid;
   const albedo = new Float32Array(n * 3), gloss = new Float32Array(n), relief = new Float32Array(n);
   const ring = Math.max(0.5, s.ringPx);
@@ -34,18 +35,19 @@ export function grainMaps(len: number, wid: number, s: GrainStyle, periodLen = 0
   const poreCols = Math.max(1, Math.round(len / Math.max(2, ring * 1.6)));
   const poreLen = periodLen > 0 ? len / poreCols : Math.max(2, ring * 1.6);
   for (let u = 0; u < len; u++) {
-    const depth = ring * (3 + 9 * s.figure * (0.5 + fbm(u * archScale, 0.5, s.seed, 2, archCells)));
-    const drift = 1 + s.drift * 0.35 * fbm(u * archScale, 3.7, s.seed + 7, 2, archCells);
+    const x = u + uOffset; // position along the whole board
+    const depth = ring * (3 + 9 * s.figure * (0.5 + fbm(x * archScale, 0.5, s.seed, 2, archCells)));
+    const drift = 1 + s.drift * 0.35 * fbm(x * archScale, 3.7, s.seed + 7, 2, archCells);
     for (let v = 0; v < wid; v++) {
       const i = v * len + u;
-      const warp = fbm(u * archScale * 3, v / (ring * 6), s.seed + 13, 3, archCells * 3) * ring * 1.5;
+      const warp = fbm(x * archScale * 3, v / (ring * 6), s.seed + 13, 3, archCells * 3) * ring * 1.5;
       const r = Math.hypot(v - pith, depth) + warp;
       const phase = (((r / ring) % 1) + 1) % 1;
       // Earlywood eases into latewood, then breaks sharply to the next year's earlywood.
       const late = phase < 0.55 ? 0 : phase < 0.9 ? (phase - 0.55) / 0.35 : (1 - phase) / 0.1;
       const lateBand = late * late;
       // Oak pores: short dark flecks along the grain, concentrated in earlywood.
-      const pu = Math.floor(u / poreLen) % (periodLen > 0 ? poreCols : Infinity), pv = Math.floor(v / Math.max(1, ring * 0.25));
+      const pu = Math.floor(x / poreLen) % (periodLen > 0 ? poreCols : Infinity), pv = Math.floor(v / Math.max(1, ring * 0.25));
       const pore = s.pores * (1 - lateBand) * (hash2(pu, pv, s.seed + 29) > 0.82 ? 0.5 + 0.5 * hash2(pu, pv, s.seed + 31) : 0);
       const tone = drift * (1 - 0.45 * pore);
       for (let c = 0; c < 3; c++) albedo[i * 3 + c] = (s.early[c] + (s.late[c] - s.early[c]) * lateBand) * tone;

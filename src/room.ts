@@ -55,6 +55,12 @@ export function lightsAt(r: Room, p: { x: number; y: number }): Light[] {
   ];
 }
 
+// Unit vector from a point on the wall towards the viewer's eye (screen coords). Highlights depend
+// on where you're standing, not just where the light is.
+export function viewAt(r: Room, p: { x: number; y: number }): Vec3 {
+  return unitScreen([r.embroidery.x - p.x, r.eyeCm - p.y, r.viewCm]);
+}
+
 // One direction standing in for both lights, for small details (stitch shadows, sheen offsets).
 export function blendedLight(lights: Light[]): Vec3 {
   const v = lights.reduce<Vec3>((s, l) => [s[0] + l.dir[0] * l.weight, s[1] + l.dir[1] * l.weight, s[2] + l.dir[2] * l.weight], [0, 0, 0]);
