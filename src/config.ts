@@ -26,17 +26,17 @@ export const CONFIG = {
   ROOM_WINDOW_BOTTOM_CM: 80, // sill
   ROOM_WINDOW_WIDTH_CM: 70,
   ROOM_WINDOW_HEIGHT_CM: 110,
-  ROOM_SUN: 1, // window light strength
-  ROOM_CLOUD_DEPTH: 0.15, // how far passing clouds dim the window light (0 = clear sky)
-  ROOM_CLOUD_RATE_HZ: 0.225, // how often the cloud cover changes
-  ROOM_CLOUD_SMOOTH: 0.85, // 0 = sudden changes, 1 = slow glides between them
-  ROOM_CLOUD_BALANCE: 0.5, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
+  ROOM_SUN: 1.2, // window light strength
+  ROOM_CLOUD_DEPTH: 0.7, // how far passing clouds dim the window light (0 = clear sky)
+  ROOM_CLOUD_RATE_HZ: 0.4, // how often the cloud cover changes
+  ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
+  ROOM_CLOUD_BALANCE: 0.97, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
   ROOM_BOUNCE: 0.25, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
-  ROOM_WALL_COLOR: '#beae90', // walls reflected in the tiles
+  ROOM_WALL_COLOR: '#dbc9a8', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
-  ROOM_FLOOR_COLOR: '#9d6f48',
+  ROOM_FLOOR_COLOR: '#9c6f48',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
@@ -92,8 +92,8 @@ export const CONFIG = {
 
   // Embroidery: glass over the cloth
   EMBROIDERY_GLASS_TINT: 0.45, // slight green colour cast
-  EMBROIDERY_GLASS_REFLECTION: 0.24, // crisp window reflection
-  EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
+  EMBROIDERY_GLASS_REFLECTION: 0.33, // crisp window reflection
+  EMBROIDERY_GLASS_SPOTS: 0.21, // dried water spots
 
   // Embroidery: back (the about note): click the frame to turn it over
   ABOUT_FLIP_MS: 900, // how long turning it over takes
@@ -130,8 +130,8 @@ export const CONFIG = {
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
 
   // Tiles: the room reflected in the glaze
-  TILE_REFLECTION: 0.09, // how strongly the room shows in the glaze
-  TILE_TILT_DEG: 1.5, // tiles sit at slightly different angles, breaking reflections at the grout
+  TILE_REFLECTION: 0.13, // how strongly the room shows in the glaze
+  TILE_TILT_DEG: 2.65, // tiles sit at slightly different angles, breaking reflections at the grout
   TILE_WAVINESS: 0.89, // glaze undulation: reflections wobble softly within a tile
 
   // Tiles: ageing (crazing, dried water marks)
@@ -154,7 +154,7 @@ export const CONFIG = {
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
-  PRINT_HOVER_REVEAL: true, // hover shows the original logo
+  PRINT_HOVER_REVEAL: false, // hover shows the original logo
   PRINT_HOVER_FADE_MS: 350, // how fast it opens out from the logo's centre
   TILE_LOGO_SIZE: 0.32,
   TILE_TITLE_SIZE: 0.075,
