@@ -156,7 +156,7 @@ export const CONFIG = {
   SKIRTING_COLOR: '#bfb093', // same paint as the rail
   SKIRTING_DEPTH_CM: 2, // the face's distance off the wall
   SKIRTING_TORUS_CM: 1.95, // half-round moulding along the top
-  SKIRTING_FLAT_CM: 15, // face height down to the floor
+  SKIRTING_FLAT_CM: 13.2, // face height down to the floor
   SKIRTING_WEAR: 0.35, // chipped paint on the torus
   SKIRTING_GRIME: 0.68, // dirt in the groove
   SKIRTING_SCUFFS: 0.58, // shoe and vacuum marks low on the face
