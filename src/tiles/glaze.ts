@@ -2,6 +2,7 @@
 // and dried water marks that build towards limescale on the lowest rows. Seeded by the tile's wall
 // position, so no two tiles match.
 import { drawSpots, spotLayout } from '../surface/spots';
+import { drawGrout, groutMarks, type GroutAge, type Joint } from './grout';
 import { hash2 } from '../wood/noise';
 
 export interface Ageing {
@@ -45,21 +46,50 @@ export function drawCrazing(ctx: CanvasRenderingContext2D, w: number, h: number,
   ctx.restore();
 }
 
-// A tile's ageing layer, w×h CSS px at the given pixel density.
-export function drawAgeing(canvas: HTMLCanvasElement, w: number, h: number, dpr: number, a: Ageing, seed: number) {
-  canvas.width = Math.max(1, Math.round(w * dpr));
-  canvas.height = Math.max(1, Math.round(h * dpr));
+export interface GroutAround {
+  g: number; // joint width, px
+  lastRow: boolean; // also owns the joint below
+  age: GroutAge;
+}
+
+// The joints a tile owns: the one to its left and the one above (and below, on the bottom row),
+// in the extended canvas's coordinates where the tile itself starts at (g, g).
+export function ownedJoints(w: number, h: number, g: number, lastRow: boolean): Joint[] {
+  const joints: Joint[] = [
+    { x: 0, y: 0, w: g, h: h + g + (lastRow ? g : 0), horizontal: false },
+    { x: 0, y: 0, w: w + g, h: g, horizontal: true },
+  ];
+  if (lastRow) joints.push({ x: 0, y: g + h, w: w + g, h: g, horizontal: true });
+  return joints;
+}
+
+// A tile's ageing layer, w×h CSS px at the given pixel density. With `grout`, the canvas extends
+// g px left and up (and down on the bottom row) to age the joints the tile owns.
+export function drawAgeing(canvas: HTMLCanvasElement, w: number, h: number, dpr: number, a: Ageing, seed: number, grout?: GroutAround) {
+  const g = grout?.g ?? 0;
+  canvas.width = Math.max(1, Math.round((w + g) * dpr));
+  canvas.height = Math.max(1, Math.round((h + g + (grout?.lastRow ? g : 0)) * dpr));
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
+  if (grout) {
+    const joints = ownedJoints(w, h, g, grout.lastRow);
+    drawGrout(ctx, joints, groutMarks(joints, g, grout.age, seed + 101));
+  }
+  ctx.save();
+  ctx.translate(g, g);
+  ctx.beginPath();
+  ctx.rect(0, 0, w, h);
+  ctx.clip();
   drawCrazing(ctx, w, h, a.crazing, seed);
   const spots = { amount: a.spots, size: a.spotSize, limescale: a.limescale, seed: seed + 11 };
   drawSpots(ctx, spotLayout(w, h, spots), spots);
   if (a.limescale > 0.3) {
     // Drips stop at the grout below: a faint crust along the tile's bottom edge.
-    const g = ctx.createLinearGradient(0, h, 0, h - h * 0.08);
-    g.addColorStop(0, `rgba(245,247,244,${(0.5 * (a.limescale - 0.3)).toFixed(3)})`);
-    g.addColorStop(1, 'rgba(245,247,244,0)');
-    ctx.fillStyle = g;
+    const crust = ctx.createLinearGradient(0, h, 0, h - h * 0.08);
+    crust.addColorStop(0, `rgba(245,247,244,${(0.5 * (a.limescale - 0.3)).toFixed(3)})`);
+    crust.addColorStop(1, 'rgba(245,247,244,0)');
+    ctx.fillStyle = crust;
     ctx.fillRect(0, h * 0.92, w, h * 0.08);
   }
+  ctx.restore();
 }

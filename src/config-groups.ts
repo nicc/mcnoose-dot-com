@@ -11,8 +11,9 @@ export const GROUPS: [string, (key: string) => boolean][] = [
   ['Paint', (k) => k.startsWith('PAINT_')],
   ['Tiles: reflections', (k) => ['TILE_REFLECTION', 'TILE_TILT_DEG', 'TILE_WAVINESS'].includes(k)],
   ['Tiles: ageing', (k) => ['TILE_CRAZING', 'TILE_SPOTS', 'TILE_SPOTS_LOW', 'TILE_LIMESCALE', 'TILE_GRIME_ROWS'].includes(k)],
+  ['Grout', (k) => k.startsWith('GROUT_')],
   ['Tile print', (k) => k === 'PRINT_COLOR' || k.startsWith('TILE_LOGO') || k.startsWith('TILE_TITLE') || k.startsWith('HALFTONE_')],
-  ['Tiles: glaze & grout', (k) => k.startsWith('TILE_') || k.startsWith('GROUT_')],
+  ['Tiles: glaze', (k) => k.startsWith('TILE_')],
   ['Skirting', (k) => k.startsWith('SKIRTING_')],
 ];
 
@@ -20,7 +21,7 @@ export const GROUPS: [string, (key: string) => boolean][] = [
 // order shown differs from the matching order above.
 export const ORDER = [
   'Layout', 'Room & light', 'Wallpaper', 'Embroidery', 'Embroidery: oak frame', 'Embroidery: glass', 'Rail', 'Paint',
-  'Tiles: glaze & grout', 'Tiles: reflections', 'Tiles: ageing', 'Tile print', 'Skirting', 'Other',
+  'Tiles: glaze', 'Tiles: reflections', 'Tiles: ageing', 'Grout', 'Tile print', 'Skirting', 'Other',
 ];
 
 export function groupOf(key: string): string {

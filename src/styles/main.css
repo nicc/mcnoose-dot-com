@@ -175,12 +175,9 @@ body {
   filter: blur(var(--reflect-blur));
 }
 
-/* Crazing and dried water marks, over the print (which sits under the glaze) */
+/* Crazing, dried water marks and the tile's own grout joints, over the print (under the glaze) */
 .tile-age {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute; /* placed by ageLayer: extends over the tile's own joints */
   pointer-events: none;
 }
 

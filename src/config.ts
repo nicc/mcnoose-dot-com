@@ -93,8 +93,8 @@ export const CONFIG = {
   RAIL_FLAT_CM: 1.1, // flat face: extends the rail's height
   RAIL_WEAR: 0.67, // chipped paint on the raised edges
   RAIL_GRIME: 0.37, // dirt in the routing
-  RAIL_DUST: 0.59, // dust settled along the top
-  RAIL_DUST_SHADE: 0.45, // dust grey: 0 dark → 1 light
+  RAIL_DUST: 0.46, // dust settled along the top
+  RAIL_DUST_SHADE: 0.64, // dust grey: 0 dark → 1 light
   RAIL_SHADOW: 0.72, // shadow it casts onto the top row of tiles
 
   // Paint: shared by every painted surface (rail now, skirting later)
@@ -105,14 +105,11 @@ export const CONFIG = {
   PAINT_SHEEN: 0.17, // satin highlight: catches on the curved top and bead, not the flat face
   PAINT_GLOSS: 0.52, // highlight tightness
 
-  // Tiles: glaze and grout
+  // Tiles: glaze
   TILE_COLOR: '#f1efe9', // warm white glaze, a little below pure white so rims can catch the light
-  GROUT_COLOR: '#bcbcbb',
   TILE_TONE: 0.012, // glaze tone variation between tiles
   TILE_EDGE_CM: 0.35, // cushion edge radius
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
-  GROUT_TEXTURE: 0.78, // sand grain in the grout
-  GROUT_RECESS: 0.93, // shadow tiles cast onto the recessed grout
 
   // Tiles: the room reflected in the glaze
   TILE_REFLECTION: 0.07, // how strongly the room shows in the glaze
@@ -125,6 +122,16 @@ export const CONFIG = {
   TILE_SPOTS_LOW: 0.6, // … and on the bottom row
   TILE_LIMESCALE: 0.7, // limescale reached on the bottom row
   TILE_GRIME_ROWS: 5, // how many rows up from the skirting the marks build
+
+  // Grout: colour, recess and age
+  GROUT_COLOR: '#bcbcbb',
+  GROUT_RECESS: 0.93, // shadow tiles cast onto the recessed grout
+  GROUT_AGE: 0.6, // uneven yellowing/greying per joint
+  GROUT_GRIME: 0.65, // dirt: more in horizontal joints and low down
+  GROUT_MOULD: 0.5, // dark spots at crossings, low down
+  GROUT_LIMESCALE: 0.55, // whitish crust along low horizontal joints
+  GROUT_EROSION: 0.6, // worn edges, crumbled crossings, soft pitting
+  GROUT_CRACKS: 0.45, // the odd hairline crack
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue

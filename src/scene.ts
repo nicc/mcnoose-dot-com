@@ -5,8 +5,7 @@ import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
 import { lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, type Room, type Vec3 } from './room';
-import { drawAgeing, grimeLevel, type Ageing } from './tiles/glaze';
-import { groutTexture } from './tiles/grout';
+import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/glaze';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { fbm } from './wood/noise';
@@ -285,14 +284,17 @@ const roomLook = (c: Config): RoomLook => ({
 // Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
 const ageing = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
 
-function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number): HTMLCanvasElement {
+function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, grout?: GroutAround): HTMLCanvasElement {
   const dpr = Math.min(1.5, devicePixelRatio || 1); // soft detail: no need for full density
-  const key = JSON.stringify([w, h, dpr, age]);
+  const key = JSON.stringify([w, h, dpr, age, grout]);
   let hit = ageing.get(id);
   if (!hit || hit.key !== key) {
     const canvas = el('canvas', 'tile-age');
     canvas.setAttribute('aria-hidden', 'true');
-    drawAgeing(canvas, w, h, dpr, age, seed);
+    drawAgeing(canvas, w, h, dpr, age, seed, grout);
+    // Extends over the joints the tile owns: left and above (and below on the bottom row).
+    const g = grout?.g ?? 0;
+    Object.assign(canvas.style, { left: `${-g}px`, top: `${-g}px`, width: `${w + g}px`, height: `${h + g + (grout?.lastRow ? g : 0)}px` });
     ageing.set(id, (hit = { key, canvas }));
   }
   return hit.canvas;
@@ -307,8 +309,15 @@ const ageAt = (c: Config, tile: number, grime: number): Ageing => ({
 });
 
 function tileAgeing(c: Config, a: Anchor, rows: number) {
-  return (row: number, col: number) =>
-    ageLayer(`${col}:${row}`, a.tile, a.tile, ageAt(c, a.tile, grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS)), tileSeed(col, row));
+  return (row: number, col: number) => {
+    const level = grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS);
+    const grout: GroutAround = {
+      g: c.GROUT_PX,
+      lastRow: row === rows - 1,
+      age: { age: c.GROUT_AGE, grime: c.GROUT_GRIME, mould: c.GROUT_MOULD, limescale: c.GROUT_LIMESCALE, erosion: c.GROUT_EROSION, cracks: c.GROUT_CRACKS, level },
+    };
+    return ageLayer(`${col}:${row}`, a.tile, a.tile, ageAt(c, a.tile, level), tileSeed(col, row), grout);
+  };
 }
 
 function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface, firstTileTop: number): HTMLElement {
@@ -345,10 +354,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
   }
   ghosts = ghosts.filter((gh) => fading(gh.canvas, gh.at, now, c.REFLOW_FADE_MS));
   for (const gh of ghosts) tiles.get(gh.slot)?.append(gh.canvas);
-  const wall = el('main', 'wall', [g]);
-  wall.style.backgroundImage = `url("${groutTexture(c.GROUT_TEXTURE, Math.min(2, devicePixelRatio || 1))}")`;
-  wall.style.backgroundPosition = `${a.originX}px 0`; // anchored to the wall, not the window
-  return wall;
+  return el('main', 'wall', [g]);
 }
 
 export interface Frame {
