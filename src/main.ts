@@ -13,7 +13,7 @@ const probe = document.getElementById('svh-probe')!;
 const projects =
   import.meta.env.DEV && new URLSearchParams(location.search).has('fixtures')
     ? (await import('./dev/fixtures')).fixtureProjects()
-    : loadProjects();
+    : await loadProjects(); // the wall's height depends on how many, so wait before drawing it
 const state: Config = { ...CONFIG };
 
 // Small viewport height (svh) stays put while mobile URL bars show/hide, so tiles don't jitter.

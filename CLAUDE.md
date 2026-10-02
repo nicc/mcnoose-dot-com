@@ -1,6 +1,6 @@
 # mcnoose-dot-com
 
-Portfolio site: a bathroom wall. Wallpaper header with framed cross-stitch → painted dado rail → white tile grid (one project per tile) → skirting board. Builds to a single `dist/index.html`.
+Portfolio site: a bathroom wall. Wallpaper header with framed cross-stitch → painted dado rail → white tile grid (one project per tile) → skirting board. Builds to `dist/`: `index.html` (everything else inlined) beside `projects.json` + `logos/`.
 
 ## Token efficiency
 Use tokens efficiently at all times — in this file, in replies, in tool use. Read only what the task needs; don't restate diffs.
@@ -32,7 +32,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - Halftone prints are cached per project; resizes move canvases, never re-print.
 
 ## Projects
-`src/projects.json` (ordered `{title, url, logo}`) + logo files in `src/logos/` (SVG/PNG, any colour; darker + more opaque = more ink). Test fails on missing fields/logos.
+`public/projects.json` (ordered `{title, url, logo}`) + logo files in `public/logos/` (SVG/PNG, any colour; darker + more opaque = more ink). Copied beside `index.html` and fetched at load (`src/projects.ts`), so adding a project on the server needs no rebuild; the wall waits for it (its height depends on the count). Logos must be same-origin (the halftone reads their pixels). Bad entries are skipped with a console warning; `src/projects.test.ts` checks the repo's file and logos. e2e waits on `.skirting` after `goto`.
 
 ## Wallpaper (`src/wallpaper/`)
 Cooper Hewitt scan 1939-45-7 (CC0, ca. 1875). `npm run prepare:wallpaper` (scripts/prepare-wallpaper.ts, tools/wallpaper-prep.ts) → seamless half-drop `scan.webp` + per-pixel ink map `inks.png` + `palette.json`. `render.ts` (pure): recolour per ink (`WALLPAPER_<INK>` colours, shift-based so print grain survives), procedural pebble emboss + ink relief, lit by `shade()`. Production: baked at build by `tools/wallpaper-bake.ts` (`virtual:wallpaper`, config.ts values, no runtime compute). Dev: rendered live (`index.ts`) for the panel. Background anchored to wall origin.

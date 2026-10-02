@@ -94,7 +94,7 @@ export const CONFIG = {
   RAIL_ROUND_CM: 1.35, // rounded top, falling back to the wall
   RAIL_BEAD_CM: 0.6, // routed bead below the round
   RAIL_COVE_CM: 0.3, // cove stepping back to the face
-  RAIL_FLAT_CM: 1.3, // flat face: extends the rail's height
+  RAIL_FLAT_CM: 2.2, // flat face: extends the rail's height
   RAIL_WEAR: 0.28, // chipped paint on the raised edges
   RAIL_GRIME: 0.36, // dirt in the routing
   RAIL_DUST: 0.45, // dust settled along the top

@@ -1,13 +1,12 @@
 import { readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import raw from '../public/projects.json';
 import fixtures from './dev/fixtures/fixtures.json';
-import raw from './projects.json';
-import { validate } from './projects';
+import { parseProjects, validate } from './projects';
 
 describe('projects.json', () => {
   it('is valid and every logo exists', () => {
-    const logos = readdirSync(new URL('./logos', import.meta.url));
-    expect(validate(raw, logos)).toEqual([]);
+    expect(validate(raw, readdirSync(new URL('../public/logos', import.meta.url)))).toEqual([]);
   });
 
   it('dev fixtures are valid too', () => {
@@ -15,9 +14,14 @@ describe('projects.json', () => {
   });
 
   it('reports missing fields and logos', () => {
-    expect(validate([{ title: 'x', url: '', logo: 'nope.svg' }], [])).toEqual([
-      '#0: missing url',
-      '#0: no src/logos/nope.svg',
-    ]);
+    expect(validate([{ title: 'x', url: '', logo: 'nope.svg' }], [])).toEqual(['#0: missing url', '#0: no logos/nope.svg']);
+  });
+
+  it('keeps good entries, skips bad ones, and points logos next to the page', () => {
+    const quiet = console.warn;
+    console.warn = () => {};
+    const parsed = parseProjects([{ title: 'A', url: 'https://a', logo: 'a.svg' }, { title: 'B' }]);
+    console.warn = quiet;
+    expect(parsed).toEqual([{ title: 'A', url: 'https://a', logo: 'a.svg', logoUrl: 'logos/a.svg' }]);
   });
 });

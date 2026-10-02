@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+const projects: { title: string }[] = JSON.parse(readFileSync(new URL('../../public/projects.json', import.meta.url), 'utf8'));
 
 const SIZES = [
   { width: 390, height: 844 },
@@ -11,6 +14,7 @@ for (const size of SIZES) {
   test(`layout holds at ${size.width}×${size.height}`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto('/');
+    await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
     const m = await page.evaluate(() => {
       const vw = document.documentElement.clientWidth;
       const row = [...document.querySelectorAll('.grid > .tile')].slice(0, Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total')));
@@ -49,11 +53,13 @@ for (const size of SIZES) {
 
 test('projects render as links in order', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.tile-project .tile-title').first()).toHaveText('Project One');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
+  await expect(page.locator('.tile-project .tile-title').first()).toHaveText(projects[0].title);
 });
 
 test('every project tile prints halftone ink, with the title kept for screen readers', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.waitForSelector('html[data-printed="true"]');
   const tiles = await page.$$eval('.tile-project', (els) =>
     els.map((a) => {
@@ -98,6 +104,7 @@ const onLattice = (xs: number[], ref: number, pitch: number) =>
 test('the wall stays where it first rendered while the window resizes', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.waitForSelector('html[data-printed="true"]');
   const first = await page.evaluate(wallState);
   await page.evaluate(() => document.querySelectorAll('canvas.tile-print').forEach((c) => ((c as HTMLElement).dataset.mark = '1')));
@@ -121,6 +128,7 @@ test('the wall stays where it first rendered while the window resizes', async ({
 test('projects fill exactly the fully visible tiles of the first row', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.setViewportSize({ width: 1000, height: 900 });
   await page.waitForSelector('html[data-rendered-width="1000"]');
   const { full, projectInFull, partialsBlank } = await page.evaluate(() => {
@@ -142,6 +150,7 @@ test('projects fill exactly the fully visible tiles of the first row', async ({ 
 test('re-anchors, centred, only when a full tile with peeks no longer fits', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   // Narrower than one tile plus a quarter-tile peek each side (whatever TILE_MAX_PX is set to).
   const tile = await page.evaluate(() => document.querySelectorAll('.grid > .tile')[1].getBoundingClientRect().width);
   const width = Math.floor(tile * 1.45);
@@ -172,6 +181,7 @@ const moveWindowBy = (page: import('@playwright/test').Page, dx: number, dy: num
 test('pinned to the screen: left/top edge moves reveal wall instead of moving it', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   test.skip(!(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)), 'desktop only');
   await page.waitForSelector('html[data-printed="true"]');
   const at = () => page.evaluate(() => ({
@@ -207,6 +217,7 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
 test('projects crossfade when they move tiles', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.waitForSelector('html[data-printed="true"]');
   await page.evaluate(() => {
     const seen = ((window as unknown as { seen: Set<string> }).seen = new Set());
@@ -224,6 +235,7 @@ test('projects crossfade when they move tiles', async ({ page }) => {
 test('no tile is left showing two prints once a re-flow fade ends', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.waitForSelector('html[data-printed="true"]');
   // Two column changes within one fade, so a print arrives where another's ghost is still fading.
   for (const width of [1300, 1000, 760]) {
@@ -241,12 +253,14 @@ test('no tile is left showing two prints once a re-flow fade ends', async ({ pag
 
 test('wallpaper is the build-time baked tile, applied with no runtime render', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   const bg = await page.$eval('.wallpaper', (el) => getComputedStyle(el).backgroundImage);
   expect(bg).toMatch(/^url\("data:image\/webp;base64,/);
 });
 
 test('the embroidery is drawn and the site title is an accessible h1', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Snickers McNoose');
   const inked = await page.$eval('canvas.embroidery', (c) => {
     const px = (c as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, (c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height).data;
@@ -259,6 +273,7 @@ test('the embroidery is drawn and the site title is an accessible h1', async ({ 
 
 test('the glass reflection slides as the page scrolls and returns at rest', async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.waitForSelector('canvas.reflection');
   const y = () => page.$eval('canvas.reflection', (c) => new DOMMatrix(getComputedStyle(c).transform).m42);
   expect(await y()).toBeCloseTo(0, 1);
