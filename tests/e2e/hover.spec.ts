@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { CONFIG } from '../../src/config';
 
 test('project links open in a new tab', async ({ page }) => {
   await page.goto('/');
@@ -8,7 +9,7 @@ test('project links open in a new tab', async ({ page }) => {
   await expect(link).toHaveAttribute('rel', /noopener/);
 });
 
-test('hovering a project tile opens the original logo out from the centre', async ({ page, isMobile }) => {
+test('hovering a project tile opens the original logo out from its centre (when PRINT_HOVER_REVEAL is on)', async ({ page, isMobile }) => {
   test.skip(isMobile, 'no hover on touch');
   await page.goto('/');
   await page.waitForSelector('html[data-printed="true"]');
@@ -24,6 +25,11 @@ test('hovering a project tile opens the original logo out from the centre', asyn
   const reveal = () => tile.evaluate((t) => parseFloat(getComputedStyle(t).getPropertyValue('--reveal')));
   expect(await reveal()).toBe(0);
   await tile.hover();
+  if (!CONFIG.PRINT_HOVER_REVEAL) {
+    await page.waitForTimeout(CONFIG.PRINT_HOVER_FADE_MS + 100);
+    expect(await reveal()).toBe(0); // toggled off: the print stays
+    return;
+  }
   await expect.poll(reveal).toBe(120); // opened out past the corners
   await page.mouse.move(5, 5);
   await expect.poll(reveal).toBe(0);

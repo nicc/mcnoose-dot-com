@@ -4,12 +4,13 @@ import { visibleColumns, wallRows, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
-import { lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, type Room, type Vec3 } from './room';
+import { blendedLight, lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, type Room, type Vec3 } from './room';
 import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/glaze';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
 import { fitNote, handReady, noteNodes } from './about';
+import { isFallen, resetFall } from './fall';
 import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
@@ -55,10 +56,17 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
 }
 
 // The site title is the embroidery; the h1 carries it for screen readers and search.
+const NAIL_CM = 0.35; // head diameter
+
 // Click the frame to turn it over: on the back, the about note (about.ts).
 function header(c: Config, tile: number, about: string): HTMLElement {
   const title = el('h1', 'sr-only', [document.createTextNode(SAMPLER_LINES.join(' '))]);
   const e = embroidery(c, tile);
+  const room = roomFromConfig(c), ppc = pxPerCm(room, tile);
+  if (!c.EMBROIDERY_FALL) resetFall(); // the experiment off: it's back on its nail
+  // Fallen: just the nail it hung from. (Don't build the frame: its canvases are shared, and the
+  // falling one is still using them.)
+  if (isFallen()) return el('header', 'wallpaper', [title, nail(e.height, room, ppc), el('div', 'seam-shadow')]);
   const note = el('div', 'note', noteNodes(about));
   // Inside the paper, clear of its worn edges.
   const pad = Math.min(e.paper.w, e.paper.h) * 0.08;
@@ -67,8 +75,23 @@ function header(c: Config, tile: number, about: string): HTMLElement {
   const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back, ...e.edges]);
   card.style.setProperty('--frame-depth', `${e.depth}px`);
   const frame = el('figure', 'frame', [card]);
-  bindFrame(frame, card, back, c, pxPerCm(roomFromConfig(c), tile));
+  bindFrame(frame, card, back, c, ppc);
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
+}
+
+// The nail the frame hung from (top centre of where it was), lit like everything else.
+function nail(frameH: number, room: Room, ppc: number): HTMLElement {
+  const L = blendedLight(lightsAt(room, room.embroidery));
+  const n = el('div', 'nail');
+  Object.assign(n.style, { width: `${NAIL_CM * ppc}px`, height: `${NAIL_CM * ppc}px`, top: `calc(var(--frame-y) - ${frameH / 2}px)` });
+  for (const [k, v] of Object.entries({
+    '--nail-hx': `${50 + L[0] * 35}%`,
+    '--nail-hy': `${50 + L[1] * 35}%`,
+    '--nail-sx': `${((-L[0] / L[2]) * 0.25 * ppc).toFixed(1)}px`,
+    '--nail-sy': `${((-L[1] / L[2]) * 0.25 * ppc).toFixed(1)}px`,
+  }))
+    n.style.setProperty(k, v);
+  return n;
 }
 
 // Painted trim (dado rail, skirting) in tile-wide lengths, each lit by the room at its own place on
@@ -118,7 +141,8 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
   const total = lights.reduce((s, l) => s + l.weight, 0);
   const reach = lights.reduce((s, { dir, weight, diffuse }) => s + (diffuse ? 0 : (Math.max(0, -dir[1]) / dir[2]) * overhang * (weight / total)), 0);
   const shadow = el('div', 'rail-shadow');
-  Object.assign(shadow.style, { height: `${(reach * 1.6 + 2).toFixed(1)}px`, '--rail-shadow-a': String(0.32 * c.RAIL_SHADOW) });
+  shadow.style.height = `${(reach * 1.6 + 2).toFixed(1)}px`;
+  shadow.style.setProperty('--rail-shadow-a', String(0.32 * c.RAIL_SHADOW)); // custom properties need setProperty
   strip.lastElementChild!.before(seamLine(c, vp, a)); // under the dust
   row.append(strip, shadow);
   return row;
@@ -495,9 +519,11 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra)),
     skirting(c, vp, a, topExtra, skirtingTop),
   );
-  const note = top.querySelector<HTMLElement>('.note')!;
-  fitNote(note);
-  handReady.then(() => fitNote(note)); // again once the handwriting's metrics are in
+  const note = top.querySelector<HTMLElement>('.note'); // none once the frame has fallen
+  if (note) {
+    fitNote(note);
+    handReady.then(() => fitNote(note)); // again once the handwriting's metrics are in
+  }
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

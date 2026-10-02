@@ -6,9 +6,11 @@
 // Let go and it swings back like what it is: a rectangle hanging from a point at its top edge (a
 // physical pendulum, its period from its real size), damped, with the sawtooth's friction able to
 // hold it a little off its resting tilt. While it moves, the glass reflection holds still on screen;
-// the frame's own lighting turns with it once it settles.
+// the frame's own lighting turns with it once it settles. With EMBROIDERY_FALL on, past
+// EMBROIDERY_FALL_DEG and not held, it slips off its nail (fall.ts).
 import type { Config } from './config';
 import { turnReflection } from './embroidery';
+import { fall } from './fall';
 
 let flipped = false;
 let settled: { tilt: number; base: number } | undefined; // where it came to rest; base: the config tilt then
@@ -60,8 +62,19 @@ export function swingStep(theta: number, omega: number, dt: number, s: SwingStyl
 
 let swinging = 0; // animation frame id
 
-function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm: number }) {
+const tooFar = (c: Config, theta: number) => c.EMBROIDERY_FALL && Math.abs(theta) > c.EMBROIDERY_FALL_DEG;
+
+function drop(theta: number, omega: number, c: Config, pxPerCm: number) {
   cancelAnimationFrame(swinging);
+  live = undefined;
+  settled = undefined;
+  const shadow = current()?.parentElement;
+  if (shadow) fall(shadow, theta, omega, c, pxPerCm, relight);
+}
+
+function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm: number }, pxPerCm: number) {
+  cancelAnimationFrame(swinging);
+  if (tooFar(c, theta)) return drop(theta, omega, c, pxPerCm);
   const s: SwingStyle = { rest: c.EMBROIDERY_TILT_DEG, rate: swingRate(size.wCm, size.hCm), damping: c.EMBROIDERY_SWING_DAMPING, stick: c.EMBROIDERY_SWING_STICK_DEG };
   let last = performance.now();
   const tick = (now: number) => {
@@ -77,6 +90,7 @@ function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm
         return;
       }
       ({ theta, omega } = next);
+      if (tooFar(c, theta)) return drop(theta, omega, c, pxPerCm); // swung off its nail
     }
     live = theta;
     show(theta);
@@ -149,7 +163,7 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
       const thrown = a && b && b.t > a.t ? ((b.tilt - a.tilt) / (b.t - a.t)) * 1000 : 0;
       const omega = Math.max(-MAX_THROW, Math.min(MAX_THROW, thrown));
       const r = box();
-      swing(live ?? frameTilt(c), omega, c, { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm });
+      swing(live ?? frameTilt(c), omega, c, { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm }, pxPerCm);
       if (!p.turning && !cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip(); // caught mid-swing and tapped
     } else if (!cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip();
   };

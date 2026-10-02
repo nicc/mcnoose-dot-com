@@ -190,6 +190,35 @@ body {
   outline-offset: 4px;
 }
 
+/* Fallen (fall.ts): the frame tumbles in its own fixed 3D layer; the nail stays on the wall. */
+.fall-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  perspective: 1200px;
+  pointer-events: none;
+}
+
+.fall-layer .frame-shadow {
+  position: absolute;
+}
+
+/* Tumbling, both faces show as they come round (the flip's visibility fallback would hide one). */
+.fall-layer .frame-card .frame-face {
+  visibility: visible; /* outranks the flip's .frame-card:not(.flipped) .frame-back */
+  transition: none;
+}
+
+.nail {
+  position: absolute;
+  left: var(--frame-x);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at var(--nail-hx) var(--nail-hy), #9a958c, #4a4640 55%, #2a2622);
+  filter: drop-shadow(var(--nail-sx) var(--nail-sy) 1px rgb(0 0 0 / 0.45));
+}
+
 /* Glass reflection: its own layer, screen-blended so it brightens without greying, slid by JS. */
 .glass {
   position: absolute;

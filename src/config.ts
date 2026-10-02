@@ -67,6 +67,11 @@ export const CONFIG = {
   EMBROIDERY_TILT_DEG: 1, // clockwise
   EMBROIDERY_SWING_DAMPING: 0.12, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
   EMBROIDERY_SWING_STICK_DEG: 2.5, // how far off its rest the hanger's friction can hold it
+  EMBROIDERY_FALL: false, // experiment: let go (or swung) past EMBROIDERY_FALL_DEG, it falls off the wall
+  EMBROIDERY_FALL_DEG: 40, // the angle past which it slips off its nail
+  EMBROIDERY_FALL_GRAVITY: 0.6, // 1 = real gravity at the room's scale; lower = slow motion
+  EMBROIDERY_FALL_KICK: 1, // how hard catching the rail pitches it forward
+  EMBROIDERY_FALL_TUMBLE: 1, // how fast it tumbles once caught
   EMBROIDERY_STANDOFF_CM: 2, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
   EMBROIDERY_DUST_TOP: 1.28, // dust on the frame's upper moulding
   EMBROIDERY_DUST_INNER: 1.46, // dust on the inner bottom lip, against the glass

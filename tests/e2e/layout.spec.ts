@@ -292,3 +292,10 @@ test('passing clouds shade the scene without getting in the way of the pointer',
   expect(opacity).toBeGreaterThanOrEqual(0);
   expect(opacity).toBeLessThan(0.3);
 });
+
+test('the rail casts its shadow onto the top row of tiles', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  const bg = await page.locator('.rail-shadow').evaluate((e) => getComputedStyle(e).backgroundImage);
+  expect(bg).toContain('gradient');
+});
