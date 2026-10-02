@@ -24,6 +24,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   ROOM_CLOUD_DEPTH: [0, 1, 0.01],
   ROOM_CLOUD_RATE_HZ: [0.005, 1, 0.005],
   ROOM_CLOUD_SMOOTH: [0, 1, 0.01],
+  ROOM_CLOUD_BALANCE: [0, 1, 0.01],
   ROOM_FILL: [0, 1.5, 0.01],
   ROOM_BOUNCE: [0, 1, 0.01],
   ROOM_EYE_FOLLOW: [0, 1, 0.01],

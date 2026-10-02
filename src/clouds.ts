@@ -2,7 +2,9 @@
 // LFO with a random waveform. A new level is drawn `rateHz` times a second; `smooth` eases between
 // levels (0 = steps, 1 = a continuous glide). The room dims by the window's share of its light: one
 // shade layer over the scene (re-shading every surface per frame would be far too heavy), so the
-// shapes of shadows and highlights hold while their brightness breathes.
+// shapes of shadows and highlights hold while their brightness breathes. The reflections (the window
+// in the glass, the room in the tiles) dim with the sky too, through one CSS variable (--glint).
+// ROOM_CLOUD_BALANCE splits the effect: 0 the room only, 0.5 both in full, 1 the reflections only.
 import type { Config } from './config';
 import { exposure, roomFromConfig } from './room';
 import { hash2 } from './wood/noise';
@@ -24,6 +26,12 @@ export function cloudLevel(t: number, s: CloudStyle, seed = 7): number {
 
 export const cloudStyle = (c: Config): CloudStyle => ({ depth: c.ROOM_CLOUD_DEPTH, rateHz: c.ROOM_CLOUD_RATE_HZ, smooth: c.ROOM_CLOUD_SMOOTH });
 
+// How a cloud level k (1 = full sun) reaches the room's light and the reflections, by balance b.
+export function cloudSplit(k: number, b: number): { room: number; reflections: number } {
+  const loss = 1 - k;
+  return { room: 1 - loss * Math.min(1, 2 * (1 - b)), reflections: 1 - loss * Math.min(1, 2 * b) };
+}
+
 // Runs for the page's life; reads config live so the panel's sliders apply at once. Holds still
 // for people who ask for reduced motion.
 export function startClouds(config: () => Config): void {
@@ -32,12 +40,15 @@ export function startClouds(config: () => Config): void {
   shade.setAttribute('aria-hidden', 'true');
   document.body.append(shade);
   const still = matchMedia('(prefers-reduced-motion: reduce)');
-  let last = -1;
+  let last = -1, lastGlint = -1;
   const tick = (now: number) => {
     const c = config(), s = cloudStyle(c);
     const k = still.matches ? 1 - s.depth / 2 : cloudLevel(now / 1000, s);
-    const dark = Math.round((1 - exposure(roomFromConfig(c), k)) * 1000) / 1000;
+    const { room, reflections } = cloudSplit(k, c.ROOM_CLOUD_BALANCE);
+    const dark = Math.round((1 - exposure(roomFromConfig(c), room)) * 1000) / 1000;
     if (dark !== last) shade.style.opacity = String((last = dark));
+    const glint = Math.round(reflections * 1000) / 1000;
+    if (glint !== lastGlint) document.documentElement.style.setProperty('--glint', String((lastGlint = glint)));
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

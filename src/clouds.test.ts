@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloudLevel } from './clouds';
+import { cloudLevel, cloudSplit } from './clouds';
 import { exposure, type Room } from './room';
 
 const s = { depth: 0.4, rateHz: 0.1, smooth: 1 };
@@ -44,5 +44,13 @@ describe('exposure', () => {
     expect(exposure(room, 1)).toBeCloseTo(1);
     expect(exposure(room, 0.5)).toBeGreaterThan(0.5);
     expect(exposure(room, 0.5)).toBeLessThan(1);
+  });
+});
+
+describe('cloudSplit', () => {
+  it('sends the cloud to the room only, both, or the reflections only', () => {
+    expect(cloudSplit(0.8, 0)).toEqual({ room: 0.8, reflections: 1 });
+    expect(cloudSplit(0.8, 0.5)).toEqual({ room: 0.8, reflections: 0.8 });
+    expect(cloudSplit(0.8, 1)).toEqual({ room: 1, reflections: 0.8 });
   });
 });
