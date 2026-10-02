@@ -29,7 +29,7 @@ export const CONFIG = {
   ROOM_FILL: 0.35, // ceiling light strength relative to the window
   ROOM_BOUNCE: 0.25, // daylight bounced up off the floor: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
-  ROOM_WALL_COLOR: '#e4dccb', // walls reflected in the tiles
+  ROOM_WALL_COLOR: '#beae90', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
   ROOM_FLOOR_COLOR: '#9d624d',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
@@ -49,9 +49,9 @@ export const CONFIG = {
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
   WALLPAPER_AMBIENT: 0.75, // how dark shadowed slopes get (1 = no shadow)
   WALLPAPER_SHEEN: 0.1, // satin highlight
-  SEAM_SHADOW: 0.25, // contact shadow on the paper where it meets the tiles
-  SEAM_SHADOW_CM: 0.5, // … and how far up the paper it reaches
-  SEAM_LINE: 0.6, // the joint line between paper and tile
+  SEAM_SHADOW: 0.28, // contact shadow on the paper where it meets the tiles
+  SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
+  SEAM_LINE: 1.5, // the joint line between paper and tile
 
   // Embroidery (framed cross-stitch on the wallpaper). Hand-charted: stitch size scales the piece.
   EMBROIDERY_STITCH_SIZE: 0.06, // one cross-stitch, in tiles: sets the detail
@@ -90,23 +90,23 @@ export const CONFIG = {
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#bfb093',
-  RAIL_DEPTH_CM: 2, // how far it stands off the wall
-  RAIL_ROUND_CM: 0.95, // rounded top, falling back to the wall
+  RAIL_DEPTH_CM: 1.95, // how far it stands off the wall
+  RAIL_ROUND_CM: 1.35, // rounded top, falling back to the wall
   RAIL_BEAD_CM: 0.6, // routed bead below the round
-  RAIL_COVE_CM: 0.7, // cove stepping back to the face
-  RAIL_FLAT_CM: 1.1, // flat face: extends the rail's height
-  RAIL_WEAR: 0.67, // chipped paint on the raised edges
-  RAIL_GRIME: 0.37, // dirt in the routing
-  RAIL_DUST: 0.46, // dust settled along the top
-  RAIL_SHADOW: 0.72, // shadow it casts onto the top row of tiles
+  RAIL_COVE_CM: 0.3, // cove stepping back to the face
+  RAIL_FLAT_CM: 1.3, // flat face: extends the rail's height
+  RAIL_WEAR: 0.28, // chipped paint on the raised edges
+  RAIL_GRIME: 0.36, // dirt in the routing
+  RAIL_DUST: 0.45, // dust settled along the top
+  RAIL_SHADOW: 0.6, // shadow it casts onto the top row of tiles
 
   // Paint: shared by every painted surface (rail, skirting)
   PAINT_GRAIN: 0.36, // wood grain telegraphing through the paint
   PAINT_BRUSH: 0.49, // brush-stroke ridges
   PAINT_BUILDUP: 0.85, // layers of old paint softening the routing
-  PAINT_YELLOWING: 0.46, // aged oil paint, most in the recesses
-  PAINT_SHEEN: 0.17, // satin highlight: catches on the curved top and bead, not the flat face
-  PAINT_GLOSS: 0.52, // highlight tightness
+  PAINT_YELLOWING: 0.31, // aged oil paint, most in the recesses
+  PAINT_SHEEN: 0.26, // satin highlight: catches on the curved top and bead, not the flat face
+  PAINT_GLOSS: 0.63, // highlight tightness
 
   // Tiles: glaze
   TILE_COLOR: '#f1efe9', // warm white glaze, a little below pure white so rims can catch the light
@@ -155,15 +155,15 @@ export const CONFIG = {
 
   // Skirting: painted board along the floor (the page ends with it). Geometry in cm.
   SKIRTING_COLOR: '#bfb093', // same paint as the rail
-  SKIRTING_DEPTH_CM: 1.85, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
-  SKIRTING_TORUS_CM: 1.95, // diameter of the round along the top
-  SKIRTING_RELIEF_CM: 0.6, // how far the round stands proud of the face: small = a lip, half the torus = a full half-round
-  SKIRTING_FLAT_CM: 13.2, // face height down to the floor
-  SKIRTING_WEAR: 0.35, // chipped paint on the torus
-  SKIRTING_GRIME: 0.68, // dirt in the groove
-  SKIRTING_SCUFFS: 0.58, // rub line, shoe scuffs and chips on the face
-  SKIRTING_SCUFF_LOW: 0.7, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
-  SKIRTING_DUST: 1.6, // dust along the top
+  SKIRTING_DEPTH_CM: 0.75, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
+  SKIRTING_TORUS_CM: 1.9, // diameter of the round along the top
+  SKIRTING_RELIEF_CM: 0.3, // how far the round stands proud of the face: small = a lip, half the torus = a full half-round
+  SKIRTING_FLAT_CM: 10.7, // face height down to the floor
+  SKIRTING_WEAR: 0.28, // chipped paint on the torus
+  SKIRTING_GRIME: 0.28, // dirt in the groove
+  SKIRTING_SCUFFS: 0.51, // rub line, shoe scuffs and chips on the face
+  SKIRTING_SCUFF_LOW: 0.65, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
+  SKIRTING_DUST: 0.75, // dust along the top
 
   // Work-in-progress notice, shown once per browser
   NOTICE_COLOR: '#f7f1e3', // soft cream card
