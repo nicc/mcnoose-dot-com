@@ -89,7 +89,7 @@ export const CONFIG = {
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#bfb093',
-  RAIL_DEPTH_CM: 1.95, // how far it stands off the wall
+  RAIL_DEPTH_CM: 2, // how far it stands off the wall
   RAIL_ROUND_CM: 0.95, // rounded top, falling back to the wall
   RAIL_BEAD_CM: 0.6, // routed bead below the round
   RAIL_COVE_CM: 0.7, // cove stepping back to the face
@@ -155,12 +155,12 @@ export const CONFIG = {
   // Skirting: painted board along the floor (the page ends with it). Geometry in cm.
   SKIRTING_COLOR: '#bfb093', // same paint as the rail
   SKIRTING_DEPTH_CM: 2, // the face's distance off the wall
-  SKIRTING_TORUS_CM: 2.4, // half-round moulding along the top
-  SKIRTING_FLAT_CM: 14, // face height down to the floor
+  SKIRTING_TORUS_CM: 1.95, // half-round moulding along the top
+  SKIRTING_FLAT_CM: 15, // face height down to the floor
   SKIRTING_WEAR: 0.35, // chipped paint on the torus
-  SKIRTING_GRIME: 0.3, // dirt in the groove
-  SKIRTING_SCUFFS: 0.45, // shoe and vacuum marks low on the face
-  SKIRTING_DUST: 0.5, // dust along the top
+  SKIRTING_GRIME: 0.68, // dirt in the groove
+  SKIRTING_SCUFFS: 0.58, // shoe and vacuum marks low on the face
+  SKIRTING_DUST: 1.6, // dust along the top
 };
 
 export type Config = { -readonly [K in keyof typeof CONFIG]: (typeof CONFIG)[K] };
