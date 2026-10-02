@@ -31,7 +31,7 @@ export const CONFIG = {
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
   ROOM_WALL_COLOR: '#beae90', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
-  ROOM_FLOOR_COLOR: '#9d624d',
+  ROOM_FLOOR_COLOR: '#9d6f48',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
@@ -115,7 +115,7 @@ export const CONFIG = {
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
 
   // Tiles: the room reflected in the glaze
-  TILE_REFLECTION: 0.06, // how strongly the room shows in the glaze
+  TILE_REFLECTION: 0.09, // how strongly the room shows in the glaze
   TILE_TILT_DEG: 1.5, // tiles sit at slightly different angles, breaking reflections at the grout
   TILE_WAVINESS: 0.89, // glaze undulation: reflections wobble softly within a tile
 
