@@ -27,7 +27,9 @@ const glass = document.createElement('div');
 glass.className = 'glass';
 let margin = 0;
 let parallax = 0;
-let tilt = 0;
+let tilt = 0; // the tilt the reflection was drawn at
+let turn = 0; // degrees the frame has turned since (live, while it's dragged or swinging)
+let shift: [number, number] = [0, 0]; // parallax slide
 
 export interface Embroidered {
   canvas: HTMLCanvasElement;
@@ -134,19 +136,23 @@ export function embroidery(c: Config, tile: number): Embroidered {
     reflection.width = Math.round((gw + 2 * margin) * dpr);
     reflection.height = Math.round((gh + 2 * margin) * dpr);
     Object.assign(reflection.style, { width: `${gw + 2 * margin}px`, height: `${gh + 2 * margin}px`, left: `${-margin}px`, top: `${-margin}px` });
-    // The window's mirror image in wall cm → glass px about the glass centre (y down). A level
-    // window seen in tilted glass appears tilted the other way, so rotate by −tilt.
+    // The window's mirror image in wall cm → glass px (y down), as at tilt 0. A flat mirror turned in
+    // its own plane reflects the same scene, so the image holds still on screen while the frame turns
+    // about its nail: draw it turned back by −tilt about the nail (top centre, above the glass).
     const ppc = pxPerCm(room, tile), win = reflectedWindow(room), e = room.embroidery;
     const rect = { x0: (win.x0 - e.x) * ppc + gw / 2, x1: (win.x1 - e.x) * ppc + gw / 2, y0: (e.y - win.y1) * ppc + gh / 2, y1: (e.y - win.y0) * ppc + gh / 2 };
     const ctx = reflection.getContext('2d')!;
     ctx.scale(dpr, dpr);
-    ctx.translate(margin + gw / 2, margin + gh / 2);
+    ctx.translate(margin + gw / 2, margin - inset);
     ctx.rotate((-tilt * Math.PI) / 180);
-    ctx.translate(-gw / 2, -gh / 2);
+    ctx.translate(-gw / 2, inset);
+    reflection.style.transformOrigin = `${margin + gw / 2}px ${margin - inset}px`; // the nail, for live turns
     drawWindowReflection(ctx, { strength: c.EMBROIDERY_GLASS_REFLECTION, rect, bars: WINDOW_BAR_CM * win.scale * ppc });
     glass.replaceChildren(reflection);
     reflectionKey = rKey;
     rest = undefined;
+    turn = 0;
+    placeReflection();
   }
   return { canvas, back, paper, glass, edges: Object.values(edges), depth, ...size };
 }
@@ -163,8 +169,18 @@ export function updateReflection(screen: { x: number; y: number }) {
   const r = glass.getBoundingClientRect();
   const pos: [number, number] = [r.left + r.width / 2 + screen.x, r.top + r.height / 2 + screen.y];
   rest ??= pos;
-  const [x, y] = parallaxOffset([pos[0] - rest[0], pos[1] - rest[1]], parallax, tilt, margin);
-  reflection.style.transform = `translate(${x}px, ${y}px)`;
+  shift = parallaxOffset([pos[0] - rest[0], pos[1] - rest[1]], parallax, tilt, margin);
+  placeReflection();
+}
+
+// The frame is at `liveTilt` (being turned or swinging): hold the reflection still on screen.
+export function turnReflection(liveTilt: number) {
+  turn = liveTilt - tilt;
+  placeReflection();
+}
+
+function placeReflection() {
+  if (reflection) reflection.style.transform = `translate(${shift[0]}px, ${shift[1]}px) rotate(${-turn}deg)`;
 }
 
 export function resetReflection() {

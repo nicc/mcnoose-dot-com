@@ -67,7 +67,7 @@ function header(c: Config, tile: number, about: string): HTMLElement {
   const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back, ...e.edges]);
   card.style.setProperty('--frame-depth', `${e.depth}px`);
   const frame = el('figure', 'frame', [card]);
-  bindFrame(frame, card, back, c);
+  bindFrame(frame, card, back, c, pxPerCm(roomFromConfig(c), tile));
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 

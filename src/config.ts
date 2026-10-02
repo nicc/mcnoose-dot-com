@@ -65,6 +65,8 @@ export const CONFIG = {
   EMBROIDERY_CLOTH_H: 53,
   EMBROIDERY_FRAME: 0.2, // moulding width
   EMBROIDERY_TILT_DEG: 1, // clockwise
+  EMBROIDERY_SWING_DAMPING: 0.12, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
+  EMBROIDERY_SWING_STICK_DEG: 2.5, // how far off its rest the hanger's friction can hold it
   EMBROIDERY_STANDOFF_CM: 2, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
   EMBROIDERY_DUST_TOP: 1.28, // dust on the frame's upper moulding
   EMBROIDERY_DUST_INNER: 1.46, // dust on the inner bottom lip, against the glass
