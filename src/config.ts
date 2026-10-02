@@ -124,14 +124,14 @@ export const CONFIG = {
   TILE_GRIME_ROWS: 5, // how many rows up from the skirting the marks build
 
   // Grout: colour, recess and age
-  GROUT_COLOR: '#bcbcbb',
+  GROUT_COLOR: '#cbcbcb',
   GROUT_RECESS: 0.93, // shadow tiles cast onto the recessed grout
-  GROUT_AGE: 0.6, // uneven yellowing/greying per joint
-  GROUT_GRIME: 0.65, // dirt: more in horizontal joints and low down
-  GROUT_MOULD: 0.5, // dark spots at crossings, low down
+  GROUT_AGE: 0.35, // uneven yellowing/greying per joint
+  GROUT_GRIME: 0.48, // dirt: more in horizontal joints and low down
+  GROUT_MOULD: 0.3, // dark spots at crossings, low down
   GROUT_LIMESCALE: 0.55, // whitish crust along low horizontal joints
-  GROUT_EROSION: 0.6, // worn edges, crumbled crossings, soft pitting
-  GROUT_CRACKS: 0.45, // the odd hairline crack
+  GROUT_EROSION: 0.55, // worn edges, crumbled crossings, soft pitting
+  GROUT_CRACKS: 0.63, // the odd hairline crack
 
   // Tile print: logo + title as halftone dots
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
