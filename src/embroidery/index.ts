@@ -66,6 +66,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
     },
     lights: lightsAt(room, room.embroidery),
     view: viewAt(room, room.embroidery),
+    dust: { top: c.EMBROIDERY_DUST_TOP, inner: c.EMBROIDERY_DUST_INNER, shade: c.DUST_SHADE },
     tiltDeg: c.EMBROIDERY_TILT_DEG,
     dpr,
   };

@@ -2,7 +2,7 @@
 // whose test matches; config.ts is laid out in the same order.
 export const GROUPS: [string, (key: string) => boolean][] = [
   ['Layout', (k) => ['TILE_MAX_PX', 'GROUT_PX', 'MIN_PEEK', 'TRAILING_ROWS', 'REFLOW_FADE_MS', 'PIN_SMOOTH_MS'].includes(k)],
-  ['Room & light', (k) => k.startsWith('ROOM_') || k === 'WATER_SPOT_SIZE'],
+  ['Room & light', (k) => k.startsWith('ROOM_') || k === 'WATER_SPOT_SIZE' || k === 'DUST_SHADE'],
   ['Wallpaper', (k) => k === 'HEADER_HEIGHT' || k.startsWith('WALLPAPER_') || k.startsWith('SEAM_')],
   ['Embroidery: oak frame', (k) => k.startsWith('EMBROIDERY_WOOD')],
   ['Embroidery: glass', (k) => k.startsWith('EMBROIDERY_GLASS')],

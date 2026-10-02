@@ -128,7 +128,7 @@ body {
 /* Tile wall */
 .wall {
   overflow: hidden;
-  padding-block: var(--grout);
+  padding-block: var(--grout-edge); /* fine caulked joints at the rail and the skirting */
   background: var(--grout-color);
 }
 

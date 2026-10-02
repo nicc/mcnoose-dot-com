@@ -64,6 +64,8 @@ function header(c: Config, tile: number): HTMLElement {
 const railDims = (c: Config): RailDims => ({ depthCm: c.RAIL_DEPTH_CM, roundCm: c.RAIL_ROUND_CM, beadCm: c.RAIL_BEAD_CM, coveCm: c.RAIL_COVE_CM, flatCm: c.RAIL_FLAT_CM });
 const railHeight = (c: Config, tile: number) => railProfile(railDims(c)).heightCm * (tile / c.ROOM_TILE_CM);
 const TILE_FACE_CM = 0.9; // tile faces stand this far off the wall
+// The well-fitted joints where the tiles meet the rail and the skirting: a fine caulked line.
+const edgeJoint = (c: Config, tile: number) => c.GROUT_EDGE_CM * (tile / c.ROOM_TILE_CM);
 
 function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
@@ -109,7 +111,7 @@ function railDust(c: Config, vp: Viewport, a: Anchor, h: number, lights: Light[]
   canvas.style.height = `${band}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  drawDust(ctx, a.originX, vp.width, band, c.RAIL_DUST, c.RAIL_DUST_SHADE, lights);
+  drawDust(ctx, a.originX, vp.width, band, c.RAIL_DUST, c.DUST_SHADE, lights);
   return canvas;
 }
 
@@ -229,7 +231,7 @@ const wallMap = (c: Config, a: Anchor, topExtra: number): WallMap => {
 function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile);
   const map = wallMap(c, a, topExtra);
-  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + c.GROUT_PX;
+  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
   const base = hexToRgb(c.TILE_COLOR);
   const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
   return (row, col) => {
@@ -294,7 +296,7 @@ function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, g
     drawAgeing(canvas, w, h, dpr, age, seed, grout);
     // Extends over the joints the tile owns: left and above (and below on the bottom row).
     const g = grout?.g ?? 0;
-    Object.assign(canvas.style, { left: `${-g}px`, top: `${-g}px`, width: `${w + g}px`, height: `${h + g + (grout?.lastRow ? g : 0)}px` });
+    Object.assign(canvas.style, { left: `${-g}px`, top: `${-g}px`, width: `${w + g}px`, height: `${h + g + (grout?.lastRow ? grout.bottomG : 0)}px` });
     ageing.set(id, (hit = { key, canvas }));
   }
   return hit.canvas;
@@ -313,6 +315,8 @@ function tileAgeing(c: Config, a: Anchor, rows: number) {
     const level = grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS);
     const grout: GroutAround = {
       g: c.GROUT_PX,
+      topG: row === 0 ? edgeJoint(c, a.tile) : c.GROUT_PX,
+      bottomG: edgeJoint(c, a.tile),
       lastRow: row === rows - 1,
       age: { age: c.GROUT_AGE, grime: c.GROUT_GRIME, mould: c.GROUT_MOULD, limescale: c.GROUT_LIMESCALE, erosion: c.GROUT_EROSION, cracks: c.GROUT_CRACKS, level },
     };
@@ -386,6 +390,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const vars: Record<string, string> = {
     '--tile': `${a.tile}px`,
     '--grout': `${c.GROUT_PX}px`,
+    '--grout-edge': `${edgeJoint(c, a.tile).toFixed(2)}px`,
     '--cols-total': String(cols.count),
     '--grid-w': `${cols.count * a.pitch - c.GROUT_PX}px`,
     '--grid-left': `${gridLeft}px`,
@@ -420,7 +425,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
-  root.replaceChildren(top, rail(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + c.GROUT_PX), el('footer', 'skirting'));
+  root.replaceChildren(top, rail(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile)), el('footer', 'skirting'));
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

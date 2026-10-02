@@ -31,6 +31,7 @@ export const CONFIG = {
   ROOM_WALL_COLOR: '#e4dccb', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
   ROOM_FLOOR_COLOR: '#8b8478',
+  DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
   // Wallpaper (header) and its seam with the tiles. Ink colours default to the 1875 scan's own.
@@ -59,6 +60,8 @@ export const CONFIG = {
   EMBROIDERY_FRAME: 0.2, // moulding width
   EMBROIDERY_TILT_DEG: 1, // clockwise
   EMBROIDERY_STANDOFF_CM: 2, // how far the frame sits off the wall: sets its cast shadows
+  EMBROIDERY_DUST_TOP: 0.45, // dust on the frame's upper moulding
+  EMBROIDERY_DUST_INNER: 0.55, // dust on the inner bottom lip, against the glass
   EMBROIDERY_CLOTH: '#f6f3ea',
   EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
   EMBROIDERY_PETAL: '#e8a283', // peach
@@ -94,7 +97,6 @@ export const CONFIG = {
   RAIL_WEAR: 0.67, // chipped paint on the raised edges
   RAIL_GRIME: 0.37, // dirt in the routing
   RAIL_DUST: 0.46, // dust settled along the top
-  RAIL_DUST_SHADE: 0.64, // dust grey: 0 dark → 1 light
   RAIL_SHADOW: 0.72, // shadow it casts onto the top row of tiles
 
   // Paint: shared by every painted surface (rail now, skirting later)
@@ -126,6 +128,7 @@ export const CONFIG = {
   // Grout: colour, recess and age
   GROUT_COLOR: '#cbcbcb',
   GROUT_RECESS: 0.93, // shadow tiles cast onto the recessed grout
+  GROUT_EDGE_CM: 0.1, // the fine caulked joints against the rail and the skirting
   GROUT_AGE: 0.35, // uneven yellowing/greying per joint
   GROUT_GRIME: 0.48, // dirt: more in horizontal joints and low down
   GROUT_MOULD: 0.3, // dark spots at crossings, low down

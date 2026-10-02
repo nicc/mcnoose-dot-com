@@ -1,6 +1,7 @@
 // Paints the framed sampler: aida cloth, X stitches with thread sheen, and a mitred wooden frame,
 // all lit from the wallpaper's light direction (rotated into the tilted frame's own coordinates).
 import { AMBIENT, blendedLight, type Light, type Vec3 } from '../room';
+import { drawDust } from '../rail/dust';
 import { drawSpots, spotLayout } from '../surface/spots';
 import { frameProfile, shadeBoard } from '../wood/board';
 import { grainMaps, type RGB } from '../wood/grain';
@@ -30,12 +31,19 @@ export interface GlassStyle {
   spotSize: number; // droplet radius, layout units
 }
 
+export interface FrameDust {
+  top: number; // 0–1 on the frame's upper moulding
+  inner: number; // 0–1 on the inner bottom lip, against the glass
+  shade: number;
+}
+
 export interface EmbroideryStyle {
   stitch: number; // CSS px per stitch
   frame: number; // CSS px moulding width
   colors: Record<Ink, string> & { cloth: string };
   wood: WoodStyle;
   glass: GlassStyle;
+  dust: FrameDust;
   lights: Light[]; // the room's lights at the embroidery, screen coords
   view: Vec3; // towards the viewer's eye, screen coords
   tiltDeg: number; // frame rotation, clockwise
@@ -241,6 +249,26 @@ export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: Embro
   innerShadow(ctx, W, H, f, L);
   glass(ctx, f, f, cw, ch, o.glass, L);
   frame(ctx, W, H, f, o, lights, final);
+  frameDust(ctx, W, H, f, o, lights, 1 / zoom);
+}
+
+// Dust on the top of the frame and on the inner bottom lip where it meets the glass. Sizes are
+// in screen px (scale: layout units per screen px), so it stays soft rather than shrinking to specks.
+function frameDust(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, lights: Light[], scale: number) {
+  const band = 3 * scale;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, band);
+  ctx.clip();
+  drawDust(ctx, 0, W, band, o.dust.top, o.dust.shade, lights, 811, scale);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(f, H - f - band * 0.25);
+  ctx.beginPath();
+  ctx.rect(0, 0, W - 2 * f, band * 1.2);
+  ctx.clip();
+  drawDust(ctx, 0, W - 2 * f, band * 1.2, o.dust.inner, o.dust.shade, lights, 823, scale);
+  ctx.restore();
 }
 
 const GLASS_CAST = [232, 244, 238]; // multiplied in: a green cast with almost no darkening

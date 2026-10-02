@@ -48,18 +48,20 @@ export function drawCrazing(ctx: CanvasRenderingContext2D, w: number, h: number,
 
 export interface GroutAround {
   g: number; // joint width, px
+  topG: number; // the joint above (narrower against the rail)
+  bottomG: number; // the joint below, on the bottom row (narrower against the skirting)
   lastRow: boolean; // also owns the joint below
   age: GroutAge;
 }
 
 // The joints a tile owns: the one to its left and the one above (and below, on the bottom row),
 // in the extended canvas's coordinates where the tile itself starts at (g, g).
-export function ownedJoints(w: number, h: number, g: number, lastRow: boolean): Joint[] {
+export function ownedJoints(w: number, h: number, g: number, lastRow: boolean, topG = g, bottomG = g): Joint[] {
   const joints: Joint[] = [
-    { x: 0, y: 0, w: g, h: h + g + (lastRow ? g : 0), horizontal: false },
-    { x: 0, y: 0, w: w + g, h: g, horizontal: true },
+    { x: 0, y: g - topG, w: g, h: topG + h + (lastRow ? bottomG : 0), horizontal: false },
+    { x: 0, y: g - topG, w: w + g, h: topG, horizontal: true },
   ];
-  if (lastRow) joints.push({ x: 0, y: g + h, w: w + g, h: g, horizontal: true });
+  if (lastRow) joints.push({ x: 0, y: g + h, w: w + g, h: bottomG, horizontal: true });
   return joints;
 }
 
@@ -68,11 +70,11 @@ export function ownedJoints(w: number, h: number, g: number, lastRow: boolean): 
 export function drawAgeing(canvas: HTMLCanvasElement, w: number, h: number, dpr: number, a: Ageing, seed: number, grout?: GroutAround) {
   const g = grout?.g ?? 0;
   canvas.width = Math.max(1, Math.round((w + g) * dpr));
-  canvas.height = Math.max(1, Math.round((h + g + (grout?.lastRow ? g : 0)) * dpr));
+  canvas.height = Math.max(1, Math.round((h + g + (grout?.lastRow ? grout.bottomG : 0)) * dpr));
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
   if (grout) {
-    const joints = ownedJoints(w, h, g, grout.lastRow);
+    const joints = ownedJoints(w, h, g, grout.lastRow, grout.topG, grout.bottomG);
     drawGrout(ctx, joints, groutMarks(joints, g, grout.age, seed + 101));
   }
   ctx.save();
