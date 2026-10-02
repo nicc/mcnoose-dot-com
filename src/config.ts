@@ -60,8 +60,8 @@ export const CONFIG = {
   EMBROIDERY_FRAME: 0.2, // moulding width
   EMBROIDERY_TILT_DEG: 1, // clockwise
   EMBROIDERY_STANDOFF_CM: 2, // how far the frame sits off the wall: sets its cast shadows
-  EMBROIDERY_DUST_TOP: 0.45, // dust on the frame's upper moulding
-  EMBROIDERY_DUST_INNER: 0.55, // dust on the inner bottom lip, against the glass
+  EMBROIDERY_DUST_TOP: 1.28, // dust on the frame's upper moulding
+  EMBROIDERY_DUST_INNER: 1.46, // dust on the inner bottom lip, against the glass
   EMBROIDERY_CLOTH: '#f6f3ea',
   EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
   EMBROIDERY_PETAL: '#e8a283', // peach
