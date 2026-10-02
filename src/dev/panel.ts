@@ -78,6 +78,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   RAIL_WEAR: [0, 1, 0.01],
   RAIL_GRIME: [0, 1, 0.01],
   RAIL_DUST: [0, 1, 0.01],
+  RAIL_DUST_SHADE: [0, 1, 0.01],
   RAIL_SHADOW: [0, 1.5, 0.01],
   PAINT_GRAIN: [0, 1, 0.01],
   PAINT_BRUSH: [0, 1.5, 0.01],

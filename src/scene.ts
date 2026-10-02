@@ -4,13 +4,14 @@ import { rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
-import { lightsAt, pxPerCm, roomFromConfig, viewAt, type Room, type Vec3 } from './room';
+import { lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, type Room, type Vec3 } from './room';
 import { drawAgeing, grimeLevel, type Ageing } from './tiles/glaze';
 import { groutTexture } from './tiles/grout';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
-import { fbm, hash2 } from './wood/noise';
+import { fbm } from './wood/noise';
 import { railLength, type RailStyle } from './rail';
+import { drawDust } from './rail/dust';
 import { railProfile, type RailDims } from './rail/profile';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
@@ -94,34 +95,22 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
   const reach = lights.reduce((s, { dir, weight }) => s + (Math.max(0, -dir[1]) / dir[2]) * overhang * (weight / total), 0);
   const shadow = el('div', 'rail-shadow');
   Object.assign(shadow.style, { height: `${(reach * 1.6 + 2).toFixed(1)}px`, '--rail-shadow-a': String(0.32 * c.RAIL_SHADOW) });
-  strip.append(seamLine(c, vp, a), railDust(c, vp, a, h));
+  strip.append(seamLine(c, vp, a), railDust(c, vp, a, h, lightsAt(room, wallPoint(map, { x: a.centreX, y: top }))));
   row.append(strip, shadow);
   return row;
 }
 
-// Dust settled on the rail's top: specks keyed to wall position, so they never repeat.
-function railDust(c: Config, vp: Viewport, a: Anchor, h: number): HTMLCanvasElement {
-  const dpr = Math.min(2, devicePixelRatio || 1), band = Math.max(3, h * 0.18);
+// Dust on the rail's top, lit by the room at the ledge (see rail/dust.ts).
+function railDust(c: Config, vp: Viewport, a: Anchor, h: number, lights: Light[]): HTMLCanvasElement {
+  const dpr = Math.min(2, devicePixelRatio || 1), band = Math.max(4, h * 0.22);
   const canvas = el('canvas', 'rail-dust');
   canvas.width = Math.ceil(vp.width * dpr);
   canvas.height = Math.ceil(band * dpr);
   canvas.setAttribute('aria-hidden', 'true');
-  Object.assign(canvas.style, { height: `${band}px` });
+  canvas.style.height = `${band}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  const haze = ctx.createLinearGradient(0, 0, 0, band);
-  haze.addColorStop(0, `rgba(120,110,95,${(0.18 * c.RAIL_DUST).toFixed(3)})`);
-  haze.addColorStop(1, 'rgba(120,110,95,0)');
-  ctx.fillStyle = haze;
-  ctx.fillRect(0, 0, vp.width, band);
-  const x0 = Math.floor(-a.originX), x1 = Math.ceil(vp.width - a.originX); // wall px
-  for (let x = x0; x <= x1; x++) {
-    if (hash2(x, 7, 431) > 0.55 * c.RAIL_DUST) continue;
-    const y = band * hash2(x, 8, 431) ** 2; // most near the top
-    ctx.fillStyle = `rgba(95,85,70,${(0.2 + 0.35 * hash2(x, 9, 431)).toFixed(3)})`;
-    const r = 0.3 + 0.7 * hash2(x, 10, 431);
-    ctx.fillRect(x + a.originX, y, r, r);
-  }
+  drawDust(ctx, a.originX, vp.width, band, c.RAIL_DUST, c.RAIL_DUST_SHADE, lights);
   return canvas;
 }
 
