@@ -38,7 +38,7 @@ const f = (n: number) => n.toFixed(2);
 export function edgeShadows(lights: Light[], s: EdgeStyle): string {
   const total = lights.reduce((t, l) => t + l.weight, 0);
   const parts: string[] = [`inset 0 0 ${f(s.edgePx)}px rgba(0,0,0,0.05)`]; // rims curve away from frontal light
-  for (const { dir: [x, y, z], weight } of lights) {
+  for (const { dir: [x, y, z], weight, diffuse } of lights) {
     const n = Math.hypot(x, y) || 1;
     const D = [x / n, y / n];
     const w = weight / total;
@@ -48,8 +48,8 @@ export function edgeShadows(lights: Light[], s: EdgeStyle): string {
       `inset ${f(-D[0] * e)}px ${f(-D[1] * e)}px ${f(e * 1.2)}px rgba(255,255,255,${f(0.7 * s.sheen * w * grazing)})`,
       `inset ${f(-D[0] * 1.5)}px ${f(-D[1] * 1.5)}px 0.5px rgba(255,255,255,${f(Math.min(1, 1.3 * s.sheen * w * grazing))})`,
       `inset ${f(D[0] * e)}px ${f(D[1] * e)}px ${f(e * 1.4)}px rgba(0,0,0,${f(0.1 * w * grazing)})`,
-      `${f((-x / z) * s.recessPx)}px ${f((-y / z) * s.recessPx)}px ${f(s.recessPx * 0.8)}px rgba(0,0,0,${f(0.25 * s.recess * w)})`,
     );
+    if (!diffuse) parts.push(`${f((-x / z) * s.recessPx)}px ${f((-y / z) * s.recessPx)}px ${f(s.recessPx * 0.8)}px rgba(0,0,0,${f(0.25 * s.recess * w)})`);
   }
   return parts.join(', ');
 }

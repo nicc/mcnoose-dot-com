@@ -40,17 +40,29 @@ function profileShadow(height: (v: number) => number, wid: number, dir: [number,
   return vis;
 }
 
-// How much of the room's diffuse light reaches each row: hollows and the foot of a proud moulding
-// see less of it. Horizon angles up and down the profile (it is constant along the board).
+// How much of the room's diffuse light reaches a surface: the open part of its hemisphere (2D view
+// factor, since the profile is constant along the board), plus some light reflected back by what
+// blocks the rest — tiles and paint, not black. 1 for an unobstructed surface facing the room.
+const INTERREFLECT = 0.4;
+export function diffuseReach(open: number): number {
+  return open + INTERREFLECT * (1 - open);
+}
+
+// Per row: the sector of directions (in the v–z plane, angle from +z, positive upwards) not blocked
+// by the profile above or below, intersected with the hemisphere around the row's own normal.
+// Nothing rises behind the wall plane, so the sector never passes straight up or down the wall.
 function profileOcclusion(height: (v: number) => number, wid: number): Float32Array {
+  const half = Math.PI / 2;
   return Float32Array.from({ length: wid }, (_, v) => {
-    let open = 0;
-    for (const step of [-1, 1]) {
-      let horizon = 0; // tan of the highest horizon this way
-      for (let k = 1, w = v + step; w >= 0 && w < wid; k++, w += step) horizon = Math.max(horizon, (height(w) - height(v)) / k);
-      open += 0.5 * (1 - horizon / Math.hypot(horizon, 1)); // 1 − sin(horizon angle)
-    }
-    return open;
+    const horizon = (step: number) => {
+      let angle = half;
+      for (let k = 1, w = v + step; w >= 0 && w < wid; k++, w += step) angle = Math.min(angle, Math.atan2(k, height(w) - height(v)));
+      return angle;
+    };
+    const up = horizon(-1), down = -horizon(1);
+    const phi = Math.atan((height(Math.min(wid - 1, v + 1)) - height(Math.max(0, v - 1))) / 2); // normal's tilt: up when height grows downwards
+    const lo = Math.max(down, phi - half), hi = Math.min(up, phi + half);
+    return diffuseReach(hi > lo ? (Math.sin(hi - phi) - Math.sin(lo - phi)) / 2 : 0);
   });
 }
 

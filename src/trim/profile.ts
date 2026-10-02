@@ -5,6 +5,7 @@ export interface Profile {
   heightCm: number;
   depthCm: number;
   faceDepthCm: number; // depth of the bottom edge: what overhangs whatever is below
+  topDepthCm: number; // depth at the top edge: the board's top runs back from here to the wall
   at: (t: number) => number;
 }
 
@@ -46,27 +47,31 @@ export function railProfile(d: RailDims): Profile {
     const b = RAIL_BOTTOM_CM;
     return F - b + Math.sqrt(Math.max(0, b * b - y * y)); // rounded bottom edge
   };
-  return { heightCm: H, depthCm: D, faceDepthCm: F - RAIL_BOTTOM_CM, at: (t) => z(t * H) / D };
+  return { heightCm: H, depthCm: D, faceDepthCm: F - RAIL_BOTTOM_CM, topDepthCm: z(0), at: (t) => z(t * H) / D };
 }
 
 export interface SkirtingDims {
-  depthCm: number; // the flat face's distance off the wall
-  torusCm: number; // height of the half-round moulding along the top
+  depthCm: number; // board thickness: the torus's front, its furthest point off the wall
+  torusCm: number; // diameter of the round along the top
+  reliefCm: number; // how far the round stands proud of the face: small = a lip, its radius = a full half-round
   flatCm: number; // flat face down to the floor
 }
 
-const QUIRK_CM = 0.25;
+const QUIRK_CM = 0.3; // routed hollow where the round meets the face
+const QUIRK_DEPTH_CM = 0.2;
 
-// Skirting, top to bottom: a half-round torus moulding standing proud of the face, a small groove,
-// then the tall flat face down to the floor.
+// Skirting, top to bottom, as routed from one board: the top edge rounded over into a torus, the
+// face cut back by `reliefCm` below it (the round's underside meets the face partway round when the
+// relief is less than its radius), a small rounded quirk, then the tall flat face to the floor.
 export function skirtingProfile(d: SkirtingDims): Profile {
-  const F = d.depthCm, T = d.torusCm, r = T / 2;
-  const D = F + 0.5 * T; // the torus's front is the deepest point
-  const H = T + QUIRK_CM + d.flatCm;
+  const D = d.depthCm, r = d.torusCm / 2, relief = Math.max(0.05, Math.min(r, d.reliefCm));
+  const c = D - r, F = D - relief; // depth of the round's centre; of the face
+  const meet = r + Math.sqrt(Math.max(0, r * r - (F - c) ** 2)); // where the round's underside reaches the face
+  const H = meet + QUIRK_CM + d.flatCm;
   const z = (y: number): number => {
-    if (y < T) return F + Math.sqrt(Math.max(0, r * r - (y - r) ** 2)); // torus: a true half-round
-    if (y < T + QUIRK_CM) return F - 0.15; // groove under it
+    if (y < meet) return c + Math.sqrt(Math.max(0, r * r - (y - r) ** 2)); // the round
+    if (y < meet + QUIRK_CM) return F - QUIRK_DEPTH_CM * Math.sin((Math.PI * (y - meet)) / QUIRK_CM); // quirk, rising back to a lip at the face
     return F;
   };
-  return { heightCm: H, depthCm: D, faceDepthCm: F, at: (t) => z(t * H) / D };
+  return { heightCm: H, depthCm: D, faceDepthCm: F, topDepthCm: c, at: (t) => z(t * H) / D };
 }

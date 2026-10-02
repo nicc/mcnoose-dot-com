@@ -22,17 +22,27 @@ describe('railProfile', () => {
 });
 
 describe('skirtingProfile', () => {
-  const p = skirtingProfile({ depthCm: 2, torusCm: 2.4, flatCm: 14 });
+  const dims = { depthCm: 2.5, torusCm: 2.4, reliefCm: 1.2, flatCm: 14 };
+  const p = skirtingProfile(dims);
+  const depthAt = (q: typeof p, cm: number) => q.at(cm / q.heightCm) * q.depthCm;
 
-  it('stacks torus, groove and face into its height', () => {
-    expect(p.heightCm).toBeCloseTo(2.4 + 0.25 + 14);
+  it('stacks round, quirk and face into its height; a full half-round at relief = radius', () => {
+    expect(p.heightCm).toBeCloseTo(2.4 + 0.3 + 14);
+    expect(depthAt(p, 1.2)).toBeCloseTo(2.5, 1); // front of the round: the board's thickness
+    expect(p.topDepthCm).toBeCloseTo(1.3);
   });
 
-  it('bulges at the torus, dips at the groove, then runs flat to the floor', () => {
-    const atCm = (cm: number) => p.at(cm / p.heightCm);
-    expect(atCm(1.2)).toBeCloseTo(1, 1); // front of the torus
-    expect(atCm(2.5)).toBeLessThan(atCm(10)); // groove
-    expect(atCm(8)).toBeCloseTo(atCm(16)); // flat face
-    expect(p.faceDepthCm).toBe(2);
+  it('relief sets how far the round stands proud of the face, and the face comes forward with less', () => {
+    const lip = skirtingProfile({ ...dims, reliefCm: 0.4 });
+    expect(depthAt(lip, 1.2) - lip.faceDepthCm).toBeCloseTo(0.4, 1);
+    expect(lip.faceDepthCm).toBeGreaterThan(p.faceDepthCm);
+    expect(lip.heightCm).toBeLessThan(p.heightCm); // the round meets the face partway round
+  });
+
+  it('dips at the quirk and rounds back up to the face, with no cliffs', () => {
+    const meet = p.heightCm - 14 - 0.3;
+    expect(depthAt(p, meet + 0.15)).toBeLessThan(depthAt(p, 10));
+    for (let cm = meet; cm < meet + 0.3; cm += 0.01) expect(Math.abs(depthAt(p, cm + 0.01) - depthAt(p, cm))).toBeLessThan(0.03); // a cliff jumps 0.15+ in one step
+    expect(depthAt(p, 8)).toBeCloseTo(depthAt(p, 16));
   });
 });

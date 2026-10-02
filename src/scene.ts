@@ -62,7 +62,7 @@ function header(c: Config, tile: number): HTMLElement {
 // Painted trim (dado rail, skirting) in tile-wide lengths, each lit by the room at its own place on
 // the wall. The rail stands proud of the tiles and casts a soft shadow onto the top row.
 const railDims = (c: Config): RailDims => ({ depthCm: c.RAIL_DEPTH_CM, roundCm: c.RAIL_ROUND_CM, beadCm: c.RAIL_BEAD_CM, coveCm: c.RAIL_COVE_CM, flatCm: c.RAIL_FLAT_CM });
-const skirtingDims = (c: Config): SkirtingDims => ({ depthCm: c.SKIRTING_DEPTH_CM, torusCm: c.SKIRTING_TORUS_CM, flatCm: c.SKIRTING_FLAT_CM });
+const skirtingDims = (c: Config): SkirtingDims => ({ depthCm: c.SKIRTING_DEPTH_CM, torusCm: c.SKIRTING_TORUS_CM, reliefCm: c.SKIRTING_RELIEF_CM, flatCm: c.SKIRTING_FLAT_CM });
 const railHeight = (c: Config, tile: number) => railProfile(railDims(c)).heightCm * (tile / c.ROOM_TILE_CM);
 const TILE_FACE_CM = 0.9; // tile faces stand this far off the wall
 // The well-fitted joints where the tiles meet the rail and the skirting: a fine caulked line.
@@ -71,10 +71,10 @@ const edgeJoint = (c: Config, tile: number) => c.GROUT_EDGE_CM * (tile / c.ROOM_
 const paintOf = (c: Config) => ({ grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, buildup: c.PAINT_BUILDUP, yellowing: c.PAINT_YELLOWING, sheen: c.PAINT_SHEEN, gloss: c.PAINT_GLOSS });
 
 // A strip of painted lengths across the window at page y `top`, clipped to the window, with dust
-// on its top ledge. Returns the strip and the height it occupies.
+// on its top (the visible ledge, when it has one). Returns the strip and the height it occupies.
 function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number): { strip: HTMLElement; h: number } {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
-  const h = style.profile.heightCm * ppc, seg = a.tile, dpr = Math.min(2, devicePixelRatio || 1);
+  const ledge = (style.ledgeCm ?? 0) * ppc, h = style.profile.heightCm * ppc + ledge, seg = a.tile, dpr = Math.min(2, devicePixelRatio || 1);
   const strip = el('div', 'trim-strip');
   const first = Math.floor(-a.originX / seg), last = Math.ceil((vp.width - a.originX) / seg);
   for (let k = first; k <= last; k++) {
@@ -87,7 +87,8 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
-  strip.append(trimDust(c, vp, a, h, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top }))));
+  const band = ledge >= 3 ? ledge : Math.max(4, Math.min(h * 0.22, 14));
+  strip.append(trimDust(c, vp, a, band, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top }))));
   return { strip, h };
 }
 
@@ -95,7 +96,7 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
   const top = topExtra + c.HEADER_HEIGHT * a.tile;
   const profile = railProfile(railDims(c));
-  const style: TrimStyle = { profile, colour: hexToRgb(c.RAIL_COLOR), paint: paintOf(c), wear: c.RAIL_WEAR, grime: c.RAIL_GRIME, scuffs: 0 };
+  const style: TrimStyle = { profile, colour: hexToRgb(c.RAIL_COLOR), paint: paintOf(c), wear: c.RAIL_WEAR, grime: c.RAIL_GRIME };
   const { strip, h } = paintedStrip('rail', c, vp, a, topExtra, top, style, c.RAIL_DUST);
   const row = el('div', 'rail');
   row.style.height = `${h}px`;
@@ -103,7 +104,7 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
   const overhang = Math.max(0, profile.faceDepthCm - TILE_FACE_CM) * ppc;
   const lights = lightsAt(room, wallPoint(map, { x: a.centreX, y: top + h }));
   const total = lights.reduce((s, l) => s + l.weight, 0);
-  const reach = lights.reduce((s, { dir, weight }) => s + (Math.max(0, -dir[1]) / dir[2]) * overhang * (weight / total), 0);
+  const reach = lights.reduce((s, { dir, weight, diffuse }) => s + (diffuse ? 0 : (Math.max(0, -dir[1]) / dir[2]) * overhang * (weight / total)), 0);
   const shadow = el('div', 'rail-shadow');
   Object.assign(shadow.style, { height: `${(reach * 1.6 + 2).toFixed(1)}px`, '--rail-shadow-a': String(0.32 * c.RAIL_SHADOW) });
   strip.lastElementChild!.before(seamLine(c, vp, a)); // under the dust
@@ -112,17 +113,25 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
 }
 
 // The skirting along the floor, directly below the last row of tiles; the page ends with it.
+// From eye height you look down onto its top: the ledge between the tile face and where the board
+// rounds over, foreshortened by the view angle — what its thickness looks like.
 function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number): HTMLElement {
-  const style: TrimStyle = { profile: skirtingProfile(skirtingDims(c)), colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, scuffs: c.SKIRTING_SCUFFS };
+  const room = roomFromConfig(c), view = viewAt(room, wallPoint(wallMap(c, a, topExtra), { x: a.centreX, y: top }));
+  const profile = skirtingProfile(skirtingDims(c));
+  const ledgeCm = (Math.max(0, profile.topDepthCm - TILE_FACE_CM) * Math.max(0, -view[1])) / view[2];
+  const style: TrimStyle = { profile, colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, ledgeCm,
+    scuffs: { amount: c.SKIRTING_SCUFFS, low: c.SKIRTING_SCUFF_LOW, faceTopCm: profile.heightCm - c.SKIRTING_FLAT_CM } };
   const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST);
   const footer = el('footer', 'skirting', [strip]);
   footer.style.height = `${h}px`;
   return footer;
 }
 
+const DUST_PX_PER_CM = 10; // dust sizes in trim/dust.ts are px at this scene scale (desktop)
+
 // Dust on a trim's top ledge, lit by the room at the ledge (see trim/dust.ts).
-function trimDust(c: Config, vp: Viewport, a: Anchor, h: number, amount: number, lights: Light[]): HTMLCanvasElement {
-  const dpr = Math.min(2, devicePixelRatio || 1), band = Math.max(4, Math.min(h * 0.22, 14));
+function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: number, lights: Light[]): HTMLCanvasElement {
+  const dpr = Math.min(2, devicePixelRatio || 1);
   const canvas = el('canvas', 'trim-dust');
   canvas.width = Math.ceil(vp.width * dpr);
   canvas.height = Math.ceil(band * dpr);
@@ -130,7 +139,7 @@ function trimDust(c: Config, vp: Viewport, a: Anchor, h: number, amount: number,
   canvas.style.height = `${band}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  drawDust(ctx, a.originX, vp.width, band, amount, c.DUST_SHADE, lights);
+  drawDust(ctx, a.originX, vp.width, band, amount, c.DUST_SHADE, lights, 433, pxPerCm(roomFromConfig(c), a.tile) / DUST_PX_PER_CM);
   return canvas;
 }
 
@@ -393,7 +402,7 @@ export interface Frame {
 function frameShadow(c: Config, tile: number): Record<string, string> {
   const room = roomFromConfig(c), d = c.EMBROIDERY_STANDOFF_CM * pxPerCm(room, tile);
   const lights = lightsAt(room, room.embroidery), total = lights.reduce((s, l) => s + l.weight, 0);
-  const shadows = lights.map(({ dir: [x, y, z], weight }) => {
+  const shadows = lights.filter((l) => !l.diffuse).map(({ dir: [x, y, z], weight }) => {
     const sx = (-x / z) * d, sy = (-y / z) * d;
     const blur = 2 + Math.hypot(sx, sy) * 0.8 + d * 0.3;
     return `drop-shadow(${sx.toFixed(1)}px ${sy.toFixed(1)}px ${blur.toFixed(1)}px rgb(0 0 0 / ${((0.45 * weight) / total).toFixed(3)}))`;

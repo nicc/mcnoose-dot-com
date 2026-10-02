@@ -6,6 +6,7 @@ const room: Room = {
   embroidery: { x: 130, y: 132 },
   window: { x: 90, bottom: 80, width: 70, height: 110 },
   fill: 0.35,
+  bounce: 0.25,
 };
 
 describe('lights', () => {

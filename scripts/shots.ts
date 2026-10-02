@@ -23,6 +23,7 @@ const browser = await { chromium, firefox, webkit }[name].launch();
 mkdirSync(dir, { recursive: true });
 for (const [label, viewport] of Object.entries(VIEWPORTS)) {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
+  await page.addInitScript(() => localStorage.setItem('mcnoose-wip-seen', '1')); // no notice in shots
   await page.goto(url);
   await page.waitForSelector('html[data-printed="true"]');
   await page.addStyleTag({ content: '.lil-gui { display: none !important }' });

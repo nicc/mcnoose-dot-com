@@ -27,6 +27,7 @@ export const CONFIG = {
   ROOM_WINDOW_WIDTH_CM: 70,
   ROOM_WINDOW_HEIGHT_CM: 110,
   ROOM_FILL: 0.35, // ceiling light strength relative to the window
+  ROOM_BOUNCE: 0.25, // daylight bounced up off the floor: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
   ROOM_WALL_COLOR: '#e4dccb', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#f1efe9',
@@ -154,12 +155,14 @@ export const CONFIG = {
 
   // Skirting: painted board along the floor (the page ends with it). Geometry in cm.
   SKIRTING_COLOR: '#bfb093', // same paint as the rail
-  SKIRTING_DEPTH_CM: 2, // the face's distance off the wall
-  SKIRTING_TORUS_CM: 1.95, // half-round moulding along the top
+  SKIRTING_DEPTH_CM: 1.85, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
+  SKIRTING_TORUS_CM: 1.95, // diameter of the round along the top
+  SKIRTING_RELIEF_CM: 0.6, // how far the round stands proud of the face: small = a lip, half the torus = a full half-round
   SKIRTING_FLAT_CM: 13.2, // face height down to the floor
   SKIRTING_WEAR: 0.35, // chipped paint on the torus
   SKIRTING_GRIME: 0.68, // dirt in the groove
-  SKIRTING_SCUFFS: 0.58, // shoe and vacuum marks low on the face
+  SKIRTING_SCUFFS: 0.58, // rub line, shoe scuffs and chips on the face
+  SKIRTING_SCUFF_LOW: 0.7, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
   SKIRTING_DUST: 1.6, // dust along the top
 
   // Work-in-progress notice, shown once per browser

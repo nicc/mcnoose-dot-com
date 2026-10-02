@@ -5,7 +5,7 @@
 // seamlessly; each is cached by its trim and its place on the wall.
 import type { Light, Vec3 } from '../room';
 import { AMBIENT } from '../room';
-import { shadeBoard } from '../wood/board';
+import { diffuseReach, shadeBoard } from '../wood/board';
 import { grainMaps, type RGB } from '../wood/grain';
 import { PAINT_BARE, paintMaps, softenProfile } from '../wood/paint';
 import { weather } from '../wood/wear';
@@ -18,7 +18,8 @@ export interface TrimStyle {
   paint: { grain: number; brush: number; buildup: number; yellowing: number; sheen: number; gloss: number };
   wear: number;
   grime: number;
-  scuffs: number; // 0–1 knocks and smudges low on the face (skirting)
+  scuffs?: { amount: number; low: number; faceTopCm: number }; // knocks on the flat face (skirting; see scuffs.ts)
+  ledgeCm?: number; // the top ledge seen from above, foreshortened (skirting): drawn above the profile
 }
 
 // Pine under the paint: only its ring relief matters once painted.
@@ -33,6 +34,17 @@ export interface TrimLight {
   view: Vec3;
 }
 
+// An upward-facing ledge lit by the room, relative to the vertical face (which shows its albedo).
+// The tile wall rising behind it fills half its view of the room (same model as the board).
+export function ledgeShade(lights: Light[]): number {
+  let lit = 0, flat = 0;
+  for (const { dir, weight } of lights) {
+    lit += weight * Math.max(0, -dir[1]);
+    flat += weight * dir[2];
+  }
+  return AMBIENT * diffuseReach(0.5) + (1 - AMBIENT) * (lit / flat);
+}
+
 const board = (lights: Light[]) => lights.map(({ dir, weight }) => ({ dir, weight }));
 
 const cache = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
@@ -45,13 +57,14 @@ export function trimLength(trim: string, index: number, lenPx: number, heightPx:
   const hit = cache.get(id);
   if (hit && hit.key === key) return hit.canvas;
 
-  const len = Math.max(1, Math.round(lenPx * dpr)), wid = Math.max(2, Math.round(heightPx * dpr));
+  const len = Math.max(1, Math.round(lenPx * dpr)), total = Math.max(2, Math.round(heightPx * dpr));
   const scale = pxPerCm * dpr, u0 = index * len;
+  const ledge = Math.min(total - 2, Math.round((s.ledgeCm ?? 0) * scale)), wid = total - ledge;
   const profile = softenProfile(s.profile.at, s.paint.buildup, s.profile.heightCm);
   const wood = grainMaps(len, wid, { ...PINE, ringPx: RING_CM * scale }, 0, u0);
-  const paint = paintMaps(wood, len, wid, profile, { colour: s.colour, grain: s.paint.grain, brush: s.paint.brush, yellowing: s.paint.yellowing, seed: 31 }, u0);
+  const paint = paintMaps(wood, len, wid, profile, { colour: s.colour, grain: s.paint.grain, brush: s.paint.brush, yellowing: s.paint.yellowing, buildup: s.paint.buildup, pxPerCm: scale, seed: 31 }, u0);
   weather(paint, len, wid, profile, { wear: s.wear, grime: s.grime, patches: 0.7, mitres: false, seed: 61, bare: PAINT_BARE }, 0, u0);
-  scuff(paint, len, wid, s.scuffs, u0, scale, trim === 'skirting' ? 71 : 73);
+  if (s.scuffs) scuff(paint, len, wid, { amount: s.scuffs.amount, low: s.scuffs.low, faceTop: Math.round(wid * (s.scuffs.faceTopCm / s.profile.heightCm)) }, u0, scale, trim === 'skirting' ? 71 : 73);
   // Trim coordinates: u along the wall (screen x), v down the rail (screen y), z out of the wall.
   const rgba = shadeBoard(paint, len, wid, {
     profile,
@@ -63,12 +76,26 @@ export function trimLength(trim: string, index: number, lenPx: number, heightPx:
     shadowSoftness: SHADOW_SOFTNESS,
   }, board(start.lights), start.view, { lights: board(end.lights), view: end.view });
 
+  // The ledge: the face's paint, turned up to the light, lit start → end like the board.
+  const out = new Uint8ClampedArray(len * total * 4);
+  out.set(rgba, len * ledge * 4);
+  if (ledge > 0) {
+    const a = ledgeShade(start.lights), b = ledgeShade(end.lights), from = Math.floor(wid * 0.4);
+    for (let v = 0; v < ledge; v++) {
+      for (let u = 0; u < len; u++) {
+        const shade = a + (b - a) * (len > 1 ? u / (len - 1) : 0), src = ((from + v) * len + u) * 3, i = (v * len + u) * 4;
+        for (let c = 0; c < 3; c++) out[i + c] = paint.albedo[src + c] * shade;
+        out[i + 3] = 255;
+      }
+    }
+  }
+
   const canvas = hit?.canvas ?? document.createElement('canvas');
   canvas.className = 'trim-length';
   canvas.setAttribute('aria-hidden', 'true');
   canvas.width = len;
-  canvas.height = wid;
-  canvas.getContext('2d')!.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, len, wid), 0, 0);
+  canvas.height = total;
+  canvas.getContext('2d')!.putImageData(new ImageData(out as Uint8ClampedArray<ArrayBuffer>, len, total), 0, 0);
   cache.set(id, { key, canvas });
   return canvas;
 }
