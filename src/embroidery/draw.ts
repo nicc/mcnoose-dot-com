@@ -1,7 +1,7 @@
 // Paints the framed sampler: aida cloth, X stitches with thread sheen, and a mitred wooden frame,
 // all lit from the wallpaper's light direction (rotated into the tilted frame's own coordinates).
 import { AMBIENT, blendedLight, type Light, type Vec3 } from '../room';
-import { drawDust } from '../rail/dust';
+import { drawDust } from '../trim/dust';
 import { drawSpots, spotLayout } from '../surface/spots';
 import { frameProfile, shadeBoard } from '../wood/board';
 import { grainMaps, type RGB } from '../wood/grain';

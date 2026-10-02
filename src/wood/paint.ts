@@ -1,4 +1,4 @@
-// A painted finish over wood (rail now, skirting later). The paint hides the wood's colour, but
+// A painted finish over wood (rail, skirting). The paint hides the wood's colour, but
 // latewood ridges still telegraph through as faint relief (pores are filled), long brush strokes
 // leave ridged streaks along the board, layers of old paint soften the routing, and oil paint
 // yellows, most in the recesses away from the light. Produces maps for shadeBoard + weather.
@@ -16,20 +16,27 @@ export interface PaintStyle {
 const YELLOWED = [1, 0.955, 0.84]; // what ageing does to a cream/white oil paint
 export const PAINT_BARE: [number, number, number] = [0.72, 0.62, 0.5]; // chips show wood and old primer
 
-// Layers of paint round off sharp routing: the profile, box-blurred across the board.
-export function softenProfile(profile: (t: number) => number, amount: number, samples = 256): (t: number) => number {
+// Layers of paint round off sharp routing: the profile, box-blurred across the board. The blur
+// radius is physical (cm of paint build-up), so tall and short boards soften alike; sampled finely
+// and interpolated so the slope has no steps for the lighting to pick out as stripes.
+const SOFTEN_CM = 0.16; // blur radius at full build-up
+const SAMPLE_CM = 0.02;
+export function softenProfile(profile: (t: number) => number, amount: number, heightCm: number): (t: number) => number {
+  const samples = Math.max(256, Math.ceil(heightCm / SAMPLE_CM));
   const raw = Float32Array.from({ length: samples }, (_, i) => profile((i + 0.5) / samples));
-  const r = Math.round(amount * samples * 0.03);
+  const r = Math.round((amount * SOFTEN_CM) / (heightCm / samples));
   const soft = r <= 0 ? raw : raw.map((_, i) => {
     let s = 0, n = 0;
     for (let k = -r; k <= r; k++) {
-      const j = Math.min(samples - 1, Math.max(0, i + k));
-      s += raw[j];
+      s += raw[Math.min(samples - 1, Math.max(0, i + k))];
       n++;
     }
     return s / n;
   });
-  return (t) => soft[Math.min(samples - 1, Math.max(0, Math.floor(t * samples)))];
+  return (t) => {
+    const x = Math.min(samples - 1, Math.max(0, t * samples - 0.5)), i = Math.floor(x), f = x - i;
+    return soft[i] + (soft[Math.min(samples - 1, i + 1)] - soft[i]) * f;
+  };
 }
 
 // grain: the wood under the paint (its relief is used, its colour is not). uOffset: position

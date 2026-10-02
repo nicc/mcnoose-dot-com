@@ -1,4 +1,4 @@
-// Builds the wall: wallpaper header, bull-nose row, tile grid, skirting.
+// Builds the wall: wallpaper header, dado rail, tile grid, skirting.
 import type { Config } from './config';
 import { rowCount, visibleColumns, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
@@ -9,9 +9,9 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { fbm } from './wood/noise';
-import { railLength, type RailStyle } from './rail';
-import { drawDust } from './rail/dust';
-import { railProfile, type RailDims } from './rail/profile';
+import { drawDust } from './trim/dust';
+import { trimLength, type TrimStyle } from './trim/length';
+import { railProfile, skirtingProfile, type RailDims, type SkirtingDims } from './trim/profile';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
 
@@ -59,59 +59,75 @@ function header(c: Config, tile: number): HTMLElement {
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 
-// The painted dado rail capping the tiles, in tile-wide lengths, each lit by the room at its own
-// place on the wall. It stands proud of the tiles, so it casts a soft shadow onto the top row.
+// Painted trim (dado rail, skirting) in tile-wide lengths, each lit by the room at its own place on
+// the wall. The rail stands proud of the tiles and casts a soft shadow onto the top row.
 const railDims = (c: Config): RailDims => ({ depthCm: c.RAIL_DEPTH_CM, roundCm: c.RAIL_ROUND_CM, beadCm: c.RAIL_BEAD_CM, coveCm: c.RAIL_COVE_CM, flatCm: c.RAIL_FLAT_CM });
+const skirtingDims = (c: Config): SkirtingDims => ({ depthCm: c.SKIRTING_DEPTH_CM, torusCm: c.SKIRTING_TORUS_CM, flatCm: c.SKIRTING_FLAT_CM });
 const railHeight = (c: Config, tile: number) => railProfile(railDims(c)).heightCm * (tile / c.ROOM_TILE_CM);
 const TILE_FACE_CM = 0.9; // tile faces stand this far off the wall
 // The well-fitted joints where the tiles meet the rail and the skirting: a fine caulked line.
 const edgeJoint = (c: Config, tile: number) => c.GROUT_EDGE_CM * (tile / c.ROOM_TILE_CM);
 
-function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
+const paintOf = (c: Config) => ({ grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, buildup: c.PAINT_BUILDUP, yellowing: c.PAINT_YELLOWING, sheen: c.PAINT_SHEEN, gloss: c.PAINT_GLOSS });
+
+// A strip of painted lengths across the window at page y `top`, clipped to the window, with dust
+// on its top ledge. Returns the strip and the height it occupies.
+function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number): { strip: HTMLElement; h: number } {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
-  const h = railHeight(c, a.tile), top = topExtra + c.HEADER_HEIGHT * a.tile, seg = a.tile;
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  const style: RailStyle = {
-    dims: railDims(c),
-    colour: hexToRgb(c.RAIL_COLOR),
-    paint: { grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, buildup: c.PAINT_BUILDUP, yellowing: c.PAINT_YELLOWING, sheen: c.PAINT_SHEEN, gloss: c.PAINT_GLOSS },
-    wear: c.RAIL_WEAR,
-    grime: c.RAIL_GRIME,
-  };
-  const row = el('div', 'rail');
-  row.style.height = `${h}px`;
-  const strip = el('div', 'rail-strip'); // clips the lengths to the window; the cast shadow spills below
+  const h = style.profile.heightCm * ppc, seg = a.tile, dpr = Math.min(2, devicePixelRatio || 1);
+  const strip = el('div', 'trim-strip');
   const first = Math.floor(-a.originX / seg), last = Math.ceil((vp.width - a.originX) / seg);
   for (let k = first; k <= last; k++) {
     const left = a.originX + k * seg;
     const at = wallPoint(map, { x: left + seg / 2, y: top + h / 2 });
-    const length = railLength(k, seg, h, ppc, dpr, lightsAt(room, at), viewAt(room, at), style);
+    const length = trimLength(trim, k, seg, h, ppc, dpr, lightsAt(room, at), viewAt(room, at), style);
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
+  strip.append(trimDust(c, vp, a, h, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top }))));
+  return { strip, h };
+}
+
+function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
+  const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
+  const top = topExtra + c.HEADER_HEIGHT * a.tile;
+  const profile = railProfile(railDims(c));
+  const style: TrimStyle = { profile, colour: hexToRgb(c.RAIL_COLOR), paint: paintOf(c), wear: c.RAIL_WEAR, grime: c.RAIL_GRIME, scuffs: 0 };
+  const { strip, h } = paintedStrip('rail', c, vp, a, topExtra, top, style, c.RAIL_DUST);
+  const row = el('div', 'rail');
+  row.style.height = `${h}px`;
   // Its cast shadow on the tiles: how far the rail's bottom overhangs them, along each light's slant.
-  const overhang = Math.max(0, railProfile(style.dims).faceDepthCm - TILE_FACE_CM) * ppc;
+  const overhang = Math.max(0, profile.faceDepthCm - TILE_FACE_CM) * ppc;
   const lights = lightsAt(room, wallPoint(map, { x: a.centreX, y: top + h }));
   const total = lights.reduce((s, l) => s + l.weight, 0);
   const reach = lights.reduce((s, { dir, weight }) => s + (Math.max(0, -dir[1]) / dir[2]) * overhang * (weight / total), 0);
   const shadow = el('div', 'rail-shadow');
   Object.assign(shadow.style, { height: `${(reach * 1.6 + 2).toFixed(1)}px`, '--rail-shadow-a': String(0.32 * c.RAIL_SHADOW) });
-  strip.append(seamLine(c, vp, a), railDust(c, vp, a, h, lightsAt(room, wallPoint(map, { x: a.centreX, y: top }))));
+  strip.lastElementChild!.before(seamLine(c, vp, a)); // under the dust
   row.append(strip, shadow);
   return row;
 }
 
-// Dust on the rail's top, lit by the room at the ledge (see rail/dust.ts).
-function railDust(c: Config, vp: Viewport, a: Anchor, h: number, lights: Light[]): HTMLCanvasElement {
-  const dpr = Math.min(2, devicePixelRatio || 1), band = Math.max(4, h * 0.22);
-  const canvas = el('canvas', 'rail-dust');
+// The skirting along the floor, directly below the last row of tiles; the page ends with it.
+function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number): HTMLElement {
+  const style: TrimStyle = { profile: skirtingProfile(skirtingDims(c)), colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, scuffs: c.SKIRTING_SCUFFS };
+  const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST);
+  const footer = el('footer', 'skirting', [strip]);
+  footer.style.height = `${h}px`;
+  return footer;
+}
+
+// Dust on a trim's top ledge, lit by the room at the ledge (see trim/dust.ts).
+function trimDust(c: Config, vp: Viewport, a: Anchor, h: number, amount: number, lights: Light[]): HTMLCanvasElement {
+  const dpr = Math.min(2, devicePixelRatio || 1), band = Math.max(4, Math.min(h * 0.22, 14));
+  const canvas = el('canvas', 'trim-dust');
   canvas.width = Math.ceil(vp.width * dpr);
   canvas.height = Math.ceil(band * dpr);
   canvas.setAttribute('aria-hidden', 'true');
   canvas.style.height = `${band}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  drawDust(ctx, a.originX, vp.width, band, c.RAIL_DUST, c.DUST_SHADE, lights);
+  drawDust(ctx, a.originX, vp.width, band, amount, c.DUST_SHADE, lights);
   return canvas;
 }
 
@@ -401,7 +417,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
     '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
     ...frameShadow(c, a.tile),
-    '--skirting-h': `${c.SKIRTING_HEIGHT * a.tile}px`,
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
     '--seam-shadow-a': String(0.22 * c.SEAM_SHADOW),
@@ -425,7 +440,15 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
-  root.replaceChildren(top, rail(c, vp, a, topExtra), grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile)), el('footer', 'skirting'));
+  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
+  const rows = rowCount(projects.length, Math.max(1, cols.full.length), c.TRAILING_ROWS);
+  const skirtingTop = firstTileTop + rows * a.pitch - c.GROUT_PX + edgeJoint(c, a.tile);
+  root.replaceChildren(
+    top,
+    rail(c, vp, a, topExtra),
+    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop),
+    skirting(c, vp, a, topExtra, skirtingTop),
+  );
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

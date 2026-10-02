@@ -48,7 +48,7 @@ export const CONFIG = {
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
   WALLPAPER_AMBIENT: 0.75, // how dark shadowed slopes get (1 = no shadow)
   WALLPAPER_SHEEN: 0.1, // satin highlight
-  SEAM_SHADOW: 0.59, // contact shadow on the paper where it meets the tiles
+  SEAM_SHADOW: 0.25, // contact shadow on the paper where it meets the tiles
   SEAM_SHADOW_CM: 0.5, // … and how far up the paper it reaches
   SEAM_LINE: 0.6, // the joint line between paper and tile
 
@@ -99,7 +99,7 @@ export const CONFIG = {
   RAIL_DUST: 0.46, // dust settled along the top
   RAIL_SHADOW: 0.72, // shadow it casts onto the top row of tiles
 
-  // Paint: shared by every painted surface (rail now, skirting later)
+  // Paint: shared by every painted surface (rail, skirting)
   PAINT_GRAIN: 0.36, // wood grain telegraphing through the paint
   PAINT_BRUSH: 0.49, // brush-stroke ridges
   PAINT_BUILDUP: 0.85, // layers of old paint softening the routing
@@ -152,9 +152,15 @@ export const CONFIG = {
   HALFTONE_BLUR_PX: 0.4, // ink bleed under the glaze
   HALFTONE_OPACITY: 0.8,
 
-  // Skirting
-  SKIRTING_HEIGHT: 0.55,
-  SKIRTING_COLOR: '#f4f3ee',
+  // Skirting: painted board along the floor (the page ends with it). Geometry in cm.
+  SKIRTING_COLOR: '#bfb093', // same paint as the rail
+  SKIRTING_DEPTH_CM: 2, // the face's distance off the wall
+  SKIRTING_TORUS_CM: 2.4, // half-round moulding along the top
+  SKIRTING_FLAT_CM: 14, // face height down to the floor
+  SKIRTING_WEAR: 0.35, // chipped paint on the torus
+  SKIRTING_GRIME: 0.3, // dirt in the groove
+  SKIRTING_SCUFFS: 0.45, // shoe and vacuum marks low on the face
+  SKIRTING_DUST: 0.5, // dust along the top
 };
 
 export type Config = { -readonly [K in keyof typeof CONFIG]: (typeof CONFIG)[K] };

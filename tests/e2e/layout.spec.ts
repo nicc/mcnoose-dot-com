@@ -27,6 +27,10 @@ for (const size of SIZES) {
         innerFits: boxes.slice(1, -1).every((b) => b.left >= -0.5 && b.right <= vw + 0.5),
         edgesBlank: !row[0].querySelector('.tile-print') && !row[row.length - 1].querySelector('.tile-print'),
         pageEnd: Math.abs(skirting.bottom + scrollY - document.documentElement.scrollHeight) < 1,
+        // The skirting is painted lengths spanning the window, sitting directly under the last tile row.
+        skirtingSpans: [...document.querySelectorAll('.skirting .trim-length')].some((l) => l.getBoundingClientRect().left <= 0) &&
+          [...document.querySelectorAll('.skirting .trim-length')].some((l) => l.getBoundingClientRect().right >= vw),
+        skirtingGap: skirting.top - [...document.querySelectorAll('.grid > .tile')].at(-1)!.getBoundingClientRect().bottom,
       };
     });
     expect(m.scrollW).toBeLessThanOrEqual(m.vw);
@@ -37,6 +41,9 @@ for (const size of SIZES) {
     expect(m.rightPeek).toBeGreaterThanOrEqual(0.25 * m.tile - 0.5);
     expect(m.tile).toBeLessThanOrEqual(400);
     expect(m.pageEnd).toBe(true);
+    expect(m.skirtingSpans).toBe(true);
+    expect(m.skirtingGap).toBeGreaterThanOrEqual(0);
+    expect(m.skirtingGap).toBeLessThan(4); // the fine caulked joint, not a full grout line
   });
 }
 
@@ -75,8 +82,8 @@ const wallState = () => {
     tile: row[0].getBoundingClientRect().width,
     pitch: row[1].getBoundingClientRect().left - row[0].getBoundingClientRect().left,
     tiles: lefts('.grid > .tile').slice(0, cols),
-    rail: lefts('.rail-length'),
-    railPitch: lefts('.rail-length')[1] - lefts('.rail-length')[0],
+    rail: lefts('.rail .trim-length'),
+    railPitch: lefts('.rail .trim-length')[1] - lefts('.rail .trim-length')[0],
     frameX: f.left + f.width / 2,
     fullTiles: row.filter((t) => t.getBoundingClientRect().left >= -0.5 && t.getBoundingClientRect().right <= vw + 0.5),
     projectsShown: document.querySelectorAll('.tile-project').length,
@@ -166,7 +173,7 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
   const at = () => page.evaluate(() => ({
     tile: document.querySelector('.grid > .tile')!.getBoundingClientRect().left,
     frame: document.querySelector('.frame')!.getBoundingClientRect(),
-    rail: document.querySelector('.rail-length')!.getBoundingClientRect().left,
+    rail: document.querySelector('.rail .trim-length')!.getBoundingClientRect().left,
     wallpaperX: parseFloat((document.querySelector('.wallpaper') as HTMLElement).style.backgroundPositionX),
     scrollY,
   }));

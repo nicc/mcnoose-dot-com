@@ -89,20 +89,20 @@ body {
   pointer-events: none;
 }
 
-/* Painted dado rail: tile-wide lengths, each lit at its own place on the wall. Above the
-   tiles in stacking order so its cast shadow falls onto them. */
+/* Painted trim (rail, skirting): tile-wide lengths, each lit at its own place on the wall. The
+   rail sits above the tiles in stacking order so its cast shadow falls onto them. */
 .rail {
   position: relative;
   z-index: 1;
 }
 
-.rail-strip {
+.trim-strip {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
 
-.rail-length {
+.trim-length {
   position: absolute;
   top: 0;
   display: block;
@@ -117,7 +117,7 @@ body {
   pointer-events: none;
 }
 
-.rail-dust {
+.trim-dust {
   position: absolute;
   top: 0;
   left: 0;
@@ -216,7 +216,6 @@ body {
 
 /* Skirting: page ends here */
 .skirting {
-  height: var(--skirting-h);
+  position: relative;
   background: var(--skirting-color);
-  border-top: calc(var(--tile) * 0.03) solid #e6e4dc;
 }

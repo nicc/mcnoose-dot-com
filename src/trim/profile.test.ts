@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RAIL_BOTTOM_CM, railProfile } from './profile';
+import { RAIL_BOTTOM_CM, railProfile, skirtingProfile } from './profile';
 
 const dims = { depthCm: 2.2, roundCm: 0.8, beadCm: 0.6, coveCm: 0.7, flatCm: 3 };
 
@@ -18,5 +18,21 @@ describe('railProfile', () => {
     expect(flat).toBeLessThan(1);
     expect(atCm(0.8 + 0.6 + 0.7 + 2.5)).toBeCloseTo(flat); // flat really is flat
     expect(p.at(1)).toBeLessThan(flat); // rounded bottom edge
+  });
+});
+
+describe('skirtingProfile', () => {
+  const p = skirtingProfile({ depthCm: 2, torusCm: 2.4, flatCm: 14 });
+
+  it('stacks torus, groove and face into its height', () => {
+    expect(p.heightCm).toBeCloseTo(2.4 + 0.25 + 14);
+  });
+
+  it('bulges at the torus, dips at the groove, then runs flat to the floor', () => {
+    const atCm = (cm: number) => p.at(cm / p.heightCm);
+    expect(atCm(1.2)).toBeCloseTo(1, 1); // front of the torus
+    expect(atCm(2.5)).toBeLessThan(atCm(10)); // groove
+    expect(atCm(8)).toBeCloseTo(atCm(16)); // flat face
+    expect(p.faceDepthCm).toBe(2);
   });
 });
