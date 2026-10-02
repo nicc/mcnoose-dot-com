@@ -30,7 +30,7 @@ export const CONFIG = {
   ROOM_CLOUD_DEPTH: 0.7, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.4, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
-  ROOM_CLOUD_BALANCE: 0.97, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
+  ROOM_CLOUD_BALANCE: 0.95, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
   ROOM_BOUNCE: 0.25, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
