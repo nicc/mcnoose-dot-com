@@ -8,6 +8,7 @@ import { lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, type Room, type 
 import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/glaze';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
+import { beginSurfaces, wipeable } from './wipe';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
 import { trimLength, type TrimStyle } from './trim/length';
@@ -88,7 +89,7 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
     strip.append(length);
   }
   const band = ledge >= 3 ? ledge : Math.max(4, Math.min(h * 0.22, 14));
-  strip.append(trimDust(c, vp, a, band, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top }))));
+  strip.append(trimDust(c, vp, a, band, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top })), map, top));
   return { strip, h };
 }
 
@@ -130,7 +131,7 @@ function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: num
 const DUST_PX_PER_CM = 10; // dust sizes in trim/dust.ts are px at this scene scale (desktop)
 
 // Dust on a trim's top ledge, lit by the room at the ledge (see trim/dust.ts).
-function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: number, lights: Light[]): HTMLCanvasElement {
+function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: number, lights: Light[], map: WallMap, top: number): HTMLCanvasElement {
   const dpr = Math.min(2, devicePixelRatio || 1);
   const canvas = el('canvas', 'trim-dust');
   canvas.width = Math.ceil(vp.width * dpr);
@@ -140,6 +141,7 @@ function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: numb
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
   drawDust(ctx, a.originX, vp.width, band, amount, c.DUST_SHADE, lights, 433, pxPerCm(roomFromConfig(c), a.tile) / DUST_PX_PER_CM);
+  wipeable(canvas, 'dust', map, 0, top, dpr, true);
   return canvas;
 }
 
@@ -312,22 +314,26 @@ const roomLook = (c: Config): RoomLook => ({
 });
 
 // Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
-const ageing = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
+const ageing = new Map<string, { key: string; fixed: HTMLCanvasElement; marks: HTMLCanvasElement }>();
 
-function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, grout?: GroutAround): HTMLCanvasElement {
+// fresh: just drawn (so wipes are replayed onto its marks).
+function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, grout?: GroutAround): { fixed: HTMLCanvasElement; marks: HTMLCanvasElement; dpr: number; fresh: boolean } {
   const dpr = Math.min(1.5, devicePixelRatio || 1); // soft detail: no need for full density
   const key = JSON.stringify([w, h, dpr, age, grout]);
   let hit = ageing.get(id);
-  if (!hit || hit.key !== key) {
-    const canvas = el('canvas', 'tile-age');
-    canvas.setAttribute('aria-hidden', 'true');
-    drawAgeing(canvas, w, h, dpr, age, seed, grout);
+  const fresh = !hit || hit.key !== key;
+  if (!hit || fresh) {
+    const fixed = el('canvas', 'tile-age'), marks = el('canvas', 'tile-age');
+    drawAgeing(fixed, marks, w, h, dpr, age, seed, grout);
     // Extends over the joints the tile owns: left and above (and below on the bottom row).
     const g = grout?.g ?? 0;
-    Object.assign(canvas.style, { left: `${-g}px`, top: `${-g}px`, width: `${w + g}px`, height: `${h + g + (grout?.lastRow ? grout.bottomG : 0)}px` });
-    ageing.set(id, (hit = { key, canvas }));
+    for (const canvas of [fixed, marks]) {
+      canvas.setAttribute('aria-hidden', 'true');
+      Object.assign(canvas.style, { left: `${-g}px`, top: `${-g}px`, width: `${w + g}px`, height: `${h + g + (grout?.lastRow ? grout.bottomG : 0)}px` });
+    }
+    ageing.set(id, (hit = { key, fixed, marks }));
   }
-  return hit.canvas;
+  return { fixed: hit.fixed, marks: hit.marks, dpr, fresh };
 }
 
 // grime: 0 high on the wall … 1 bottom row
@@ -352,7 +358,7 @@ function tileAgeing(c: Config, a: Anchor, rows: number) {
   };
 }
 
-function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface, firstTileTop: number): HTMLElement {
+function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface, firstTileTop: number, map: WallMap): HTMLElement {
   const g = el('div', 'grid');
   const slot = new Map(cols.full.map((k, i) => [k, i]));
   const n = Math.max(1, cols.full.length);
@@ -378,8 +384,10 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
           strength: c.TILE_REFLECTION,
           seed: tileSeed(k, r),
         }),
-        aged(r, k),
       );
+      const age = aged(r, k);
+      t.append(age.fixed, age.marks);
+      wipeable(age.marks, 'scale', map, a.originX + k * a.pitch - c.GROUT_PX, firstTileTop + r * a.pitch - c.GROUT_PX, age.dpr, age.fresh);
       tiles.set(key, t);
       g.append(t);
     }
@@ -454,13 +462,14 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
+  beginSurfaces(wallMap(c, a, topExtra)); // wipeable canvases register as they're placed
   const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
   const rows = wallRows(projects.length, a, cols.full.length, c.TRAILING_ROWS);
   const skirtingTop = firstTileTop + rows * a.pitch - c.GROUT_PX + edgeJoint(c, a.tile);
   root.replaceChildren(
     top,
     rail(c, vp, a, topExtra),
-    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop),
+    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra)),
     skirting(c, vp, a, topExtra, skirtingTop),
   );
   // Signals tests and screenshots that every visible print has settled.

@@ -55,6 +55,9 @@ Painted dado rail capping the tiles and the skirting the page ends on; one pipel
 ## Notice
 `src/notice.ts`: once-per-browser "still being built" `<dialog>` (localStorage `mcnoose-wip-seen`). e2e storage marks it seen; `notice.spec.ts` starts clean. Remove when the site launches.
 
+## Wiping (`src/wipe.ts`)
+Mouse only (touch drags scroll). Round soft brush `WIPE_WIDTH_CM`; dust on rail/skirting clears in one pass, tile marks/limescale per `WIPE_LIMESCALE_STUBBORN`. Dabs logged in wall cm and replayed onto freshly drawn canvases (`beginSurfaces`/`wipeable` at render); tile ageing is two canvases (fixed: crazing + grout; marks: wipeable). Frame dust isn't wipeable (frame drags rotate). A drag that wiped swallows the next click.
+
 ## Halftone
 Dots come from the `halftone-print` package (our own: ~/source/play/halftone-print, github nicc/halftone-print; changes go there, released by tag). `src/halftone/print.ts` composes logo + title per tile and calls `renderHalftone`. Pitch fixed in CSS px. Title stays in DOM as `.sr-only`; shown as plain text if printing fails. `html[data-printed=true]` when all prints settle.
 

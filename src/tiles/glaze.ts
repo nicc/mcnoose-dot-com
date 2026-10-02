@@ -67,31 +67,39 @@ export function ownedJoints(w: number, h: number, g: number, lastRow: boolean, t
 
 // A tile's ageing layer, w×h CSS px at the given pixel density. With `grout`, the canvas extends
 // g px left and up (and down on the bottom row) to age the joints the tile owns.
-export function drawAgeing(canvas: HTMLCanvasElement, w: number, h: number, dpr: number, a: Ageing, seed: number, grout?: GroutAround) {
+// Two layers: `fixed` (grout ageing, crazing — in the glaze, permanent) and `marks` (dried water
+// marks and limescale — on the glaze, so they can be wiped; see wipe.ts).
+export function drawAgeing(fixed: HTMLCanvasElement, marks: HTMLCanvasElement, w: number, h: number, dpr: number, a: Ageing, seed: number, grout?: GroutAround) {
   const g = grout?.g ?? 0;
-  canvas.width = Math.max(1, Math.round((w + g) * dpr));
-  canvas.height = Math.max(1, Math.round((h + g + (grout?.lastRow ? grout.bottomG : 0)) * dpr));
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(dpr, dpr);
+  const ctxs = [fixed, marks].map((canvas) => {
+    canvas.width = Math.max(1, Math.round((w + g) * dpr));
+    canvas.height = Math.max(1, Math.round((h + g + (grout?.lastRow ? grout.bottomG : 0)) * dpr));
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(dpr, dpr);
+    return ctx;
+  });
+  const [f, m] = ctxs;
   if (grout) {
     const joints = ownedJoints(w, h, g, grout.lastRow, grout.topG, grout.bottomG);
-    drawGrout(ctx, joints, groutMarks(joints, g, grout.age, seed + 101));
+    drawGrout(f, joints, groutMarks(joints, g, grout.age, seed + 101));
   }
-  ctx.save();
-  ctx.translate(g, g);
-  ctx.beginPath();
-  ctx.rect(0, 0, w, h);
-  ctx.clip();
-  drawCrazing(ctx, w, h, a.crazing, seed);
+  for (const ctx of ctxs) {
+    ctx.save();
+    ctx.translate(g, g);
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    ctx.clip();
+  }
+  drawCrazing(f, w, h, a.crazing, seed);
   const spots = { amount: a.spots, size: a.spotSize, limescale: a.limescale, seed: seed + 11 };
-  drawSpots(ctx, spotLayout(w, h, spots), spots);
+  drawSpots(m, spotLayout(w, h, spots), spots);
   if (a.limescale > 0.3) {
     // Drips stop at the grout below: a faint crust along the tile's bottom edge.
-    const crust = ctx.createLinearGradient(0, h, 0, h - h * 0.08);
+    const crust = m.createLinearGradient(0, h, 0, h - h * 0.08);
     crust.addColorStop(0, `rgba(245,247,244,${(0.5 * (a.limescale - 0.3)).toFixed(3)})`);
     crust.addColorStop(1, 'rgba(245,247,244,0)');
-    ctx.fillStyle = crust;
-    ctx.fillRect(0, h * 0.92, w, h * 0.08);
+    m.fillStyle = crust;
+    m.fillRect(0, h * 0.92, w, h * 0.08);
   }
-  ctx.restore();
+  for (const ctx of ctxs) ctx.restore();
 }

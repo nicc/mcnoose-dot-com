@@ -169,6 +169,10 @@ export const CONFIG = {
   SKIRTING_SCUFF_LOW: 0.65, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
   SKIRTING_DUST: 0.75, // dust along the top
 
+  // Wiping with a finger (mouse): dust on the rail and skirting, limescale and marks on the tiles
+  WIPE_WIDTH_CM: 1.6, // brush width: about a fingertip
+  WIPE_LIMESCALE_STUBBORN: 0.6, // 0 = one pass clears it, towards 1 = rub and rub
+
   // Work-in-progress notice, shown once per browser
   NOTICE_COLOR: '#f7f1e3', // soft cream card
   NOTICE_INK: '#4a4237',

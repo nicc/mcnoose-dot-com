@@ -87,6 +87,8 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   SKIRTING_GRIME: [0, 1, 0.01],
   SKIRTING_SCUFFS: [0, 1, 0.01],
   SKIRTING_SCUFF_LOW: [0, 1, 0.01],
+  WIPE_WIDTH_CM: [0.3, 6, 0.05],
+  WIPE_LIMESCALE_STUBBORN: [0, 0.98, 0.01],
   SKIRTING_DUST: [0, 2, 0.01],
   RAIL_DEPTH_CM: [0.5, 6, 0.05],
   RAIL_ROUND_CM: [0, 3, 0.05],
