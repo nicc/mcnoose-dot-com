@@ -7,6 +7,7 @@ export const GROUPS: [string, (key: string) => boolean][] = [
   ['Embroidery: oak frame', (k) => k.startsWith('EMBROIDERY_WOOD')],
   ['Embroidery: glass', (k) => k.startsWith('EMBROIDERY_GLASS')],
   ['Embroidery', (k) => k.startsWith('EMBROIDERY_')],
+  ['Embroidery: back', (k) => k.startsWith('ABOUT_')],
   ['Rail', (k) => k.startsWith('RAIL_')],
   ['Paint', (k) => k.startsWith('PAINT_')],
   ['Tiles: reflections', (k) => ['TILE_REFLECTION', 'TILE_TILT_DEG', 'TILE_WAVINESS'].includes(k)],
@@ -22,7 +23,7 @@ export const GROUPS: [string, (key: string) => boolean][] = [
 // Display order (config.ts follows it too). Tests match more specific groups first, so the
 // order shown differs from the matching order above.
 export const ORDER = [
-  'Layout', 'Room & light', 'Wallpaper', 'Embroidery', 'Embroidery: oak frame', 'Embroidery: glass', 'Rail', 'Paint',
+  'Layout', 'Room & light', 'Wallpaper', 'Embroidery', 'Embroidery: oak frame', 'Embroidery: glass', 'Embroidery: back', 'Rail', 'Paint',
   'Tiles: glaze', 'Tiles: reflections', 'Tiles: ageing', 'Grout', 'Tile print', 'Skirting', 'Wiping', 'Notice', 'Other',
 ];
 

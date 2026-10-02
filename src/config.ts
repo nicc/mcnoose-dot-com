@@ -92,6 +92,13 @@ export const CONFIG = {
   EMBROIDERY_GLASS_REFLECTION: 0.24, // crisp window reflection
   EMBROIDERY_GLASS_SPOTS: 0.18, // dried water spots
 
+  // Embroidery: back (the about note): click the frame to turn it over
+  ABOUT_FLIP_MS: 900, // how long turning it over takes
+  ABOUT_PAPER: '#b8946a', // aged kraft dust-cover
+  ABOUT_STAINS: 0.45, // water tide-marks and foxing
+  ABOUT_EDGE_WEAR: 0.5, // edges darkened, rubbed and torn back
+  ABOUT_INK: '#2b2420', // the handwriting
+
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#bfb093',
   RAIL_DEPTH_CM: 1.95, // how far it stands off the wall

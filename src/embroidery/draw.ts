@@ -154,7 +154,7 @@ const GRAIN_DEPTH = 0.8; // CSS px of height for pores and ring relief
 
 // Four mitred oak boards, each its own piece of wood: own grain, slightly different tone.
 // Lit with the scene light rotated into each board's coordinates (u along, v inward, z up).
-function frame(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, lights: Light[], pxPerUnit: number) {
+export function frame(ctx: Ctx, W: number, H: number, f: number, o: Pick<EmbroideryStyle, 'wood' | 'view' | 'tiltDeg'>, lights: Light[], pxPerUnit: number) {
   const w = o.wood, dpr = pxPerUnit; // board pixels per layout unit
   sides(W, H, f).forEach((side, k) => {
     const len = Math.max(2, Math.round((side.along[0] ? W : H) * dpr)), wid = Math.max(2, Math.round(f * dpr));

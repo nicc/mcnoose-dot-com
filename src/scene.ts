@@ -9,6 +9,7 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
+import { bindFrame, fitNote, handReady, noteNodes } from './about';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
 import { trimLength, type TrimStyle } from './trim/length';
@@ -53,10 +54,18 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
 }
 
 // The site title is the embroidery; the h1 carries it for screen readers and search.
-function header(c: Config, tile: number): HTMLElement {
+// Click the frame to turn it over: on the back, the about note (about.ts).
+function header(c: Config, tile: number, about: string): HTMLElement {
   const title = el('h1', 'sr-only', [document.createTextNode(SAMPLER_LINES.join(' '))]);
   const e = embroidery(c, tile);
-  const frame = el('figure', 'frame', [e.canvas, e.glass]);
+  const note = el('div', 'note', noteNodes(about));
+  // Inside the paper, clear of its worn edges.
+  const pad = Math.min(e.paper.w, e.paper.h) * 0.08;
+  Object.assign(note.style, { left: `${e.paper.x + pad}px`, top: `${e.paper.y + pad}px`, width: `${e.paper.w - 2 * pad}px`, height: `${e.paper.h - 2 * pad}px` });
+  const back = el('div', 'frame-face frame-back', [e.back, note]);
+  const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back]);
+  const frame = el('figure', 'frame', [card]);
+  bindFrame(frame, card, back);
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 
@@ -420,7 +429,7 @@ function frameShadow(c: Config, tile: number): Record<string, string> {
 
 let generation = 0;
 
-export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[]): Frame {
+export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[], about: string): Frame {
   const cols = visibleColumns(a, vp.width);
   const gridLeft = a.originX + cols.first * a.pitch;
   const vars: Record<string, string> = {
@@ -436,6 +445,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--frame-y': `${topExtra + (c.HEADER_HEIGHT * a.tile) / 2}px`,
     '--header-h': `${c.HEADER_HEIGHT * a.tile + topExtra}px`,
     '--frame-tilt': `${c.EMBROIDERY_TILT_DEG}deg`,
+    '--flip-ms': `${c.ABOUT_FLIP_MS}ms`,
+    '--about-ink': c.ABOUT_INK,
     ...frameShadow(c, a.tile),
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
@@ -457,7 +468,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
-  const top = header(c, a.tile);
+  const top = header(c, a.tile, about);
   hangWallpaper(top, c, a, topExtra, pending);
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
@@ -472,6 +483,9 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra)),
     skirting(c, vp, a, topExtra, skirtingTop),
   );
+  const note = top.querySelector<HTMLElement>('.note')!;
+  fitNote(note);
+  handReady.then(() => fitNote(note)); // again once the handwriting's metrics are in
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

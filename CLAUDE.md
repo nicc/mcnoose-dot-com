@@ -1,6 +1,6 @@
 # mcnoose-dot-com
 
-Portfolio site: a bathroom wall. Wallpaper header with framed cross-stitch → painted dado rail → white tile grid (one project per tile) → skirting board. Builds to `dist/`: `index.html` (everything else inlined) beside `projects.json` + `logos/`.
+Portfolio site: a bathroom wall. Wallpaper header with framed cross-stitch → painted dado rail → white tile grid (one project per tile) → skirting board. Builds to `dist/`: `index.html` (everything else inlined) beside `projects.json`, `logos/` and `about.md`.
 
 ## Token efficiency
 Use tokens efficiently at all times — in this file, in replies, in tool use. Read only what the task needs; don't restate diffs.
@@ -38,7 +38,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 Cooper Hewitt scan 1939-45-7 (CC0, ca. 1875). `npm run prepare:wallpaper` (scripts/prepare-wallpaper.ts, tools/wallpaper-prep.ts) → seamless half-drop `scan.webp` + per-pixel ink map `inks.png` + `palette.json`. `render.ts` (pure): recolour per ink (`WALLPAPER_<INK>` colours, shift-based so print grain survives), procedural pebble emboss + ink relief, lit by `shade()`. Production: baked at build by `tools/wallpaper-bake.ts` (`virtual:wallpaper`, config.ts values, no runtime compute). Dev: rendered live (`index.ts`) for the panel. Background anchored to wall origin.
 
 ## Embroidery (`src/embroidery/`)
-Hand-charted sampler (`chart.ts`: glyphs for the letters used, corner sprig, auto layout) painted on canvas (`draw.ts`: aida, X stitches, mitred wood frame) lit by the room's lights rotated into the frame's tilt; window reflection placed by `reflectedWindow` and slid by `parallaxFactor`. Size = `EMBROIDERY_STITCH_SIZE` × chart. New letters need new glyphs. Site title is a visually hidden h1.
+Hand-charted sampler (`chart.ts`: glyphs for the letters used, corner sprig, auto layout) painted on canvas (`draw.ts`: aida, X stitches, mitred wood frame) lit by the room's lights rotated into the frame's tilt; window reflection placed by `reflectedWindow` and slid by `parallaxFactor`. Size = `EMBROIDERY_STITCH_SIZE` × chart. New letters need new glyphs. Site title is a visually hidden h1. Click/tap/Enter turns the frame over (CSS 3D card, `ABOUT_FLIP_MS`): `back.ts` draws raw oak boards + aged kraft dust-cover (`ABOUT_STAINS`, `ABOUT_EDGE_WEAR`), lit like the front; the note is DOM over it (`src/about.ts`): `public/about.md` fetched at load, small markdown subset parsed to DOM (only http/mailto links), bundled Homemade Apple woff2, fitted to the paper, ink multiplied into the paper. The turned-away face gets `pointer-events: none` (WebKit hit-tests hidden backfaces).
 
 ## Wood (`src/wood/`)
 Shared by frame and (later) skirting. `grain.ts`: flat-sawn oak growth rings with cathedral figure, pores, colour drift → albedo/gloss/relief (optionally periodic along the length). `board.ts`: lights a board from a cross-section profile + grain relief; finish sheen is scaled by the gloss map and streaks along the grain. `wear.ts`: rubbing on convex/high profile, grime in hollows and mitre joints, patchy along the length. Lit by a list of room lights.

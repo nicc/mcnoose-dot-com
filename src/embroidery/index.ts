@@ -6,6 +6,7 @@ import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig, vie
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
+import { drawBack } from './back';
 import { drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
 export const SAMPLER_LINES = ['Snickers', 'McNoose'];
@@ -14,6 +15,9 @@ let chartKey = '';
 let chart: Chart;
 let key = '';
 let canvas: HTMLCanvasElement | undefined;
+let backKey = '';
+let back: HTMLCanvasElement | undefined;
+let paper = { x: 0, y: 0, w: 0, h: 0 };
 let reflectionKey = '';
 let reflection: HTMLCanvasElement | undefined;
 const glass = document.createElement('div');
@@ -24,6 +28,8 @@ let tilt = 0;
 
 export interface Embroidered {
   canvas: HTMLCanvasElement;
+  back: HTMLCanvasElement; // what you see when it's turned over
+  paper: { x: number; y: number; w: number; h: number }; // css px on the back: where the note goes
   glass: HTMLElement; // positioned over the cloth; holds the reflection layer
   width: number;
   height: number;
@@ -83,6 +89,20 @@ export function embroidery(c: Config, tile: number): Embroidered {
   canvas.style.width = `${size.width}px`;
   canvas.style.height = `${size.height}px`;
 
+  // The back: drawn at its finished size (it has no fine detail to supersample).
+  const backStyle = { paper: hexToRgb(c.ABOUT_PAPER), stains: c.ABOUT_STAINS, wear: c.ABOUT_EDGE_WEAR };
+  const nextBack = JSON.stringify([style, zoom, size, backStyle]);
+  if (!back || nextBack !== backKey) {
+    back = document.createElement('canvas');
+    back.className = 'embroidery-back';
+    back.setAttribute('aria-hidden', 'true');
+    const wood = { ...style.wood, ring: style.wood.ring * zoom };
+    paper = drawBack(back, size.width, size.height, style.frame * zoom, { ...style, wood }, backStyle, Math.min(2, dpr));
+    backKey = nextBack;
+  }
+  back.style.width = `${size.width}px`;
+  back.style.height = `${size.height}px`;
+
   // Glass area (CSS px) and its reflection layer, with a margin to slide into.
   const inset = style.frame * zoom;
   const gw = chart.w * style.stitch * zoom, gh = chart.h * style.stitch * zoom;
@@ -111,7 +131,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
     reflectionKey = rKey;
     rest = undefined;
   }
-  return { canvas, glass, ...size };
+  return { canvas, back, paper, glass, ...size };
 }
 
 const WINDOW_BAR_CM = 5; // sash frame and glazing bars

@@ -49,7 +49,87 @@ body {
 
 .frame {
   position: relative;
+  margin: 0;
   transform: rotate(var(--frame-tilt));
+  perspective: 1600px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Turning it over: the card spins about its vertical axis; each face hides its back. */
+.frame-card {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform var(--flip-ms) cubic-bezier(0.45, 0.05, 0.25, 1);
+}
+
+.frame-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.frame-face {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.frame-front {
+  position: relative;
+  transform: rotateY(0deg);
+}
+
+.frame-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+/* WebKit hit-tests hidden backfaces: the face turned away mustn't catch clicks (the note's links). */
+.frame-card.flipped .frame-front,
+.frame-card:not(.flipped) .frame-back {
+  pointer-events: none;
+}
+
+.embroidery-back {
+  display: block;
+}
+
+/* The note: ink sinks into the paper (multiply), so it takes the paper's light and stains. */
+.note {
+  position: absolute;
+  overflow: hidden;
+  color: var(--about-ink);
+  font-family: 'Homemade Apple', cursive;
+  line-height: 1.55;
+  mix-blend-mode: multiply;
+  transform: rotate(-1deg);
+  cursor: auto;
+}
+
+.note h2 {
+  margin: 0 0 0.4em;
+  font-size: 1.25em;
+  font-weight: normal;
+}
+
+.note p,
+.note ul {
+  margin: 0 0 0.6em;
+}
+
+.note ul {
+  padding-left: 1.1em;
+  list-style: '– ';
+}
+
+.note a {
+  color: inherit;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.15em;
+}
+
+.frame:focus-visible .frame-card {
+  outline: 2px solid var(--about-ink);
+  outline-offset: 4px;
 }
 
 /* Glass reflection: its own layer, screen-blended so it brightens without greying, slid by JS. */
