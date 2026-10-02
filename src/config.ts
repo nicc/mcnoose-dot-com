@@ -4,7 +4,7 @@
 
 export const CONFIG = {
   // Layout
-  TILE_MAX_PX: 200, // largest tile edge
+  TILE_MAX_PX: 150, // largest tile edge
   GROUT_PX: 4,
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
   TRAILING_ROWS: 6, // blank rows after the last project row
@@ -34,7 +34,7 @@ export const CONFIG = {
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
   // Wallpaper (header) and its seam with the tiles. Ink colours default to the 1875 scan's own.
-  HEADER_HEIGHT: 1.4,
+  HEADER_HEIGHT: 2,
   WALLPAPER_ZOOM: 2, // pattern repeat width, in tiles (~32cm at real scale)
   WALLPAPER_GROUND: '#beb091', // ink: ground
   WALLPAPER_FOLIAGE: '#a3a28d', // ink: foliage
@@ -53,7 +53,7 @@ export const CONFIG = {
 
   // Embroidery (framed cross-stitch on the wallpaper). Hand-charted: stitch size scales the piece.
   EMBROIDERY_STITCH_SIZE: 0.06, // one cross-stitch, in tiles: sets the detail
-  EMBROIDERY_ZOOM: 0.29, // scales the finished framed piece; < 1 shrinks a detailed render
+  EMBROIDERY_ZOOM: 0.38, // scales the finished framed piece; < 1 shrinks a detailed render
   EMBROIDERY_CLOTH_W: 76, // cloth size in stitches; florals stay in the corners
   EMBROIDERY_CLOTH_H: 53,
   EMBROIDERY_FRAME: 0.2, // moulding width
