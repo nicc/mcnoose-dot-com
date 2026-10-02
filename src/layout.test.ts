@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorFits, compensateTop, computeLayout, initialAnchor, rowCount, shiftAnchor, visibleColumns } from './layout';
+import { anchorFits, compensateTop, computeLayout, initialAnchor, rowCount, shiftAnchor, visibleColumns, wallRows } from './layout';
 
 const base = { height: 2000, tileMax: 400, grout: 0, minPeek: 0.25 };
 
@@ -112,5 +112,17 @@ describe('screen pinning', () => {
     expect(compensateTop(500, 120, 0)).toEqual({ scrollY: 620, topExtra: 0 });
     expect(compensateTop(500, -120, 0)).toEqual({ scrollY: 380, topExtra: 0 });
     expect(compensateTop(50, -120, 10)).toEqual({ scrollY: 0, topExtra: 80 });
+  });
+});
+
+describe('wallRows', () => {
+  const a = { ...initialAnchor({ ...base, width: 3000 }) };
+  it('keeps the anchor-time height while projects re-flow into trailing rows', () => {
+    expect(a.columns).toBeGreaterThanOrEqual(5);
+    expect(wallRows(5, a, a.columns, 6)).toBe(7);
+    expect(wallRows(5, a, 2, 6)).toBe(7);
+  });
+  it('grows only once projects run out of rows', () => {
+    expect(wallRows(20, { ...a, columns: 20 }, 1, 2)).toBe(20);
   });
 });

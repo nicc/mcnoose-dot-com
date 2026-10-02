@@ -47,11 +47,13 @@ export interface Anchor {
   pitch: number;
   originX: number; // left edge of tile column 0, in viewport px
   centreX: number; // first-render viewport centre: embroidery and bull-nose reference
+  columns: number; // fully visible columns at anchor time: fixes the wall's height (see wallRows)
 }
 
 export function initialAnchor(input: LayoutInput): Anchor {
   const l = computeLayout(input);
-  return { tile: l.tile, grout: input.grout, pitch: l.pitch, originX: l.gridLeft, centreX: input.width / 2 };
+  const a = { tile: l.tile, grout: input.grout, pitch: l.pitch, originX: l.gridLeft, centreX: input.width / 2, columns: 0 };
+  return { ...a, columns: Math.max(1, visibleColumns(a, input.width).full.length) };
 }
 
 // Screen pinning: the viewport moved dx px right on the physical screen, so the wall
@@ -94,4 +96,10 @@ export function anchorFits(a: Anchor, width: number, height: number, minPeek: nu
 
 export function rowCount(projects: number, columns: number, trailing: number): number {
   return Math.ceil(projects / columns) + trailing;
+}
+
+// The wall's height in rows, fixed at anchor time so the skirting stays put while the window
+// narrows and projects re-flow into the trailing rows. Grows only if they run out of rows.
+export function wallRows(projects: number, a: Anchor, columns: number, trailing: number): number {
+  return Math.max(rowCount(projects, a.columns, trailing), Math.ceil(projects / Math.max(1, columns)));
 }

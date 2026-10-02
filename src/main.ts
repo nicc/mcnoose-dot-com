@@ -4,6 +4,7 @@ import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
 import { resetReflection, updateReflection } from './embroidery';
+import { showNotice } from './notice';
 import { renderScene, updateTileReflections, type Frame, type Viewport } from './scene';
 
 const root = document.getElementById('app')!;
@@ -91,6 +92,7 @@ addEventListener(
 
 render();
 addEventListener('resize', () => render());
+showNotice();
 
 // No event fires when a window moves, so watch its screen position each frame.
 // data-pin tells tests when the smoothed position has caught up.

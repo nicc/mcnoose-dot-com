@@ -161,6 +161,10 @@ export const CONFIG = {
   SKIRTING_GRIME: 0.68, // dirt in the groove
   SKIRTING_SCUFFS: 0.58, // shoe and vacuum marks low on the face
   SKIRTING_DUST: 1.6, // dust along the top
+
+  // Work-in-progress notice, shown once per browser
+  NOTICE_COLOR: '#f7f1e3', // soft cream card
+  NOTICE_INK: '#4a4237',
 };
 
 export type Config = { -readonly [K in keyof typeof CONFIG]: (typeof CONFIG)[K] };

@@ -1,6 +1,6 @@
 // Builds the wall: wallpaper header, dado rail, tile grid, skirting.
 import type { Config } from './config';
-import { rowCount, visibleColumns, type Anchor, type Columns } from './layout';
+import { visibleColumns, wallRows, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, SAMPLER_LINES } from './embroidery';
@@ -79,8 +79,11 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
   const first = Math.floor(-a.originX / seg), last = Math.ceil((vp.width - a.originX) / seg);
   for (let k = first; k <= last; k++) {
     const left = a.originX + k * seg;
-    const at = wallPoint(map, { x: left + seg / 2, y: top + h / 2 });
-    const length = trimLength(trim, k, seg, h, ppc, dpr, lightsAt(room, at), viewAt(room, at), style);
+    const lit = (x: number) => {
+      const at = wallPoint(map, { x, y: top + h / 2 });
+      return { lights: lightsAt(room, at), view: viewAt(room, at) };
+    };
+    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style);
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
@@ -344,7 +347,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
   const g = el('div', 'grid');
   const slot = new Map(cols.full.map((k, i) => [k, i]));
   const n = Math.max(1, cols.full.length);
-  const rows = rowCount(projects.length, n, c.TRAILING_ROWS);
+  const rows = wallRows(projects.length, a, n, c.TRAILING_ROWS);
   const aged = tileAgeing(c, a, rows);
   const now = performance.now();
   const tiles = new Map<string, HTMLElement>();
@@ -428,6 +431,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--print-color': c.PRINT_COLOR,
     '--wallpaper-color': c.WALLPAPER_GROUND, // shown until the pattern is ready
     '--skirting-color': c.SKIRTING_COLOR,
+    '--notice-color': c.NOTICE_COLOR,
+    '--notice-ink': c.NOTICE_INK,
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
 
@@ -441,7 +446,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
   const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
-  const rows = rowCount(projects.length, Math.max(1, cols.full.length), c.TRAILING_ROWS);
+  const rows = wallRows(projects.length, a, cols.full.length, c.TRAILING_ROWS);
   const skirtingTop = firstTileTop + rows * a.pitch - c.GROUT_PX + edgeJoint(c, a.tile);
   root.replaceChildren(
     top,

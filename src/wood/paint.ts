@@ -55,7 +55,9 @@ export function paintMaps(grain: GrainMaps, len: number, wid: number, profile: (
       const i = v * len + u, x = u + uOffset;
       // Ridged streaks along the board; a stroke now and then ends with a slight lap.
       const streak = fbm(x / strokeLen, v / strokeWid, s.seed, 3);
-      const lap = hash2(Math.floor(x / strokeLen), Math.floor(v / (strokeWid * 3)), s.seed + 3) > 0.9 ? 0.15 : 0;
+      // Laps taper at both ends and edges like a stroke thinning out, so they never form a hard edge.
+      const lx = x / strokeLen, lv = v / (strokeWid * 3);
+      const lap = hash2(Math.floor(lx), Math.floor(lv), s.seed + 3) > 0.9 ? 0.15 * Math.sqrt(Math.sin(Math.PI * (lx - Math.floor(lx)))) * Math.sin(Math.PI * (lv - Math.floor(lv))) : 0;
       relief[i] = Math.max(0, grain.relief[i]) * s.grain * 3 + (streak + lap) * s.brush * 0.8;
       const tone = 1 + 0.025 * s.brush * streak;
       for (let c = 0; c < 3; c++) albedo[i * 3 + c] = base[c] * tone;

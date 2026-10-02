@@ -61,10 +61,10 @@ const QUIRK_CM = 0.25;
 // then the tall flat face down to the floor.
 export function skirtingProfile(d: SkirtingDims): Profile {
   const F = d.depthCm, T = d.torusCm, r = T / 2;
-  const D = F + 0.45 * T; // the torus's front is the deepest point
+  const D = F + 0.5 * T; // the torus's front is the deepest point
   const H = T + QUIRK_CM + d.flatCm;
   const z = (y: number): number => {
-    if (y < T) return F + 0.9 * Math.sqrt(Math.max(0, r * r - (y - r) ** 2)); // torus
+    if (y < T) return F + Math.sqrt(Math.max(0, r * r - (y - r) ** 2)); // torus: a true half-round
     if (y < T + QUIRK_CM) return F - 0.15; // groove under it
     return F;
   };

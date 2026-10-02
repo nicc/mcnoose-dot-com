@@ -219,3 +219,42 @@ body {
   position: relative;
   background: var(--skirting-color);
 }
+
+/* Work-in-progress notice */
+.notice {
+  position: fixed;
+  inset: 0;
+  margin: auto; /* centred: the page reset removes the dialog's own auto margins */
+  height: fit-content;
+  max-width: min(20rem, calc(100vw - 32px));
+  padding: 1.5rem 1.75rem 1.25rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--notice-color);
+  color: var(--notice-ink);
+  font: 1rem/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  text-align: center;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+}
+
+.notice:focus {
+  outline: none;
+}
+
+.notice::backdrop {
+  background: rgb(40 35 28 / 0.25);
+}
+
+.notice p {
+  margin: 0 0 1rem;
+}
+
+.notice button {
+  padding: 0.35rem 1.4rem;
+  border: 1px solid color-mix(in srgb, var(--notice-ink) 30%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

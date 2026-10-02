@@ -5,7 +5,11 @@ export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   reporter: 'list',
-  use: { baseURL: 'http://localhost:4173' },
+  use: {
+    baseURL: 'http://localhost:4173',
+    // The work-in-progress notice counts as already seen; notice.spec.ts starts clean.
+    storageState: { cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'mcnoose-wip-seen', value: '1' }] }] },
+  },
   webServer: { command: 'npm run build && npx vite preview --port 4173 --strictPort', url: 'http://localhost:4173', reuseExistingServer: false },
   projects: [
     { name: 'chromium', use: devices['Desktop Chrome'] },

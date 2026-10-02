@@ -15,13 +15,14 @@ export const GROUPS: [string, (key: string) => boolean][] = [
   ['Tile print', (k) => k === 'PRINT_COLOR' || k.startsWith('TILE_LOGO') || k.startsWith('TILE_TITLE') || k.startsWith('HALFTONE_')],
   ['Tiles: glaze', (k) => k.startsWith('TILE_')],
   ['Skirting', (k) => k.startsWith('SKIRTING_')],
+  ['Notice', (k) => k.startsWith('NOTICE_')],
 ];
 
 // Display order (config.ts follows it too). Tests match more specific groups first, so the
 // order shown differs from the matching order above.
 export const ORDER = [
   'Layout', 'Room & light', 'Wallpaper', 'Embroidery', 'Embroidery: oak frame', 'Embroidery: glass', 'Rail', 'Paint',
-  'Tiles: glaze', 'Tiles: reflections', 'Tiles: ageing', 'Grout', 'Tile print', 'Skirting', 'Other',
+  'Tiles: glaze', 'Tiles: reflections', 'Tiles: ageing', 'Grout', 'Tile print', 'Skirting', 'Notice', 'Other',
 ];
 
 export function groupOf(key: string): string {

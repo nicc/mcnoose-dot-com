@@ -87,6 +87,8 @@ const wallState = () => {
     frameX: f.left + f.width / 2,
     fullTiles: row.filter((t) => t.getBoundingClientRect().left >= -0.5 && t.getBoundingClientRect().right <= vw + 0.5),
     projectsShown: document.querySelectorAll('.tile-project').length,
+    // Relative to the top tile row: top-edge window moves may grow wallpaper above and shift the whole wall.
+    skirtingY: document.querySelector('.skirting')!.getBoundingClientRect().top - row[0].getBoundingClientRect().top,
   };
 };
 
@@ -100,7 +102,8 @@ test('the wall stays where it first rendered while the window resizes', async ({
   const first = await page.evaluate(wallState);
   await page.evaluate(() => document.querySelectorAll('canvas.tile-print').forEach((c) => ((c as HTMLElement).dataset.mark = '1')));
 
-  for (const size of [{ width: 1100, height: 900 }, { width: 1800, height: 700 }, { width: 900, height: 1000 }]) {
+  // The last size is narrow enough that projects re-flow onto more rows.
+  for (const size of [{ width: 1100, height: 900 }, { width: 1800, height: 700 }, { width: 900, height: 1000 }, { width: 560, height: 900 }]) {
     await page.setViewportSize(size);
     await page.waitForSelector(`html[data-rendered-width="${size.width}"]`);
     const now = await page.evaluate(wallState);
@@ -109,6 +112,7 @@ test('the wall stays where it first rendered while the window resizes', async ({
     expect(onLattice(now.rail, first.rail[0], first.railPitch)).toBe(true);
     expect(now.frameX).toBeCloseTo(first.frameX, 0);
     expect(now.projectsShown).toBe(first.projectsShown); // every project still on the wall
+    expect(now.skirtingY).toBeCloseTo(first.skirtingY, 0); // the wall's height holds too
     // Prints are moved, not redrawn.
     expect(await page.$$eval('canvas.tile-print:not(.tile-ghost)', (cs) => cs.every((c) => (c as HTMLElement).dataset.mark === '1'))).toBe(true);
   }

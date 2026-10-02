@@ -64,6 +64,30 @@ describe('shadeBoard', () => {
     expect(shiny[0]).toBeGreaterThan(dull[0] + 50);
   });
 
+  it('a proud moulding shades the face below it from a high light, softly, and only when asked', () => {
+    const wid = 40, big = { albedo: new Float32Array(4 * wid * 3).fill(100), gloss: new Float32Array(4 * wid), relief: new Float32Array(4 * wid) };
+    const ridge: Finish = { ...flat, profile: (t) => (t < 0.25 ? 1 : 0), profileDepth: 10 }; // shadow ~13 rows, penumbra to ~27
+    const high = [{ dir: [0, -0.8, 0.6] as [number, number, number], weight: 1 }];
+    const row = (px: Uint8ClampedArray, v: number) => px[(v * 4 + 1) * 4];
+    const lit = shadeBoard(big, 4, wid, ridge, high), shaded = shadeBoard(big, 4, wid, { ...ridge, shadowSoftness: 0.2 }, high);
+    expect(row(shaded, 12)).toBeLessThan(row(lit, 12) - 20); // just below the moulding: in its shadow
+    expect(row(shaded, 12)).toBeLessThan(row(shaded, 24)); // penumbra lightens away from the edge
+    // Lit head-on there is no cast shadow, but the foot of the moulding still sees less of the room.
+    const ahead = [{ dir: [0, 0, 1] as [number, number, number], weight: 1 }];
+    const occluded = shadeBoard(big, 4, wid, { ...ridge, shadowSoftness: 0.2 }, ahead);
+    expect(row(occluded, 11)).toBeLessThan(row(occluded, 38));
+    expect(row(occluded, 38)).toBeLessThan(row(shadeBoard(big, 4, wid, ridge, ahead), 38) + 1);
+  });
+
+  it('blends lighting from start to end, so lengths lit at their ends meet without a step', () => {
+    const a = [{ dir: [0, -0.3, 0.95] as [number, number, number], weight: 1 }], b = [{ dir: [0.6, 0.3, 0.74] as [number, number, number], weight: 0.5 }];
+    const tilted: Finish = { ...flat, profile: (t) => t, profileDepth: 2 };
+    const blended = shadeBoard(maps, 4, 4, tilted, a, [0, 0, 1], { lights: b, view: [0, 0, 1] });
+    expect(blended[4 * 4]).toBe(shadeBoard(maps, 4, 4, tilted, a)[4 * 4]); // u = 0, v = 1: start lighting
+    expect(blended[4 * 7]).toBe(shadeBoard(maps, 4, 4, tilted, b)[4 * 7]); // u = 3, v = 1: end lighting
+    expect(blended[4 * 4]).not.toBe(blended[4 * 7]);
+  });
+
   it('frame profile rises from the outer edge, peaks on the face and drops at the rebate', () => {
     expect(frameProfile(0)).toBeCloseTo(0);
     expect(frameProfile(0.4)).toBeGreaterThan(0.9);

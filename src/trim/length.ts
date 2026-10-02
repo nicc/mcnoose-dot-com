@@ -1,5 +1,6 @@
 // Painted trim (dado rail, skirting), built from lengths about one tile wide. Each length is lit by
-// the room's lights at its own position on the wall (dynamic lighting, like every other surface).
+// the room's lights at its own position on the wall (dynamic lighting, like every other surface):
+// at both its ends, blended across, so neighbouring lengths meet without a step.
 // Grain, brush strokes, wear and scuffs are generated in wall coordinates, so lengths join
 // seamlessly; each is cached by its trim and its place on the wall.
 import type { Light, Vec3 } from '../room';
@@ -24,13 +25,22 @@ export interface TrimStyle {
 const PINE = { early: [215, 185, 140] as RGB, late: [165, 120, 75] as RGB, figure: 0.5, pores: 0, drift: 0, seed: 23 };
 const RING_CM = 0.35;
 const RELIEF_CM = 0.06; // paint ridges and telegraphed grain: half a millimetre
+const SHADOW_SOFTNESS = 0.2; // penumbra widening per unit distance: a window-sized light, not a point
+
+// The room's light at one end of a length.
+export interface TrimLight {
+  lights: Light[];
+  view: Vec3;
+}
+
+const board = (lights: Light[]) => lights.map(({ dir, weight }) => ({ dir, weight }));
 
 const cache = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
 
 // trim: which piece ('rail', 'skirting'); index: which length along the wall; lenPx/heightPx in
-// CSS px; pxPerCm: scene scale.
-export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, lights: Light[], view: Vec3, s: TrimStyle): HTMLCanvasElement {
-  const key = JSON.stringify([lenPx, heightPx, pxPerCm, dpr, lights, view, s, s.profile.heightCm, s.profile.depthCm]);
+// CSS px; pxPerCm: scene scale; start/end: the room's light at its left and right ends.
+export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle): HTMLCanvasElement {
+  const key = JSON.stringify([lenPx, heightPx, pxPerCm, dpr, start, end, s, s.profile.heightCm, s.profile.depthCm]);
   const id = `${trim}:${index}`;
   const hit = cache.get(id);
   if (hit && hit.key === key) return hit.canvas;
@@ -50,7 +60,8 @@ export function trimLength(trim: string, index: number, lenPx: number, heightPx:
     sheen: s.paint.sheen,
     gloss: s.paint.gloss,
     ambient: AMBIENT,
-  }, lights.map(({ dir, weight }) => ({ dir, weight })), view);
+    shadowSoftness: SHADOW_SOFTNESS,
+  }, board(start.lights), start.view, { lights: board(end.lights), view: end.view });
 
   const canvas = hit?.canvas ?? document.createElement('canvas');
   canvas.className = 'trim-length';
