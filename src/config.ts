@@ -78,7 +78,7 @@ export const CONFIG = {
   WALLPAPER_SHEEN: 0.5, // satin highlight
   SEAM_SHADOW: 0.28, // contact shadow on the paper where it meets the tiles
   SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
-  SEAM_LINE: 0.99, // the joint line between paper and tile
+  SEAM_LINE: 1.14, // the joint line between paper and tile
   PAPER_AGE: true, // the wallpaper's age, laid over the pattern without repeating
   PAPER_AGE_YELLOWING: 0.11, // uneven yellowing, heavier towards the ceiling
   PAPER_AGE_STAINS: 0, // blotches with tide-lines
@@ -152,7 +152,7 @@ export const CONFIG = {
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#dbd6cb',
-  RAIL_DEPTH_CM: 1.5, // how far it stands off the wall
+  RAIL_DEPTH_CM: 1.8, // how far it stands off the wall
   RAIL_ROUND_CM: 1.45, // rounded top, falling back to the wall
   RAIL_BEAD_CM: 0.6, // routed bead below the round
   RAIL_COVE_CM: 0.1, // cove stepping back to the face
