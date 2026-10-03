@@ -28,7 +28,7 @@ export const CONFIG = {
   ROOM_WINDOW_HEIGHT_CM: 101,
   ROOM_SUN: 1.22, // window light strength
   ROOM_LIGHT_KELVIN: 5100, // the window light's colour: 2500 golden late light … 6500 neutral … 9000 cool north sky
-  ROOM_LIGHT_TINT: 0.65, // how much of that colour shows: 1 = as a camera sees it, lower = as an eye adapted to the room does
+  ROOM_LIGHT_TINT: 0.6, // how much of that colour shows: 1 = as a camera sees it, lower = as an eye adapted to the room does
   ROOM_SUN_PATCH: 0.2, // direct sun throwing the window, bars and all, onto this wall (0 = none)
   ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
   ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
