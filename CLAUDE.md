@@ -66,7 +66,7 @@ Dots come from the `halftone-print` package (our own: ~/source/play/halftone-pri
 Chrome, Firefox, Safari on desktop and mobile, always. Check support before using new CSS/JS. `npm run test:e2e` covers chromium/firefox/webkit + Pixel/iPhone emulation; Playwright WebKit ≠ real iOS Safari.
 
 ## Commands
-`npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build` · `node scripts/profile.ts [mobile]` (load / idle / scroll / window-drag CPU profile)
+`npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build` · `node scripts/profile.ts [mobile]` (load / idle / scroll / window-drag CPU profile) · `npm run build && node scripts/loadtime.ts` (production load times: desktop, phone on fast/slow 4G)
 
 ## Performance
 The scene renders into `#stage`, 1.5 tiles wider than the window each side (`#app` clips); window moves within that slide the stage (`translate3d`) and only past it rebuild. `renderScene(…, visible)`: projects fill only tiles fully in the window; overscan trim lengths draw later; tile reflections trace only near the window (`slideStage` traces what slides into view). Tests measure tiles within the window, not row ends.
