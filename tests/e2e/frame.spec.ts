@@ -46,14 +46,7 @@ test('let go at a steep angle, it swings back and settles near where it hangs', 
   expect(Math.abs((await tiltOf(page)) - rest)).toBeGreaterThan(15);
   await page.mouse.up();
   // Wait until it has stopped moving, then it should be near where it hangs.
-  let last = NaN;
-  await expect
-    .poll(async () => {
-      const now = await tiltOf(page), still = now === last;
-      last = now;
-      return still;
-    }, { timeout: 15000, intervals: [400] })
-    .toBe(true);
+  await page.waitForSelector('html[data-frame="still"]', { timeout: 15000 });
   const left = await tiltOf(page);
   expect(Math.abs(left - rest)).toBeLessThan(4);
   await page.setViewportSize({ width: 1180, height: 800 });

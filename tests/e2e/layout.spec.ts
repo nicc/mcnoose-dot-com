@@ -313,3 +313,12 @@ test('the wallpaper has aged: wall-anchored layers under the frame that never ca
   });
   expect(underFrame).toBe(true);
 });
+
+test('direct sun throws the window onto the wall without getting in the pointer’s way', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  const patch = page.locator('.sun-patch');
+  if (!(await patch.count())) return; // ROOM_SUN_PATCH off
+  await expect(patch).toHaveCSS('pointer-events', 'none');
+  await expect(patch).toHaveCSS('mix-blend-mode', 'color-dodge');
+});

@@ -444,6 +444,24 @@ body {
   background: var(--skirting-color);
 }
 
+/* Direct sun through the window (sunlight.ts): brightens what it falls on, comes and goes with the clouds. */
+.sun-patch {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+  opacity: var(--sunlit, 1);
+}
+
+/* The window light's colour (sunlight.ts): a multiply tint over the scene, absent at neutral. */
+.light-tint {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
 /* Clouds passing the sun: dims the whole scene by the window's share of the light (clouds.ts) */
 .cloud-shade {
   position: fixed;

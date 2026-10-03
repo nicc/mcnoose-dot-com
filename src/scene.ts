@@ -10,6 +10,7 @@ import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
 import { ageLayers } from './wallpaper/age';
+import { applyTint, sunPatch } from './sunlight';
 import { fitNote, handReady, noteNodes } from './about';
 import { isFallen, resetFall } from './fall';
 import { bindFrame, frameTilt } from './frame';
@@ -531,6 +532,9 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra)),
     skirting(c, vp, a, topExtra, skirtingTop),
   );
+  const patch = sunPatch(c, wallMap(c, a, topExtra));
+  if (patch) root.append(patch);
+  applyTint(c);
   const note = top.querySelector<HTMLElement>('.note'); // none once the frame has fallen
   if (note) {
     fitNote(note);

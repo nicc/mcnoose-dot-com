@@ -27,6 +27,11 @@ export const CONFIG = {
   ROOM_WINDOW_WIDTH_CM: 70,
   ROOM_WINDOW_HEIGHT_CM: 110,
   ROOM_SUN: 1.2, // window light strength
+  ROOM_LIGHT_KELVIN: 6500, // the window light's colour: 2500 golden late light … 6500 neutral … 9000 cool north sky
+  ROOM_SUN_PATCH: 0.2, // direct sun throwing the window, bars and all, onto this wall (0 = none)
+  ROOM_SUN_ELEVATION_DEG: 5, // how steeply the sun comes in: lowers the patch
+  ROOM_SUN_AZIMUTH_DEG: 0, // from the side: slides the patch across
+  ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
   ROOM_CLOUD_DEPTH: 0.7, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.4, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them

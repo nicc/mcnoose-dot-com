@@ -61,11 +61,13 @@ export function swingStep(theta: number, omega: number, dt: number, s: SwingStyl
 }
 
 let swinging = 0; // animation frame id
+const moving = (on: boolean) => (document.documentElement.dataset.frame = on ? 'moving' : 'still'); // for tests
 
 const tooFar = (c: Config, theta: number) => c.EMBROIDERY_FALL && Math.abs(theta) > c.EMBROIDERY_FALL_DEG;
 
 function drop(theta: number, omega: number, c: Config, pxPerCm: number) {
   cancelAnimationFrame(swinging);
+  moving(false);
   live = undefined;
   settled = undefined;
   const shadow = current()?.parentElement;
@@ -77,6 +79,7 @@ function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm
   if (tooFar(c, theta)) return drop(theta, omega, c, pxPerCm);
   const s: SwingStyle = { rest: c.EMBROIDERY_TILT_DEG, rate: swingRate(size.wCm, size.hCm), damping: c.EMBROIDERY_SWING_DAMPING, stick: c.EMBROIDERY_SWING_STICK_DEG };
   let last = performance.now();
+  moving(true);
   const tick = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -87,6 +90,7 @@ function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm
         settled = { tilt: theta, base: c.EMBROIDERY_TILT_DEG };
         show(theta);
         relight();
+        moving(false);
         return;
       }
       ({ theta, omega } = next);
@@ -135,6 +139,7 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
     if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
     const touch = e.pointerType !== 'mouse';
     cancelAnimationFrame(swinging); // catch it mid-swing
+    moving(true);
     press = { id: e.pointerId, x: e.clientX, y: e.clientY, from: frameTilt(c), touch, armed: !touch, turning: false, moved: 0 };
     trail = [];
     if (touch) press.timer = window.setTimeout(() => press && (press.armed = true, frame.classList.add('held')), HOLD_MS);
@@ -165,7 +170,10 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
       const r = box();
       swing(live ?? frameTilt(c), omega, c, { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm }, pxPerCm);
       if (!p.turning && !cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip(); // caught mid-swing and tapped
-    } else if (!cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip();
+    } else {
+      moving(false); // a click or tap: it never moved
+      if (!cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip();
+    }
   };
   frame.addEventListener('pointerup', (e) => release(e, false));
   frame.addEventListener('pointercancel', (e) => release(e, true)); // the browser took it for a scroll
