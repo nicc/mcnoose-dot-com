@@ -65,12 +65,15 @@ export function ledgeLight(lights: Light[]): number {
   return Math.max(0.5, Math.min(1.3, lit / flat));
 }
 
-export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: number, band: number, amount: number, shade: number, lights: Light[], seed = 433, scale = 1) {
+// look: how the dust shows against what's under it — opacity of the clumps and fibres, haze (the
+// even film under them), tone (dark wood shows pale fluff that a pale-painted ledge hides).
+export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: number, band: number, amount: number, shade: number, lights: Light[], seed = 433, scale = 1, look = { opacity: 1, haze: 1, tone: 1 }) {
   if (amount <= 0) return;
-  const g = (20 + 200 * shade) * ledgeLight(lights);
+  const opacity = look.opacity;
+  const g = (20 + 200 * shade) * ledgeLight(lights) * look.tone;
   const rgb = [g + 8, g + 4, g].map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(',');
   const haze = ctx.createLinearGradient(0, 0, 0, band);
-  haze.addColorStop(0, `rgba(${rgb},${(0.2 * amount).toFixed(3)})`);
+  haze.addColorStop(0, `rgba(${rgb},${Math.min(0.8, 0.2 * amount * look.haze).toFixed(3)})`);
   haze.addColorStop(1, `rgba(${rgb},0)`);
   ctx.fillStyle = haze;
   ctx.fillRect(0, 0, width, band);
@@ -78,14 +81,14 @@ export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: 
   for (const c of clumps) {
     const x = c.x + originX;
     const soft = ctx.createRadialGradient(x, c.y, 0, x, c.y, c.r);
-    soft.addColorStop(0, `rgba(${rgb},${c.alpha.toFixed(3)})`);
+    soft.addColorStop(0, `rgba(${rgb},${Math.min(0.9, c.alpha * opacity).toFixed(3)})`);
     soft.addColorStop(1, `rgba(${rgb},0)`);
     ctx.fillStyle = soft;
     ctx.fillRect(x - c.r, c.y - c.r, c.r * 2, c.r * 2);
   }
   ctx.lineCap = 'round';
   ctx.lineWidth = 0.35 * scale;
-  ctx.strokeStyle = `rgba(${rgb},0.3)`;
+  ctx.strokeStyle = `rgba(${rgb},${Math.min(0.9, 0.3 * opacity).toFixed(3)})`;
   for (const f of fibres) {
     const x = f.x + originX, dx = Math.cos(f.angle) * f.len, dy = Math.sin(f.angle) * f.len;
     ctx.beginPath();

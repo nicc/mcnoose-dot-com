@@ -254,20 +254,23 @@ export function drawEmbroidery(canvas: HTMLCanvasElement, chart: Chart, o: Embro
 
 // Dust on the top of the frame and on the inner bottom lip where it meets the glass. Sizes are
 // in screen px (scale: layout units per screen px), so it stays soft rather than shrinking to specks.
+// The frame's dark, grimy edges show dust far more than pale paint does: pale fluff, clumps and
+// fibres stronger, the film under them lighter (else it reads as murk rather than dust).
+const FRAME_DUST = { opacity: 2.6, haze: 0.5, tone: 1.4 };
 function frameDust(ctx: Ctx, W: number, H: number, f: number, o: EmbroideryStyle, lights: Light[], scale: number) {
-  const band = 3 * scale;
+  const band = 4 * scale;
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, W, band);
   ctx.clip();
-  drawDust(ctx, 0, W, band, o.dust.top, o.dust.shade, lights, 811, scale);
+  drawDust(ctx, 0, W, band, o.dust.top, o.dust.shade, lights, 811, scale, FRAME_DUST);
   ctx.restore();
   ctx.save();
   ctx.translate(f, H - f - band * 0.25);
   ctx.beginPath();
   ctx.rect(0, 0, W - 2 * f, band * 1.2);
   ctx.clip();
-  drawDust(ctx, 0, W - 2 * f, band * 1.2, o.dust.inner, o.dust.shade, lights, 823, scale);
+  drawDust(ctx, 0, W - 2 * f, band * 1.2, o.dust.inner, o.dust.shade, lights, 823, scale, FRAME_DUST);
   ctx.restore();
 }
 
