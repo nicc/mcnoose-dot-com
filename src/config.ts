@@ -78,7 +78,7 @@ export const CONFIG = {
   WALLPAPER_SHEEN: 0.5, // satin highlight
   SEAM_SHADOW: 0.28, // contact shadow on the paper where it meets the tiles
   SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
-  SEAM_LINE: 1.5, // the joint line between paper and tile
+  SEAM_LINE: 0.99, // the joint line between paper and tile
   PAPER_AGE: true, // the wallpaper's age, laid over the pattern without repeating
   PAPER_AGE_YELLOWING: 0.11, // uneven yellowing, heavier towards the ceiling
   PAPER_AGE_STAINS: 0, // blotches with tide-lines
@@ -219,7 +219,7 @@ export const CONFIG = {
 
   // Skirting: painted board along the floor (the page ends with it). Geometry in cm.
   SKIRTING_COLOR: '#dbd6cb', // same paint as the rail
-  SKIRTING_DEPTH_CM: 0.5, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
+  SKIRTING_DEPTH_CM: 2.25, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
   SKIRTING_TORUS_CM: 2.5, // diameter of the round along the top
   SKIRTING_RELIEF_CM: 0.3, // how far the round stands proud of the face: small = a lip, half the torus = a full half-round
   SKIRTING_FLAT_CM: 10.7, // face height down to the floor
@@ -227,7 +227,7 @@ export const CONFIG = {
   SKIRTING_GRIME: 0.1, // dirt in the groove
   SKIRTING_SCUFFS: 0.2, // rub line, shoe scuffs and chips on the face
   SKIRTING_SCUFF_LOW: 0.27, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
-  SKIRTING_DUST: 0.33, // dust along the top
+  SKIRTING_DUST: 1.21, // dust along the top
 
   // Wiping with a finger (mouse): dust on the rail and skirting, limescale and marks on the tiles
   WIPE_WIDTH_CM: 2, // brush width: about a fingertip
