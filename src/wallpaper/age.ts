@@ -126,6 +126,15 @@ const SEG_CM = 12; // seams are considered in lengths this long for lifts and te
 const DIRT_CM = 1.2; // how far paste and handling grime spreads from the joint
 const LIFT_CM = 0.25; // greatest lift of an edge off the wall
 
+// The joint at height y (cm): how far its centre wavers off the seam line, and how far it's open
+// (canvas px). Shared by the joint and the tears, so a tear runs flush with its roll's edge.
+function jointAt(k: number, y: number, gapPx: number, scale: number): { wob: number; open: number } {
+  return {
+    wob: fbm(y / 35, k * 3.1, 331, 2) * 0.08 * scale, // edges not quite straight
+    open: gapPx * Math.max(0, Math.min(1, 0.15 + 1.1 * (fbm(y / 14, k * 1.7, 333, 2) + 0.5))), // opens and closes
+  };
+}
+
 interface Lift {
   y0: number; // wall cm, bottom
   y1: number;
@@ -174,9 +183,8 @@ export function drawSeam(seamX: number, area: AgeArea, amount: number, s: SeamSt
   const reach = Math.min(cx, gapPx / 2 + DIRT_CM * scale * 2 + LIFT_CM * scale * 3 + 4 * blur);
   for (let j = 0; j < H; j++) {
     const y = rowCm(j);
-    const wob = fbm(y / 35, k * 3.1, 331, 2) * 0.08 * scale; // edges not quite straight
+    const { wob, open } = jointAt(k, y, gapPx, scale);
     const grime = s.dirt * (0.3 + 1.1 * Math.max(0, fbm(y / 18, k * 2.3, 335, 3) + 0.5)); // patchy along its length
-    const open = gapPx * Math.max(0, Math.min(1, 0.15 + 1.1 * (fbm(y / 14, k * 1.7, 333, 2) + 0.5))); // opens and closes
     const lift = lifts.find((l) => y >= l.y0 && y <= l.y1);
     const bump = lift ? Math.sin((Math.PI * (y - lift.y0)) / (lift.y1 - lift.y0)) ** 2 : 0;
     const liftPx = lift ? lift.height * bump * scale : 0;
@@ -201,7 +209,7 @@ export function drawSeam(seamX: number, area: AgeArea, amount: number, s: SeamSt
     if (a > 0) (px[i] /= a), (px[i + 1] /= a), (px[i + 2] /= a);
   }
   ctx.putImageData(img, 0, 0);
-  if (s.tear > 0) tears(ctx, k, area, amount, s, scale, dpr, -lit, rowCm);
+  if (s.tear > 0) tears(ctx, k, area, amount, s, scale, dpr, -lit, gapPx);
   return canvas;
 }
 
@@ -209,25 +217,30 @@ export function drawSeam(seamX: number, area: AgeArea, amount: number, s: SeamSt
 // torn edge is what sells it: a broken, uneven fringe of the paper's pale core (only along the torn
 // side, never the seam), toned near the paper, with a thin shadow only where the edge faces away
 // from the light. The plaster is stained with old paste towards the edge, a few fibres still on it.
-function tears(ctx: CanvasRenderingContext2D, k: number, area: AgeArea, amount: number, s: SeamStyle, scale: number, dpr: number, away: number, rowCm: (j: number) => number) {
-  const cx = ctx.canvas.width / 2, py = (yCm: number) => (area.yTop - yCm) * scale;
-  void rowCm;
+function tears(ctx: CanvasRenderingContext2D, k: number, area: AgeArea, amount: number, s: SeamStyle, scale: number, dpr: number, away: number, gapPx: number) {
+  const cx = ctx.canvas.width / 2, py = (yCm: number) => (area.yTop - yCm) * scale, cm = (yPx: number) => area.yTop - yPx / scale;
   const soft = 1 - s.sharpness;
   for (let seg = Math.floor(area.yBottom / SEG_CM); seg * SEG_CM < area.yTop; seg++) {
     if (hash2(k, seg, 341) >= 0.35 * s.tear * amount) continue;
     const side = hash2(k, seg, 342) < 0.5 ? -1 : 1, size = 0.5 + s.tear;
     const wT = (0.6 + 1.6 * hash2(k, seg, 316)) * size * scale, hT = (1.5 + 4.5 * hash2(k, seg, 317)) * size * scale;
     const top = py(seg * SEG_CM + SEG_CM * hash2(k, seg, 343)) - hT;
-    // The torn edge, top (at the seam) to bottom (back at the seam).
-    const steps = 48, edge: [number, number][] = [[cx, top]];
+    // Its roll's edge (the joint's centre, wavering, plus half the gap on this side) at a height.
+    const rollEdge = (yPx: number) => {
+      const j = jointAt(k, cm(yPx), gapPx, scale);
+      return cx + j.wob + (side * j.open) / 2;
+    };
+    // The torn edge, from the roll's edge at the top, out and back to it at the bottom.
+    const steps = 48, edge: [number, number][] = [[rollEdge(top), top]];
     for (let i = 1; i < steps; i++) {
-      const t = i / steps, width = Math.sin(Math.PI * t) ** 0.7 * (1 - 0.55 * t);
+      const t = i / steps, y = top + t * hT, width = Math.sin(Math.PI * t) ** 0.7 * (1 - 0.55 * t);
       const ragged = 1 + 0.4 * fbm(i * 0.3, seg, 318 + k, 3) + (0.12 + 0.1 * s.sharpness) * (hash2(i, seg, 322 + k) - 0.5);
-      edge.push([cx + side * wT * width * ragged, top + t * hT]);
+      edge.push([rollEdge(y) + side * wT * width * ragged, y]);
     }
-    edge.push([cx, top + hT]);
-    const path = new Path2D();
+    edge.push([rollEdge(top + hT), top + hT]);
+    const path = new Path2D(); // out along the torn edge, back up the roll's own edge
     edge.forEach(([x, y], i) => (i ? path.lineTo(x, y) : path.moveTo(x, y)));
+    for (let i = steps - 1; i > 0; i--) path.lineTo(rollEdge(top + (i / steps) * hT), top + (i / steps) * hT);
     path.closePath();
 
     // Plaster, stained with paste towards the torn edge, a few fibres left on it.
