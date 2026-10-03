@@ -36,7 +36,7 @@ export const CONFIG = {
   SUNSET: true, // the sun goes down: one pass from the daylight above to dusk, then held there
   SUNSET_DELAY_S: 3, // daylight held this long first
   SUNSET_MINUTES: 2, // how long the sun takes to go down
-  SUNSET_KELVIN: 3600, // the window light's colour at dusk
+  SUNSET_KELVIN: 3200, // the window light's colour at dusk
   SUNSET_KELVIN_CURVE: 1.2, // each curve: 1 even, above 1 holds then goes, below 1 goes early
   SUNSET_ELEVATION_DEG: -2, // the sun's height at dusk (lower: the patch climbs the wall)
   SUNSET_ELEVATION_CURVE: 1,
