@@ -296,6 +296,9 @@ body {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  /* Edges feathered by a pixel: wood meeting wall and tile isn't a ruled line. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 1.2px, #000 calc(100% - 1.2px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 1.2px, #000 calc(100% - 1.2px), transparent);
 }
 
 .rail .trim-strip {
@@ -327,9 +330,34 @@ body {
 
 /* Tile wall */
 .wall {
+  position: relative;
   overflow: hidden;
   padding-block: var(--grout-edge); /* fine caulked joints at the rail and the skirting */
   background: var(--grout-color);
+}
+
+/* Those joints are caulked, not grouted: a pale bead (mostly tile colour) that fades over the tiles'
+   first pixels rather than ruling a grey line. */
+.wall::before,
+.wall::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: calc(var(--grout-edge) + 2px);
+  pointer-events: none;
+  --caulk: color-mix(in srgb, var(--tile-color) 70%, var(--grout-color));
+}
+
+.wall::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--caulk) var(--grout-edge), transparent);
+}
+
+.wall::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--caulk) var(--grout-edge), transparent);
 }
 
 .grid {

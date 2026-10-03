@@ -69,25 +69,51 @@ export function ledgeLight(lights: Light[]): number {
 // lifted — so it reads as dust rather than murk. (Was the frame's alone; now every ledge's.)
 export const DUST_LOOK = { opacity: 2.6, haze: 0.5, tone: 1.4 };
 
-// look: opacity of the clumps and fibres, haze (the film under them), tone.
-export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: number, band: number, amount: number, shade: number, lights: Light[], seed = 433, scale = 1, look = DUST_LOOK) {
+// look: opacity of the clumps and fibres, haze (the film under them), tone. settle: where on the
+// ledge dust can lie, per row of the band (0–1: how much that row faces up; a round's top holds it,
+// its steepening sides don't) — clumps gather there, flattened as things lying on a surface seen
+// from above. Without it, the band is treated as one flat ledge.
+export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: number, band: number, amount: number, shade: number, lights: Light[], seed = 433, scale = 1, look = DUST_LOOK, settle?: number[]) {
   if (amount <= 0) return;
   const opacity = look.opacity;
   const g = (20 + 200 * shade) * ledgeLight(lights) * look.tone;
   const rgb = [g + 8, g + 4, g].map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(',');
-  const haze = ctx.createLinearGradient(0, 0, 0, band);
-  haze.addColorStop(0, `rgba(${rgb},${Math.min(0.8, 0.2 * amount * look.haze).toFixed(3)})`);
-  haze.addColorStop(1, `rgba(${rgb},0)`);
-  ctx.fillStyle = haze;
-  ctx.fillRect(0, 0, width, band);
+  const hazeAlpha = Math.min(0.8, 0.2 * amount * look.haze);
+  if (settle) {
+    // The film follows where dust can lie, row by row.
+    settle.forEach((w, y) => {
+      if (w <= 0.01) return;
+      ctx.fillStyle = `rgba(${rgb},${(hazeAlpha * w).toFixed(3)})`;
+      ctx.fillRect(0, y, width, 1);
+    });
+  } else {
+    const haze = ctx.createLinearGradient(0, 0, 0, band);
+    haze.addColorStop(0, `rgba(${rgb},${hazeAlpha.toFixed(3)})`);
+    haze.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, width, band);
+  }
+  // Rows to put a clump in, by where dust can lie: the inverse of their cumulative share.
+  const cdf = settle && settle.reduce<number[]>((acc, w) => (acc.push((acc.at(-1) ?? 0) + w), acc), []);
+  const rowAt = (u: number) => {
+    if (!cdf || !cdf.at(-1)) return undefined;
+    const target = u * cdf.at(-1)!;
+    const i = cdf.findIndex((v) => v >= target);
+    return { y: i + 0.5, up: settle![i] };
+  };
   const { clumps, fibres } = dustLayout(-originX, width - originX, band, amount, seed, scale);
   for (const c of clumps) {
-    const x = c.x + originX;
-    const soft = ctx.createRadialGradient(x, c.y, 0, x, c.y, c.r);
+    const x = c.x + originX, row = rowAt(Math.min(1, c.y / band) ** (1 / 2.2)); // c.y was biased to the top; undo, then place by settle
+    const y = row?.y ?? c.y, squash = row ? 0.35 + 0.4 * (1 - row.up) : 1; // lying flat on a ledge seen from above
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, squash);
+    const soft = ctx.createRadialGradient(0, 0, 0, 0, 0, c.r);
     soft.addColorStop(0, `rgba(${rgb},${Math.min(0.9, c.alpha * opacity).toFixed(3)})`);
     soft.addColorStop(1, `rgba(${rgb},0)`);
     ctx.fillStyle = soft;
-    ctx.fillRect(x - c.r, c.y - c.r, c.r * 2, c.r * 2);
+    ctx.fillRect(-c.r, -c.r, c.r * 2, c.r * 2);
+    ctx.restore();
   }
   ctx.lineCap = 'round';
   ctx.lineWidth = 0.35 * scale;

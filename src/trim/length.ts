@@ -98,7 +98,8 @@ function paintLength(canvas: HTMLCanvasElement, trim: string, index: number, len
     const a = ledgeShade(start.lights), b = ledgeShade(end.lights), from = Math.floor(wid * 0.4);
     for (let v = 0; v < ledge; v++) {
       for (let u = 0; u < len; u++) {
-        const shade = a + (b - a) * (len > 1 ? u / (len - 1) : 0), src = ((from + v) * len + u) * 3, i = (v * len + u) * 4;
+        // Darker at the back, where it meets the tiles above (they hide part of the room from it).
+        const shade = (a + (b - a) * (len > 1 ? u / (len - 1) : 0)) * (0.78 + 0.22 * ((v + 0.5) / ledge)), src = ((from + v) * len + u) * 3, i = (v * len + u) * 4;
         for (let c = 0; c < 3; c++) out[i + c] = paint.albedo[src + c] * shade;
         out[i + 3] = 255;
       }

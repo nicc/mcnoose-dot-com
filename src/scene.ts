@@ -18,7 +18,7 @@ import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
 import { trimLength, type TrimStyle } from './trim/length';
-import { railProfile, skirtingProfile, type RailDims, type SkirtingDims } from './trim/profile';
+import { railProfile, skirtingProfile, type Profile, type RailDims, type SkirtingDims } from './trim/profile';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
 
@@ -163,8 +163,8 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
-  const band = ledge >= 3 ? ledge : Math.max(4, Math.min(h * 0.22, 14));
-  strip.append(trimDust(c, vp, a, band, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top })), map, top));
+  const settle = settleRows(style.profile, ledge, ppc);
+  strip.append(trimDust(c, vp, a, settle.length, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top })), map, top, settle));
   return { strip, h };
 }
 
@@ -222,8 +222,23 @@ const SKIRTING_EARLY_PX = 600; // how far off screen the skirting starts paintin
 
 const DUST_PX_PER_CM = 10; // dust sizes in trim/dust.ts are px at this scene scale (desktop)
 
+// Where dust can lie on a trim, per css px row from its top: how much each row faces up (squared,
+// so it thins quickly as a round steepens). The visible ledge above a skirting's round (ledge px)
+// is flat, so it all holds dust; then the profile's own slope (depth gained per cm down).
+function settleRows(profile: Profile, ledge: number, ppc: number): number[] {
+  const rows: number[] = Array.from({ length: Math.round(ledge) }, () => 1);
+  const hPx = profile.heightCm * ppc, dt = 0.5 / hPx;
+  for (let v = 0; v < Math.min(hPx, 40); v++) {
+    const t = (v + 0.5) / hPx, slope = ((profile.at(Math.min(1, t + dt)) - profile.at(Math.max(0, t - dt))) * profile.depthCm) / (2 * dt * profile.heightCm);
+    const up = slope > 0 ? slope / Math.hypot(slope, 1) : 0;
+    if (up < 0.3 && v > 2) break; // past the part of the round that faces up
+    rows.push(up * up);
+  }
+  return rows.length ? rows : [1];
+}
+
 // Dust on a trim's top ledge, lit by the room at the ledge (see trim/dust.ts).
-function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: number, lights: Light[], map: WallMap, top: number): HTMLCanvasElement {
+function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: number, lights: Light[], map: WallMap, top: number, settle?: number[]): HTMLCanvasElement {
   const dpr = Math.min(2, devicePixelRatio || 1);
   const canvas = el('canvas', 'trim-dust');
   canvas.width = Math.ceil(vp.width * dpr);
@@ -232,7 +247,7 @@ function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: numb
   canvas.style.height = `${band}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  drawDust(ctx, a.originX, vp.width, band, amount, c.DUST_SHADE, lights, 433, pxPerCm(roomFromConfig(c), a.tile) / DUST_PX_PER_CM);
+  drawDust(ctx, a.originX, vp.width, band, amount, c.DUST_SHADE, lights, 433, pxPerCm(roomFromConfig(c), a.tile) / DUST_PX_PER_CM, undefined, settle);
   wipeable(canvas, 'dust', map, 0, top, dpr, true);
   return canvas;
 }
@@ -247,6 +262,8 @@ function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
   canvas.setAttribute('aria-hidden', 'true');
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
+  // The paper's edge against the rail: wavering, drawn soft (a wider faint pass under a narrow one)
+  // rather than ruled, then made patchy along its length (it sits tighter in places) by a mask.
   const y = (x: number) => 1 + 0.6 * fbm((x - a.originX) / 40, 0.5, 17, 3);
   const line = (dy: number, colour: string, width: number) => {
     ctx.beginPath();
@@ -255,8 +272,14 @@ function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
     ctx.lineWidth = width;
     ctx.stroke();
   };
-  line(0, `rgba(55,45,35,${(0.5 * c.SEAM_LINE).toFixed(3)})`, 1);
-  line(1, `rgba(255,255,255,${(0.45 * c.SEAM_LINE).toFixed(3)})`, 0.6);
+  line(0.2, `rgba(55,45,35,${(0.16 * c.SEAM_LINE).toFixed(3)})`, 2.4);
+  line(0, `rgba(55,45,35,${(0.34 * c.SEAM_LINE).toFixed(3)})`, 0.9);
+  line(1.1, `rgba(255,255,255,${(0.32 * c.SEAM_LINE).toFixed(3)})`, 0.8);
+  const patchy = ctx.createLinearGradient(0, 0, vp.width, 0);
+  for (let x = 0; x <= vp.width; x += 30) patchy.addColorStop(x / vp.width, `rgba(0,0,0,${Math.min(1, 0.45 + 0.9 * Math.max(0, fbm((x - a.originX) / 90, 1.5, 19, 2) + 0.5)).toFixed(3)})`);
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = patchy;
+  ctx.fillRect(0, 0, vp.width, hpx);
   return canvas;
 }
 
