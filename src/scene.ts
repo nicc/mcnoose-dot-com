@@ -325,6 +325,7 @@ const arrivals = new Map<string, number>(); // project id → fade-in start
 let ghosts: { slot: string; canvas: HTMLCanvasElement; at: number }[] = []; // fading copies at old tiles
 
 const projectId = (p: Project) => `${p.title}\n${p.logoUrl}`;
+const holds = new WeakMap<HTMLElement, string>(); // tile → the project it shows
 
 function ghostOf(canvas: HTMLCanvasElement): HTMLCanvasElement | undefined {
   if (!canvas.width || !canvas.height) return;
@@ -383,6 +384,7 @@ function printFor(c: Config, tile: number, p: Project): Print {
 // is untouched). Links open in a new tab.
 function projectTile(c: Config, tile: number, p: Project, slot: string, now: number, pending: Promise<unknown>[]): HTMLElement {
   const a = el('a', 'tile tile-project');
+  holds.set(a, projectId(p));
   a.href = p.url;
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
@@ -562,8 +564,51 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
   }
   ghosts = ghosts.filter((gh) => fading(gh.canvas, gh.at, now, c.REFLOW_FADE_MS));
   for (const gh of ghosts) tiles.get(gh.slot)?.append(gh.canvas);
+  built = { c, a, rows, projects, tiles };
   return el('main', 'wall', [g]);
 }
+
+// The grid as last built, so a window move can re-flow projects without rebuilding the scene.
+let built: { c: Config; a: Anchor; rows: number; projects: Project[]; tiles: Map<string, HTMLElement> } | undefined;
+const PROJECT_PARTS = ['tile-ink', 'tile-clean', 'tile-title'];
+
+// A window move changed which tiles fully show: move the projects (their cached prints) to the tiles
+// that now qualify, crossfading as any re-flow does, keeping every tile's own layers (reflection,
+// ageing, fading ghosts). Undefined if it can't — the wall would need another row: rebuild then.
+export function reflowProjects(visible: { anchor: Anchor; width: number }): Frame | undefined {
+  if (!built) return;
+  const { c, a, projects, tiles } = built;
+  const shown = visibleColumns(visible.anchor, visible.width, projectMargin(visible.anchor, c.PROJECT_PEEK));
+  const n = Math.max(1, shown.full.length);
+  if (wallRows(projects.length, a, n, c.TRAILING_ROWS) !== built.rows) return;
+  const slot = new Map(shown.full.map((k, i) => [k, i]));
+  const now = performance.now(), pending: Promise<unknown>[] = [];
+  for (const [key, t] of tiles) {
+    const [r, k] = key.split(':').map(Number), i = slot.get(k);
+    const p = i === undefined ? undefined : projects[r * n + i];
+    if ((p && projectId(p)) === holds.get(t)) continue;
+    const next = p ? projectTile(c, a.tile, p, key, now, pending) : el('div', 'tile');
+    next.style.cssText = t.style.cssText; // its glaze tone and edge lighting
+    next.append(...[...t.children].filter((e) => !PROJECT_PARTS.some((cls) => e.classList.contains(cls))));
+    t.replaceWith(next);
+    tiles.set(key, next);
+  }
+  ghosts = ghosts.filter((gh) => fading(gh.canvas, gh.at, now, c.REFLOW_FADE_MS) || void gh.canvas.remove());
+  for (const gh of ghosts) if (!gh.canvas.isConnected) tiles.get(gh.slot)?.append(gh.canvas);
+  if (pending.length) {
+    const gen = ++generation;
+    document.documentElement.dataset.printed = 'false';
+    printed = Promise.all([printed, ...pending]);
+    printed.then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
+  }
+  return frameFor(a.tile, shown, visible);
+}
+
+let printed: Promise<unknown> = Promise.resolve(); // what data-printed waits on
+const frameFor = (tile: number, shown: Columns, visible: { anchor: Anchor; width: number }): Frame => {
+  const vis = visible.anchor, right = vis.originX + (shown.first + shown.count - 1) * vis.pitch;
+  return { tile, columns: shown.full.length, peekLeft: vis.originX + shown.first * vis.pitch + vis.tile, peekRight: visible.width - right };
+};
 
 export interface Frame {
   tile: number;
@@ -669,8 +714,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
   pending.push(soonSettled()); // the painted rail and the sampler, just after the first paint
   firstPaint = false;
-  Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
-
-  const vis = visible.anchor, right = vis.originX + (shown.first + shown.count - 1) * vis.pitch;
-  return { tile: a.tile, columns: cols.full.length, peekLeft: vis.originX + shown.first * vis.pitch + vis.tile, peekRight: visible.width - right };
+  printed = Promise.all(pending);
+  printed.then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
+  return frameFor(a.tile, shown, visible);
 }

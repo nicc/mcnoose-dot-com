@@ -197,11 +197,14 @@ test('projects re-flow as soon as a window move changes which tiles qualify', as
   test.skip(!(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)), 'desktop only');
   const before = await projectFill(page);
   expect(before.matches).toBe(true);
+  await page.evaluate(() => ((window as unknown as { railBefore: Element }).railBefore = document.querySelector('.rail')!));
   // Well within the overscan margin: the first project tile's left neighbour drops below the peek.
   await moveWindowBy(page, Math.ceil(before.first - before.margin) + 2, 0);
   const after = await projectFill(page);
   expect(after.first).not.toBeCloseTo(before.first, 0);
   expect(after.matches).toBe(true);
+  // The projects moved; the scene wasn't rebuilt (the rail is the same element).
+  expect(await page.evaluate(() => document.querySelector('.rail') === (window as unknown as { railBefore: Element }).railBefore)).toBe(true);
 });
 
 test('pinned to the screen: left/top edge moves reveal wall instead of moving it', async ({ page }) => {

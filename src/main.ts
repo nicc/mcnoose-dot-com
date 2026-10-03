@@ -8,7 +8,7 @@ import { startClouds } from './clouds';
 import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
-import { forgetCanvases, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
+import { forgetCanvases, reflowProjects, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
 
 // The wall renders into a stage a margin wider than the window each side (overscan); #app clips
 // it. Window moves within the margin just slide the stage (a GPU transform, no redraw); past it,
@@ -63,6 +63,7 @@ let lastScreenY = 0;
 let topExtra = 0; // wallpaper grown above the header by top-edge drags
 let intendedScroll = 0; // unrounded scroll we last set, so small eased corrections don't lose fractions
 let last = '';
+let lastFull = ''; // which columns hold projects, as last laid out
 let rendered: Anchor | undefined; // the wall as the scene was last built (window coords)
 let renderedDensity = 0; // devicePixelRatio it was built at
 export const renderCounts = { rebuilds: 0, slides: 0 }; // dev panel readout: spot unexpected re-renders
@@ -92,11 +93,16 @@ function render(force = false): Frame {
   }
 
   // Everything but the window's sideways position: if only that changed, and not past the margin,
-  // slide the stage. Unless a tile gained or lost its place for a project: projects re-flow.
-  const full = visibleColumns(wall, vp.width, projectMargin(wall, state.PROJECT_PEEK)).full;
-  const m = overscan(wall.tile), key = JSON.stringify([vp, state, wall.tile, wall.pitch, wall.originX - wall.centreX, topExtra, full]);
+  // slide the stage. If a tile also gained or lost its place for a project, the projects move to
+  // the tiles that now qualify (their prints are moved, not redrawn).
+  const full = JSON.stringify(visibleColumns(wall, vp.width, projectMargin(wall, state.PROJECT_PEEK)).full);
+  const m = overscan(wall.tile), key = JSON.stringify([vp, state, wall.tile, wall.pitch, wall.originX - wall.centreX, topExtra]);
   const dx = rendered ? wall.originX - rendered.originX : 0;
-  if (force || key !== last || !rendered || Math.abs(dx) > m) {
+  let rebuild = force || key !== last || !rendered || Math.abs(dx) > m;
+  const reflowed = !rebuild && full !== lastFull ? reflowProjects({ anchor: wall, width: vp.width }) : undefined;
+  if (!rebuild && full !== lastFull && !reflowed) rebuild = true; // needs another row
+  lastFull = full;
+  if (rebuild) {
     Object.assign(stage.style, { left: `${-m}px`, width: `${vp.width + 2 * m}px`, transform: '' });
     frame = renderScene(stage, state, { width: vp.width + 2 * m, height: vp.height }, shiftAnchor(wall, -m), topExtra, projects, { anchor: wall, width: vp.width });
     rendered = wall;
@@ -105,6 +111,7 @@ function render(force = false): Frame {
   } else {
     stage.style.transform = dx ? `translate3d(${dx}px, 0, 0)` : ''; // composited only while it slides
     slideStage(dx);
+    if (reflowed) frame = reflowed;
     renderCounts.slides++;
   }
   last = key;
