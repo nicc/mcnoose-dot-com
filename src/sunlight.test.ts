@@ -29,8 +29,9 @@ describe('sun patch', () => {
     expect(high.y1 - high.y0).toBeCloseTo(level.y1 - level.y0); // parallel rays: same size
   });
 
-  it('is there in clear sun and gone by the deepest cloud', () => {
-    expect(sunlit(1, 0.3)).toBe(1);
-    expect(sunlit(0.7, 0.3)).toBe(0);
+  it('is there in clear sun, gone once a cloud dims the window by `hide`, and barely touched by thin cloud', () => {
+    expect(sunlit(1, 0.2)).toBe(1);
+    expect(sunlit(0.8, 0.2)).toBeCloseTo(0);
+    expect(sunlit(0.99, 0.2)).toBeGreaterThan(0.95); // cloud depth 0.01 can't take it away
   });
 });

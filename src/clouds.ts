@@ -5,7 +5,7 @@
 // shapes of shadows and highlights hold while their brightness breathes. The reflections (the window
 // in the glass, the room in the tiles) dim with the sky too, through one CSS variable (--glint).
 // ROOM_CLOUD_BALANCE splits the effect: 0 the room only, 0.5 both in full, 1 the reflections only.
-// Direct sun (the sun patch, --sunlit) goes first: it's gone by the deepest cloud.
+// Direct sun (the sun patch, --sunlit) goes first: gone once a cloud dims the window by ROOM_SUN_HIDE.
 import type { Config } from './config';
 import { exposure, roomFromConfig } from './room';
 import { sunlit } from './sunlight';
@@ -54,7 +54,7 @@ export function startClouds(config: () => Config): void {
     if (dark !== last) shade.style.opacity = String((last = dark));
     const glint = Math.round(reflections * 1000) / 1000;
     if (glint !== lastGlint || !document.querySelector<HTMLElement>('.wall')?.style.getPropertyValue('--glint')) set('.wall, .glass', '--glint', (lastGlint = glint)); // re-renders replace .wall
-    const sun = Math.round(sunlit(k, s.depth) * 1000) / 1000; // direct sun: the sun patch
+    const sun = Math.round(sunlit(k, c.ROOM_SUN_HIDE) * 1000) / 1000; // direct sun: the sun patch
     if (sun !== lastSun || !document.querySelector<HTMLElement>('.sun-patch')?.style.getPropertyValue('--sunlit')) set('.sun-patch', '--sunlit', (lastSun = sun));
     requestAnimationFrame(tick);
   };

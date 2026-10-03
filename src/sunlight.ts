@@ -90,9 +90,9 @@ export function sunPatch(c: Config, map: WallMap): HTMLElement | undefined {
   return canvas;
 }
 
-// How much direct sun there is at cloud level k (1 = clear): gone by the deepest cloud.
-export function sunlit(k: number, depth: number): number {
-  if (depth <= 0) return 1;
-  const x = Math.max(0, Math.min(1, (k - (1 - depth)) / depth));
+// How much direct sun there is at cloud level k (1 = clear): by how far the window light has
+// actually dropped — gone once a cloud dims it by `hide` (so a shallow cloud depth barely touches it).
+export function sunlit(k: number, hide: number): number {
+  const x = Math.max(0, Math.min(1, 1 - (1 - k) / Math.max(0.01, hide)));
   return x * x * (3 - 2 * x);
 }
