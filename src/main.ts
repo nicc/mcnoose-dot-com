@@ -2,7 +2,7 @@ import './styles/main.css';
 import { CONFIG, type Config } from './config';
 import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
-import { PinFilter, type Point } from './pin';
+import { PinFilter, zoomScale, type Point } from './pin';
 import { embroideryLost, resetReflection, skyInGlass, updateReflection } from './embroidery';
 import { startClouds } from './clouds';
 import { onFrameTurned } from './frame';
@@ -18,6 +18,7 @@ const stage = document.createElement('div');
 stage.id = 'stage';
 app.append(stage);
 const overscan = (tile: number) => Math.round(1.5 * tile);
+const DENSITY_SETTLE_MS = 300; // a run of zoom steps redraws once
 const probe = document.getElementById('svh-probe')!;
 // ?fixtures swaps in the dev test logos; the branch is dropped from production builds.
 const projects =
@@ -34,12 +35,26 @@ const viewport = (): Viewport => ({ width: document.documentElement.clientWidth,
 // On desktop it is also pinned to the physical screen: dragging the left/top edge or
 // moving the window reveals more wall instead of moving it.
 const pinToScreen = matchMedia('(hover: hover) and (pointer: fine)').matches;
+let zoom = pinToScreen ? zoomScale(innerWidth, outerWidth, devicePixelRatio) : 1; // page px per screen unit (browser zoom)
 const screenPos = (): Point => {
   const w = window as Window & { mozInnerScreenX?: number; mozInnerScreenY?: number };
-  return pinToScreen ? { x: w.mozInnerScreenX ?? w.screenX, y: w.mozInnerScreenY ?? w.screenY } : { x: 0, y: 0 };
+  return pinToScreen ? { x: (w.mozInnerScreenX ?? w.screenX) * zoom, y: (w.mozInnerScreenY ?? w.screenY) * zoom } : { x: 0, y: 0 };
 };
-const pin = new PinFilter(screenPos(), performance.now());
+let pin = new PinFilter(screenPos(), performance.now());
 let shown = screenPos(); // smoothed screen position the wall is drawn against
+
+// Zoomed (or moved to a screen of another density): screen positions are now in other page px, so
+// restart the pin there (no easing across the jump); render() re-centres the wall at the new scale.
+// Firefox zooms its screen positions too, so only the pixel density shows its zoom.
+let density = devicePixelRatio;
+function syncZoom() {
+  const z = pinToScreen ? zoomScale(innerWidth, outerWidth, devicePixelRatio) : 1;
+  if (z === zoom && devicePixelRatio === density) return;
+  zoom = z;
+  density = devicePixelRatio;
+  pin = new PinFilter(screenPos(), performance.now());
+  shown = screenPos();
+}
 
 let anchor: Anchor | undefined;
 let anchorKey = '';
@@ -49,13 +64,15 @@ let topExtra = 0; // wallpaper grown above the header by top-edge drags
 let intendedScroll = 0; // unrounded scroll we last set, so small eased corrections don't lose fractions
 let last = '';
 let rendered: Anchor | undefined; // the wall as the scene was last built (window coords)
+let renderedDensity = 0; // devicePixelRatio it was built at
 export const renderCounts = { rebuilds: 0, slides: 0 }; // dev panel readout: spot unexpected re-renders
 let frame: Frame;
 
 function render(force = false): Frame {
+  syncZoom();
   const vp = viewport();
   const pos = shown;
-  const geometry = JSON.stringify([state.TILE_MAX_PX, state.GROUT_PX, state.MIN_PEEK]);
+  const geometry = JSON.stringify([state.TILE_MAX_PX, state.GROUT_PX, state.MIN_PEEK, density]); // zoomed: re-centred at the new scale
   let wall = anchor && shiftAnchor(anchor, pos.x - anchorScreenX);
   if (!wall || geometry !== anchorKey || !anchorFits(wall, vp.width, vp.height, state.MIN_PEEK)) {
     wall = anchor = initialAnchor({ ...vp, tileMax: state.TILE_MAX_PX, grout: state.GROUT_PX, minPeek: state.MIN_PEEK });
@@ -82,6 +99,7 @@ function render(force = false): Frame {
     Object.assign(stage.style, { left: `${-m}px`, width: `${vp.width + 2 * m}px`, transform: '' });
     frame = renderScene(stage, state, { width: vp.width + 2 * m, height: vp.height }, shiftAnchor(wall, -m), topExtra, projects, { anchor: wall, width: vp.width });
     rendered = wall;
+    renderedDensity = devicePixelRatio;
     renderCounts.rebuilds++;
   } else {
     stage.style.transform = dx ? `translate3d(${dx}px, 0, 0)` : ''; // composited only while it slides
@@ -130,9 +148,15 @@ const recover = () => {
 setInterval(recover, 2000);
 document.addEventListener('visibilitychange', recover);
 
-// Moved to a screen with another pixel density: redraw sharp for it.
+// Another pixel density (zoomed, or moved to another screen): redraw sharp for it, once the zooming
+// stops (each step would otherwise be a full redraw), and only if no rebuild has done so already.
+let densityTimer = 0;
 const watchDensity = () =>
-  matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener('change', () => (render(true), watchDensity()), { once: true });
+  matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener('change', () => {
+    clearTimeout(densityTimer);
+    densityTimer = window.setTimeout(() => devicePixelRatio !== renderedDensity && render(true), DENSITY_SETTLE_MS);
+    watchDensity();
+  }, { once: true });
 watchDensity();
 startWiping(() => state);
 showNotice();

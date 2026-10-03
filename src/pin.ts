@@ -6,6 +6,23 @@ export interface Point {
   y: number;
 }
 
+// Browser zoom: how many of the page's CSS px make one unit of the window's screen position.
+// Chrome and Safari report screenX/outerWidth unzoomed while innerWidth zooms; Firefox's
+// mozInnerScreenX and outerWidth zoom with the page. So innerWidth / outerWidth is the factor in
+// every browser (≈1 in Firefox) — snapped to the zoom steps browsers use, since window borders
+// make the raw ratio a little off. Docked devtools or a side panel also narrow the page: a ratio
+// counts as zoom only if it's near a zoom step and leaves a real screen density (dpr = density ×
+// zoom); otherwise it's taken as unzoomed.
+const ZOOM_STEPS = [0.25, 0.3, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.2, 1.25, 1.33, 1.5, 1.7, 1.75, 2, 2.4, 2.5, 3, 4, 5];
+const DENSITIES = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3, 3.5, 4];
+export function zoomScale(innerWidth: number, outerWidth: number, dpr: number): number {
+  if (!(innerWidth > 0 && outerWidth > 0)) return 1;
+  const zoom = outerWidth / innerWidth;
+  const step = ZOOM_STEPS.reduce((a, b) => (Math.abs(b - zoom) < Math.abs(a - zoom) ? b : a));
+  if (step === 1 || Math.abs(step - zoom) / step > 0.02) return 1;
+  return DENSITIES.some((d) => Math.abs(dpr / step - d) / d < 0.02) ? 1 / step : 1;
+}
+
 const VELOCITY_MS = 50; // time constant for the velocity estimate
 const MAX_LEAD_PX = 200; // caps lag correction after sudden jumps (e.g. moving between monitors)
 const SETTLED_PX = 0.05;
