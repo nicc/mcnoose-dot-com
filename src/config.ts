@@ -31,11 +31,11 @@ export const CONFIG = {
   ROOM_LIGHT_TINT: 0.6, // how much of that colour shows: 1 = as a camera sees it, lower = as an eye adapted to the room does
   ROOM_SUN_PATCH: 0.2, // direct sun throwing the window, bars and all, onto this wall (0 = none)
   ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
-  ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
+  ROOM_SUN_AZIMUTH_DEG: 2, // from the side: slides the patch across
   ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
   SUNSET: true, // the sun goes down: one pass from the daylight above to dusk, then held there
   SUNSET_DELAY_S: 3, // daylight held this long first
-  SUNSET_MINUTES: 2, // how long the sun takes to go down
+  SUNSET_MINUTES: 5, // how long the sun takes to go down
   SUNSET_KELVIN: 3200, // the window light's colour at dusk
   SUNSET_KELVIN_CURVE: 1.2, // each curve: 1 even, above 1 holds then goes, below 1 goes early
   SUNSET_ELEVATION_DEG: -2, // the sun's height at dusk (lower: the patch climbs the wall)
@@ -53,7 +53,7 @@ export const CONFIG = {
   SUNSET_SKY_TOP: '#8d9cc6', // the sky in the glass's reflected window at dusk: deeper blue up high…
   SUNSET_SKY_LOW: '#f3b58a', // … and warm low down, towards the horizon
   SUNSET_SKY_CURVE: 1.5,
-  ROOM_CLOUD_DEPTH: 0.13, // how far passing clouds dim the window light (0 = clear sky)
+  ROOM_CLOUD_DEPTH: 0.1, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.3, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
   ROOM_CLOUD_BALANCE: 0.98, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
