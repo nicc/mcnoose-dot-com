@@ -7,7 +7,8 @@ const tiltOf = (page: Page) => page.evaluate(() => parseFloat(getComputedStyle(d
 const nailOf = (page: Page) =>
   page.evaluate(() => {
     const r = document.querySelector('.frame-shadow')!.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top, w: r.width, h: r.height };
+    const drop = parseFloat((document.querySelector('.frame') as HTMLElement).style.getPropertyValue('--nail-y')) || 0; // the nail, in its hanger's notch
+    return { x: r.left + r.width / 2, y: r.top + drop, w: r.width, h: r.height };
   });
 
 // Grab at (fx, fy) of the frame and drag by dx, holding on: how far it turned, and how far the

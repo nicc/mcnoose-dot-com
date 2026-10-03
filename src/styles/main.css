@@ -80,7 +80,7 @@ body {
   position: relative;
   margin: 0;
   transform: rotate(var(--frame-tilt));
-  transform-origin: 50% 0; /* it hangs from a nail at the top centre */
+  transform-origin: 50% var(--nail-y, 0); /* it hangs from a nail, in its hanger's notch near the top */
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;

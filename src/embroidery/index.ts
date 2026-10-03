@@ -8,7 +8,7 @@ import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
 import { frameTilt } from '../frame';
 import { flush, later, soon } from '../later';
-import { drawBack, paperRect } from './back';
+import { drawBack, nailDrop, paperRect } from './back';
 import { drawEdges, drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
 export const SAMPLER_LINES = ['Snickers', 'McNoose'];
@@ -48,6 +48,7 @@ export interface Embroidered {
   paper: { x: number; y: number; w: number; h: number }; // css px on the back: where the note goes
   edges: HTMLCanvasElement[]; // top, bottom, left, right: the frame's sides
   depth: number; // css px: how far it stands off the wall
+  nail: number; // css px below the frame's top edge: where it hangs (in a notch of its hanger)
   glass: HTMLElement; // positioned over the cloth; holds the reflection layer
   width: number;
   height: number;
@@ -113,7 +114,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
 
   // The back and the sides: only seen when it's turned over (or falls), so drawn when the browser is
   // next idle rather than holding up the first paint — or at once if something reveals them first.
-  const backStyle = { paper: hexToRgb(c.ABOUT_PAPER), stains: c.ABOUT_STAINS, wear: c.ABOUT_EDGE_WEAR, tarnish: c.ABOUT_HANGER_TARNISH, pxPerCm: pxPerCm(room, tile) };
+  const backStyle = { paper: hexToRgb(c.ABOUT_PAPER), stains: c.ABOUT_STAINS, wear: c.ABOUT_EDGE_WEAR, tarnish: c.ABOUT_HANGER_TARNISH, pxPerCm: pxPerCm(room, tile), hangerDropCm: c.ABOUT_HANGER_DROP_CM, hangerTiltDeg: c.ABOUT_HANGER_TILT_DEG };
   const wood = { ...style.wood, ring: style.wood.ring * zoom }, bdpr = Math.min(2, dpr);
   const nextBack = JSON.stringify([style, zoom, size, backStyle]);
   if (!back || nextBack !== backKey) {
@@ -175,7 +176,7 @@ export function embroidery(c: Config, tile: number): Embroidered {
     turn = 0;
     placeReflection();
   }
-  return { canvas, back, paper, glass, edges: Object.values(edges), depth, ...size };
+  return { canvas, back, paper, glass, edges: Object.values(edges), depth, nail: nailDrop(style.frame * zoom, pxPerCm(room, tile), c.ABOUT_HANGER_DROP_CM), ...size };
 }
 
 const WINDOW_BAR_CM = 5; // sash frame and glazing bars

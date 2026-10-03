@@ -98,7 +98,6 @@ export function startWiping(config: () => Config): void {
   const end = () => {
     if (!last) return;
     last = undefined;
-    document.documentElement.classList.remove('wiping');
     if (moved > 4) addEventListener('click', (e) => (e.preventDefault(), e.stopPropagation()), { capture: true, once: true }); // a wipe isn't a click
   };
   addEventListener('pointerdown', (e) => {
@@ -109,7 +108,6 @@ export function startWiping(config: () => Config): void {
     moved = 0;
     startX = e.clientX;
     startY = e.clientY;
-    document.documentElement.classList.add('wiping');
     dabAt(e.clientX, e.clientY);
   });
   addEventListener('pointermove', (e) => {

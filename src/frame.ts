@@ -36,9 +36,10 @@ const show = (tilt: number) => {
   turnReflection(tilt);
 };
 
-// Natural angular frequency (rad/s) of a w × h rectangle swinging about the middle of its top edge.
-export function swingRate(wCm: number, hCm: number): number {
-  const d = hCm / 2, inertia = (wCm * wCm + hCm * hCm) / 12 + d * d; // per unit mass, about the pivot
+// Natural angular frequency (rad/s) of a w × h rectangle swinging about a point `dropCm` below the
+// middle of its top edge (the nail, in its hanger).
+export function swingRate(wCm: number, hCm: number, dropCm = 0): number {
+  const d = hCm / 2 - dropCm, inertia = (wCm * wCm + hCm * hCm) / 12 + d * d; // per unit mass, about the pivot
   return Math.sqrt((G * d) / inertia);
 }
 
@@ -70,14 +71,14 @@ function drop(theta: number, omega: number, c: Config, pxPerCm: number) {
   moving(false);
   live = undefined;
   settled = undefined;
-  const shadow = current()?.parentElement;
-  if (shadow) fall(shadow, theta, omega, c, pxPerCm, relight);
+  const frame = current(), shadow = frame?.parentElement;
+  if (frame && shadow) fall(shadow, theta, omega, c, pxPerCm, relight, parseFloat(frame.style.getPropertyValue('--nail-y')) || 0);
 }
 
-function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm: number }, pxPerCm: number) {
+function swing(theta: number, omega: number, c: Config, size: { wCm: number; hCm: number; dropCm: number }, pxPerCm: number) {
   cancelAnimationFrame(swinging);
   if (tooFar(c, theta)) return drop(theta, omega, c, pxPerCm);
-  const s: SwingStyle = { rest: c.EMBROIDERY_TILT_DEG, rate: swingRate(size.wCm, size.hCm), damping: c.EMBROIDERY_SWING_DAMPING, stick: c.EMBROIDERY_SWING_STICK_DEG };
+  const s: SwingStyle = { rest: c.EMBROIDERY_TILT_DEG, rate: swingRate(size.wCm, size.hCm, size.dropCm), damping: c.EMBROIDERY_SWING_DAMPING, stick: c.EMBROIDERY_SWING_STICK_DEG };
   let last = performance.now();
   moving(true);
   const tick = (now: number) => {
@@ -119,11 +120,13 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
     sync();
   };
 
-  // The nail: top centre of the frame's unturned box (its wrapper isn't rotated).
+  // The nail: centred, in the hanger's notch just below the top of the frame's unturned box (its
+  // wrapper isn't rotated).
   const box = () => (frame.parentElement as HTMLElement).getBoundingClientRect();
+  const drop = () => parseFloat(frame.style.getPropertyValue('--nail-y')) || 0;
   const nail = () => {
     const r = box();
-    return { x: r.left + r.width / 2, y: r.top };
+    return { x: r.left + r.width / 2, y: r.top + drop() };
   };
   let press: { id: number; x: number; y: number; from: number; touch: boolean; armed: boolean; turning: boolean; moved: number; timer?: number } | undefined;
   let trail: { t: number; tilt: number }[] = []; // recent tilts, for the speed it's let go at
@@ -169,7 +172,7 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
       const thrown = a && b && b.t > a.t ? ((b.tilt - a.tilt) / (b.t - a.t)) * 1000 : 0;
       const omega = Math.max(-MAX_THROW, Math.min(MAX_THROW, thrown));
       const r = box();
-      swing(live ?? frameTilt(c), omega, c, { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm }, pxPerCm);
+      swing(live ?? frameTilt(c), omega, c, { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm, dropCm: drop() / pxPerCm }, pxPerCm);
       if (!p.turning && !cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip(); // caught mid-swing and tapped
     } else {
       moving(false); // a click or tap: it never moved

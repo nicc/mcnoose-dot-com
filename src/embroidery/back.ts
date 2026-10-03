@@ -14,6 +14,8 @@ export interface BackStyle {
   wear: number; // 0–1 edges darkened, rubbed and torn
   tarnish: number; // 0–1 the hanger's brass: bright → dark patina and verdigris
   pxPerCm: number; // room scale, for the hanger's real size
+  hangerDropCm: number; // how far down from the frame's top the hanger is fixed
+  hangerTiltDeg: number; // and how crookedly
 }
 
 const PAPER_INSET = 0.3; // of the frame width: bare wood showing round the paper
@@ -111,7 +113,13 @@ export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: num
   }
   ctx.putImageData(img, x0, y0);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  hanger(ctx, W / 2, f * 0.15, b, lights, toLocal(o.view, o.tiltDeg), dpr);
+  const top = hangerTop(f, b.hangerDropCm * b.pxPerCm), mid = top + (HANGER_H_CM * b.pxPerCm) / 2;
+  ctx.save();
+  ctx.translate(W / 2, mid); // fixed a little crooked, turned about its middle
+  ctx.rotate((b.hangerTiltDeg * Math.PI) / 180);
+  ctx.translate(-W / 2, -mid);
+  hanger(ctx, W / 2, top, b, lights, toLocal(o.view, o.tiltDeg + b.hangerTiltDeg), dpr);
+  ctx.restore();
   return { x: p, y: p, w: W - 2 * p, h: H - 2 * p };
 }
 
@@ -119,11 +127,16 @@ export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: num
 // fixed with two brads at the top centre of the back. (Sawtooth hangers are early-1900s: a later
 // re-hang of an 1870s piece, which is why the brass has had time to tarnish.) Lit from the room:
 // the strip is pressed slightly convex, so its shading and highlight move with the light.
-const HANGER_W_CM = 4.4, HANGER_H_CM = 0.85, TEETH = 27, BRAD_CM = 0.12;
+const HANGER_W_CM = 4.4, HANGER_H_CM = 0.85, TEETH = 27, BRAD_CM = 0.12, TOOTH = 0.22;
+const hangerTop = (f: number, dropPx: number) => f * 0.15 + dropPx;
+
+// How far below the frame's top edge the nail sits (css px): in the notch at the hanger's middle
+// (which its tilt turns about, so that notch stays put). f: the frame's moulding width (css px).
+export const nailDrop = (f: number, pxPerCm: number, dropCm: number) => hangerTop(f, dropCm * pxPerCm) + HANGER_H_CM * pxPerCm * (1 - TOOTH);
 const BRASS: RGB = [190, 152, 84], PATINA: RGB = [72, 62, 40], VERDIGRIS: RGB = [112, 140, 112], BRAD: RGB = [104, 100, 94];
 
 function hanger(ctx: CanvasRenderingContext2D, cx: number, top: number, b: BackStyle, lights: Light[], view: Vec3, dpr: number) {
-  const ppc = b.pxPerCm, hw = HANGER_W_CM * ppc, hh = HANGER_H_CM * ppc, x0 = cx - hw / 2, tooth = hh * 0.22;
+  const ppc = b.pxPerCm, hw = HANGER_W_CM * ppc, hh = HANGER_H_CM * ppc, x0 = cx - hw / 2, tooth = hh * TOOTH;
   const body = new Path2D();
   body.moveTo(x0 + hh * 0.2, top);
   body.lineTo(x0 + hw - hh * 0.2, top);

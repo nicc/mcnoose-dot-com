@@ -103,7 +103,7 @@ function header(c: Config, tile: number): HTMLElement {
   if (!c.EMBROIDERY_FALL) resetFall(); // the experiment off: it's back on its nail
   // Fallen: just the nail it hung from. (Don't build the frame: its canvases are shared, and the
   // falling one is still using them.)
-  if (isFallen()) return el('header', 'wallpaper', [title, nail(e.height, room, ppc), el('div', 'seam-shadow')]);
+  if (isFallen()) return el('header', 'wallpaper', [title, nail(e.height, e.nail, room, ppc), el('div', 'seam-shadow')]);
   // Inside the paper, clear of its worn edges.
   const pad = Math.min(e.paper.w, e.paper.h) * 0.08, box = { x: e.paper.x + pad, y: e.paper.y + pad, w: e.paper.w - 2 * pad, h: e.paper.h - 2 * pad };
   const note = noteElement(box, { zoom: c.ABOUT_NOTE_ZOOM, spacing: c.ABOUT_NOTE_SPACING, ink: c.ABOUT_INK, strength: c.ABOUT_INK_STRENGTH }, Math.min(3, devicePixelRatio || 1));
@@ -111,15 +111,16 @@ function header(c: Config, tile: number): HTMLElement {
   const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back, ...e.edges]);
   card.style.setProperty('--frame-depth', `${e.depth}px`);
   const frame = el('figure', 'frame', [card]);
+  frame.style.setProperty('--nail-y', `${e.nail}px`); // it turns and swings about the nail
   bindFrame(frame, card, back, c, ppc);
   return el('header', 'wallpaper', [title, el('div', 'frame-shadow', [frame]), el('div', 'seam-shadow')]);
 }
 
-// The nail the frame hung from (top centre of where it was), lit like everything else.
-function nail(frameH: number, room: Room, ppc: number): HTMLElement {
+// The nail the frame hung from (in its hanger's notch, just below its top edge), lit like everything else.
+function nail(frameH: number, drop: number, room: Room, ppc: number): HTMLElement {
   const L = blendedLight(lightsAt(room, room.embroidery));
   const n = el('div', 'nail');
-  Object.assign(n.style, { width: `${NAIL_CM * ppc}px`, height: `${NAIL_CM * ppc}px`, top: `calc(var(--frame-y) - ${frameH / 2}px)` });
+  Object.assign(n.style, { width: `${NAIL_CM * ppc}px`, height: `${NAIL_CM * ppc}px`, top: `calc(var(--frame-y) - ${frameH / 2 - drop}px)` });
   for (const [k, v] of Object.entries({
     '--nail-hx': `${50 + L[0] * 35}%`,
     '--nail-hy': `${50 + L[1] * 35}%`,

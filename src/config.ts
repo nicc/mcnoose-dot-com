@@ -91,6 +91,8 @@ export const CONFIG = {
   EMBROIDERY_FALL_GRAVITY: 0.63, // 1 = real gravity at the room's scale; lower = slow motion
   EMBROIDERY_FALL_KICK: 1, // how hard catching the rail pitches it forward
   EMBROIDERY_FALL_TUMBLE: 0.1, // how fast it tumbles once caught
+  EMBROIDERY_FALL_CATCH: false, // it catches the rail and is kicked off it; off = it tumbles from the moment it leaves the nail
+  EMBROIDERY_FALL_BLUR: 0.6, // motion blur as it falls (0 = none)
   EMBROIDERY_STANDOFF_CM: 1.3, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
   EMBROIDERY_DUST_TOP: 1.24, // dust on the frame's upper moulding
   EMBROIDERY_DUST_INNER: 0.93, // dust on the inner bottom lip, against the glass
@@ -129,6 +131,8 @@ export const CONFIG = {
   ABOUT_NOTE_ZOOM: 0.96, // 1 = the longest line spans the paper
   ABOUT_NOTE_SPACING: 1.05, // between lines: 1 = as written
   ABOUT_HANGER_TARNISH: 0.6, // the sawtooth hanger's brass: 0 bright, 1 dark patina and verdigris
+  ABOUT_HANGER_DROP_CM: 0.3, // how far below the frame's top the hanger was fixed (the nail sits in its notch)
+  ABOUT_HANGER_TILT_DEG: 1.5, // and how crookedly
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#bfb093',
@@ -158,7 +162,7 @@ export const CONFIG = {
 
   // Tiles: the room reflected in the glaze
   TILE_REFLECTION: 0.12, // how strongly the room shows in the glaze
-  TILE_TILT_DEG: 2.65, // tiles sit at slightly different angles, breaking reflections at the grout
+  TILE_TILT_DEG: 1.3, // tiles sit at slightly different angles, breaking reflections at the grout
   TILE_WAVINESS: 0.89, // glaze undulation: reflections wobble softly within a tile
 
   // Tiles: ageing (crazing, dried water marks)
