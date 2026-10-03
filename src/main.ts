@@ -1,6 +1,5 @@
 import './styles/main.css';
 import { CONFIG, type Config } from './config';
-import { loadAbout } from './about';
 import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
@@ -14,12 +13,10 @@ import { renderScene, updateTileReflections, type Frame, type Viewport } from '.
 const root = document.getElementById('app')!;
 const probe = document.getElementById('svh-probe')!;
 // ?fixtures swaps in the dev test logos; the branch is dropped from production builds.
-const aboutText = loadAbout();
 const projects =
   import.meta.env.DEV && new URLSearchParams(location.search).has('fixtures')
     ? (await import('./dev/fixtures')).fixtureProjects()
     : await loadProjects(); // the wall's height depends on how many, so wait before drawing it
-const about = await aboutText;
 const state: Config = { ...CONFIG };
 
 // Small viewport height (svh) stays put while mobile URL bars show/hide, so tiles don't jitter.
@@ -69,7 +66,7 @@ function render(force = false): Frame {
   }
 
   const key = JSON.stringify([vp, state, wall, topExtra]);
-  if (force || key !== last) frame = renderScene(root, state, vp, wall, topExtra, projects, about);
+  if (force || key !== last) frame = renderScene(root, state, vp, wall, topExtra, projects);
   last = key;
   if (scrollTarget !== undefined) scrollTo(scrollX, scrollTarget);
   updateReflection(shown);

@@ -121,7 +121,10 @@ export const CONFIG = {
   ABOUT_PAPER: '#b8946a', // aged kraft dust-cover
   ABOUT_STAINS: 0.45, // water tide-marks and foxing
   ABOUT_EDGE_WEAR: 0.5, // edges darkened, rubbed and torn back
-  ABOUT_INK: '#2b2420', // the handwriting
+  ABOUT_INK: '#2b2420', // the handwriting's ink
+  ABOUT_INK_STRENGTH: 1, // ink density: below 1 fainter, above 1 blacker
+  ABOUT_NOTE_ZOOM: 0.95, // 1 = the longest line spans the paper
+  ABOUT_NOTE_SPACING: 1, // between lines: 1 = as written
   ABOUT_HANGER_TARNISH: 0.6, // the sawtooth hanger's brass: 0 bright, 1 dark patina and verdigris
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.

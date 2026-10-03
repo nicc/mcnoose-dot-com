@@ -11,3 +11,6 @@ playwright-report/
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Source photo for the about note (tools/prepare-note.py); kept out of the public repo
+note-src/

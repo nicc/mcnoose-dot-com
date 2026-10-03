@@ -1,0 +1,58 @@
+{
+  "lines": [
+    {
+      "text": "Thank you for visiting.",
+      "file": "line-1.png",
+      "x": 18,
+      "w": 596,
+      "h": 56,
+      "baseline": 34,
+      "gapBefore": 0
+    },
+    {
+      "text": "Sometimes I make things. Some",
+      "file": "line-2.png",
+      "x": 22,
+      "w": 760,
+      "h": 60,
+      "baseline": 32,
+      "gapBefore": 0
+    },
+    {
+      "text": "of them can be seen here.",
+      "file": "line-3.png",
+      "x": 19,
+      "w": 668,
+      "h": 42,
+      "baseline": 36,
+      "gapBefore": 0
+    },
+    {
+      "text": "You can reach me on",
+      "file": "line-4.png",
+      "x": 24,
+      "w": 523,
+      "h": 35,
+      "baseline": 29,
+      "gapBefore": 0
+    },
+    {
+      "text": "nic@mcnoose.com",
+      "file": "line-5.png",
+      "x": 27,
+      "w": 396,
+      "h": 29,
+      "baseline": 24,
+      "gapBefore": 0
+    },
+    {
+      "text": "-Nic",
+      "file": "line-6.png",
+      "x": 0,
+      "w": 121,
+      "h": 34,
+      "baseline": 28,
+      "gapBefore": 1
+    }
+  ]
+}

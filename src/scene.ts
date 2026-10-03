@@ -11,7 +11,7 @@ import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface'
 import { beginSurfaces, wipeable } from './wipe';
 import { ageLayers } from './wallpaper/age';
 import { applyTint, sunPatch } from './sunlight';
-import { fitNote, handReady, noteNodes } from './about';
+import { noteElement } from './about';
 import { isFallen, resetFall } from './fall';
 import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
@@ -72,7 +72,7 @@ function paperAge(c: Config, a: Anchor, topExtra: number, vp: Viewport): HTMLEle
 }
 
 // Click the frame to turn it over: on the back, the about note (about.ts).
-function header(c: Config, tile: number, about: string): HTMLElement {
+function header(c: Config, tile: number): HTMLElement {
   const title = el('h1', 'sr-only', [document.createTextNode(SAMPLER_LINES.join(' '))]);
   const e = embroidery(c, tile);
   const room = roomFromConfig(c), ppc = pxPerCm(room, tile);
@@ -80,10 +80,9 @@ function header(c: Config, tile: number, about: string): HTMLElement {
   // Fallen: just the nail it hung from. (Don't build the frame: its canvases are shared, and the
   // falling one is still using them.)
   if (isFallen()) return el('header', 'wallpaper', [title, nail(e.height, room, ppc), el('div', 'seam-shadow')]);
-  const note = el('div', 'note', noteNodes(about));
   // Inside the paper, clear of its worn edges.
-  const pad = Math.min(e.paper.w, e.paper.h) * 0.08;
-  Object.assign(note.style, { left: `${e.paper.x + pad}px`, top: `${e.paper.y + pad}px`, width: `${e.paper.w - 2 * pad}px`, height: `${e.paper.h - 2 * pad}px` });
+  const pad = Math.min(e.paper.w, e.paper.h) * 0.08, box = { x: e.paper.x + pad, y: e.paper.y + pad, w: e.paper.w - 2 * pad, h: e.paper.h - 2 * pad };
+  const note = noteElement(box, { zoom: c.ABOUT_NOTE_ZOOM, spacing: c.ABOUT_NOTE_SPACING, ink: c.ABOUT_INK, strength: c.ABOUT_INK_STRENGTH }, Math.min(3, devicePixelRatio || 1));
   const back = el('div', 'frame-face frame-back', [e.back, note]);
   const card = el('div', 'frame-card', [el('div', 'frame-face frame-front', [e.canvas, e.glass]), back, ...e.edges]);
   card.style.setProperty('--frame-depth', `${e.depth}px`);
@@ -474,7 +473,7 @@ function frameShadow(c: Config, tile: number): Record<string, string> {
 
 let generation = 0;
 
-export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[], about: string): Frame {
+export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[]): Frame {
   const cols = visibleColumns(a, vp.width);
   const gridLeft = a.originX + cols.first * a.pitch;
   const vars: Record<string, string> = {
@@ -494,7 +493,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--hover-fade': `${c.PRINT_HOVER_FADE_MS}ms`,
     // The logo's centre in the print layout (halftone/print.ts): where the hover reveal opens from.
     '--logo-y': `${(50 * (1 - c.TILE_TITLE_SIZE - c.TILE_TITLE_GAP)).toFixed(2)}%`,
-    '--about-ink': c.ABOUT_INK,
     ...frameShadow(c, a.tile),
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
@@ -517,7 +515,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
-  const top = header(c, a.tile, about);
+  const top = header(c, a.tile);
   if (c.PAPER_AGE) top.firstElementChild!.after(...paperAge(c, a, topExtra, vp)); // under the frame
   hangWallpaper(top, c, a, topExtra, pending);
   const room = roomFromConfig(c);
@@ -536,11 +534,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const patch = sunPatch(c, wallMap(c, a, topExtra));
   if (patch) root.append(patch);
   applyTint(c);
-  const note = top.querySelector<HTMLElement>('.note'); // none once the frame has fallen
-  if (note) {
-    fitNote(note);
-    handReady.then(() => fitNote(note)); // again once the handwriting's metrics are in
-  }
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections();
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

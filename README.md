@@ -21,7 +21,7 @@ Logos are SVG or PNG on the same site. Darker, more opaque areas print more ink.
 
 ## The about note
 
-Click the embroidery to turn it over. The note on the back is `about.md` (next to `index.html` on the server; `public/about.md` in the repo). Blank lines start paragraphs, line breaks are kept, `# ` makes a heading, `- ` a list, `[text](https://…)` a link. It shrinks to fit the paper, so keep it short.
+Click the embroidery to turn it over. The note on the back is real handwriting, cut from a photo: put the photo at `note-src/note-photo.png` (kept out of git), set which lines to keep in `tools/prepare-note.py`, and run `python3 tools/prepare-note.py` (numpy, scipy, Pillow). It writes ink-only line images and their layout to `src/about/`. Zoom, line spacing and ink are in the dev panel under "Embroidery: back".
 
 ## Configuration
 
@@ -45,7 +45,7 @@ npm run build
 npm run build
 ```
 
-Upload the contents of `dist/` (`index.html`, `projects.json`, `logos/`, `about.md`) to any static web host. It needs to be served over http(s); opening `index.html` from disk won't load the projects.
+Upload the contents of `dist/` (`index.html`, `projects.json`, `logos/`) to any static web host. It needs to be served over http(s); opening `index.html` from disk won't load the projects.
 
 ## Acknowledgements
 - Claude
