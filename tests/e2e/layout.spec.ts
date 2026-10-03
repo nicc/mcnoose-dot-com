@@ -44,8 +44,8 @@ for (const size of SIZES) {
     expect(m.square).toBe(true);
     expect(m.innerFits).toBe(true);
     expect(m.edgesBlank).toBe(true);
-    expect(m.leftPeek).toBeGreaterThanOrEqual(0.25 * m.tile - 0.5);
-    expect(m.rightPeek).toBeGreaterThanOrEqual(0.25 * m.tile - 0.5);
+    expect(m.leftPeek).toBeGreaterThanOrEqual(CONFIG.MIN_PEEK * m.tile - 0.5);
+    expect(m.rightPeek).toBeGreaterThanOrEqual(CONFIG.MIN_PEEK * m.tile - 0.5);
     expect(m.tile).toBeLessThanOrEqual(400);
     expect(m.pageEnd).toBe(true);
     expect(m.skirtingSpans).toBe(true);
@@ -163,15 +163,15 @@ test('re-anchors, centred, only when a full tile with peeks no longer fits', asy
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
-  // Narrower than one tile plus a quarter-tile peek each side (whatever TILE_MAX_PX is set to).
+  // Narrower than one tile plus MIN_PEEK either side (whatever TILE_MAX_PX is set to).
   const tile = await page.evaluate(() => document.querySelectorAll('.grid > .tile')[1].getBoundingClientRect().width);
-  const width = Math.floor(tile * 1.45);
+  const width = Math.floor(tile * (1 + 2 * CONFIG.MIN_PEEK)) - 2;
   await page.setViewportSize({ width, height: 800 });
   await page.waitForSelector(`html[data-rendered-width="${width}"]`);
   const s = await page.evaluate(wallState);
   expect(s.fullTiles.length).toBeGreaterThanOrEqual(1);
   const left = s.tiles[0] + s.tile; // visible part of the leftmost tile
-  expect(left).toBeGreaterThanOrEqual(0.25 * s.tile - 0.5);
+  expect(left).toBeGreaterThanOrEqual(CONFIG.MIN_PEEK * s.tile - 0.5);
   expect(s.frameX).toBeCloseTo(width / 2, 0);
 });
 
