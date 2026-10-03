@@ -36,8 +36,9 @@ export function cloudSplit(k: number, b: number): { room: number; reflections: n
   return { room: 1 - loss * Math.min(1, 2 * (1 - b)), reflections: 1 - loss * Math.min(1, 2 * b) };
 }
 
-// Runs for the page's life; reads config live so the panel's sliders apply at once. Holds still
-// for people who ask for reduced motion.
+// Runs for the page's life; reads config live so the panel's sliders apply at once. For people who
+// ask for reduced motion the clouds hold still (their coming and going is close to flicker), but
+// the sunset still runs: a slow change of colour and light over minutes, not movement.
 // skyInGlass: repaints the glass's reflected panes when the sky in them changes colour (the sunset).
 export function startClouds(config: () => Config, skyInGlass: (sky: { top: number[]; low: number[] }) => void): void {
   const shade = document.createElement('div');
@@ -53,7 +54,7 @@ export function startClouds(config: () => Config, skyInGlass: (sky: { top: numbe
     const c = config(), s = cloudStyle(c);
     const k = still.matches ? 1 - s.depth / 2 : cloudLevel(now / 1000, s);
     const { room, reflections } = cloudSplit(k, c.ROOM_CLOUD_BALANCE);
-    const sky = skyAt(c, still.matches ? 0 : now / 1000), dusk = 1 - sky.dim; // the sunset (sunset.ts)
+    const sky = skyAt(c, now / 1000), dusk = 1 - sky.dim; // the sunset (sunset.ts)
     const dark = Math.round((1 - exposure(roomFromConfig(c), room) * dusk) * 1000) / 1000;
     if (dark !== last) shade.style.opacity = String((last = dark));
     const glint = Math.round(reflections * (1 - sky.fade) * 1000) / 1000; // the sky in them dims
