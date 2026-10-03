@@ -15,6 +15,7 @@ export interface AgeStyle {
   stains: number;
   seams: number; // master: 0 = no seams at all
   seam: SeamStyle;
+  seamOrigin: number; // wall cm of a reference seam; the rest every ROLL_CM
   halo: number;
   haloSpreadDeg: number;
 }
@@ -29,7 +30,6 @@ export interface SeamStyle {
 
 const RES = 3; // tint cells per cm
 const ROLL_CM = 53; // a roll's width (21 in)
-const SEAM_OFFSET_CM = 19;
 const STRIP_CM = 8; // each seam's canvas width
 const HALO_CM = 2.2; // how far the grime spreads from the frame's edge
 const STAIN_CELL_CM = 60;
@@ -119,17 +119,20 @@ export function drawTint(area: AgeArea, s: AgeStyle, f: Frame): HTMLCanvasElemen
 
 // The rolls (seam to seam, wall cm) across an area, and how far each was hung off the pattern's
 // match: −1…1 of the greatest mismatch. Hand-hung paper rarely matched exactly.
-export function rollsIn(x0: number, x1: number): { k: number; x0: number; x1: number }[] {
-  return seamsIn(x0 - ROLL_CM, x1 + ROLL_CM).slice(0, -1).map((x, i, all) => ({ k: Math.round(x / ROLL_CM), x0: x, x1: all[i + 1] ?? x + ROLL_CM }));
+export function rollsIn(x0: number, x1: number, origin: number): { k: number; x0: number; x1: number }[] {
+  return seamsIn(x0 - ROLL_CM, x1 + ROLL_CM, origin).slice(0, -1).map((x, i, all) => ({ k: seamIndex(x, origin), x0: x, x1: all[i + 1] ?? x + ROLL_CM }));
 }
 export const rollShift = (k: number) => 2 * hash2(k, 0, 351) - 1;
 
-// Seam x positions (wall cm) across an area.
-export function seamsIn(x0: number, x1: number): number[] {
+// Seam x positions (wall cm) across an area: every ROLL_CM from the reference seam at `origin`.
+export function seamsIn(x0: number, x1: number, origin: number): number[] {
   const out: number[] = [];
-  for (let k = Math.ceil((x0 - SEAM_OFFSET_CM) / ROLL_CM); SEAM_OFFSET_CM + k * ROLL_CM <= x1; k++) out.push(SEAM_OFFSET_CM + k * ROLL_CM);
+  for (let k = Math.ceil((x0 - origin) / ROLL_CM); origin + k * ROLL_CM <= x1; k++) out.push(origin + k * ROLL_CM);
   return out;
 }
+
+// Which seam (counting from the reference seam): seeds its lifts and tears, so they move with it.
+export const seamIndex = (x: number, origin: number) => Math.round((x - origin) / ROLL_CM);
 
 const SEG_CM = 12; // seams are considered in lengths this long for lifts and tears
 const DIRT_CM = 1.2; // how far paste and handling grime spreads from the joint
@@ -157,8 +160,8 @@ interface Lift {
 // catch light along the lip and shadow the paper beyond. Grime gathers, patchily, along the joint.
 // Tears are strips torn back to the plaster. The master amount scales how visible the joint is and
 // how often lifts and tears happen (each is drawn in full); at 0 it's empty.
-export function drawSeam(seamX: number, area: AgeArea, amount: number, s: SeamStyle, ppc: number, dpr: number, light: Vec3): HTMLCanvasElement {
-  const k = Math.round(seamX / ROLL_CM), scale = ppc * dpr; // canvas px per cm
+export function drawSeam(k: number, area: AgeArea, amount: number, s: SeamStyle, ppc: number, dpr: number, light: Vec3): HTMLCanvasElement {
+  const scale = ppc * dpr; // canvas px per cm
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(STRIP_CM * scale);
   canvas.height = Math.ceil((area.yTop - area.yBottom) * scale);
@@ -321,8 +324,8 @@ export function ageLayers(map: WallMap, vpWidth: number, headerH: number, s: Age
   const want = areaFor(map, vpWidth, headerH), have = cached?.area;
   const covered = have && cached!.key === key && want.x0 + (want.x1 - want.x0) / 3 >= have.x0 && want.x1 - (want.x1 - want.x0) / 3 <= have.x1 && want.yTop - 20 <= have.yTop;
   if (!covered) {
-    const seams = s.seams > 0 ? seamsIn(want.x0 - STRIP_CM, want.x1 + STRIP_CM) : []; // none at all at 0
-    cached = { key, area: want, tint: drawTint(want, s, f), seams: seams.map((x) => ({ x, canvas: drawSeam(x, want, s.seams, s.seam, ppc, dpr, light) })) };
+    const seams = s.seams > 0 ? seamsIn(want.x0 - STRIP_CM, want.x1 + STRIP_CM, s.seamOrigin) : []; // none at all at 0
+    cached = { key, area: want, tint: drawTint(want, s, f), seams: seams.map((x) => ({ x, canvas: drawSeam(seamIndex(x, s.seamOrigin), want, s.seams, s.seam, ppc, dpr, light) })) };
     cached.tint.className = 'paper-age';
     for (const seam of cached.seams) seam.canvas.className = 'paper-seam';
   }

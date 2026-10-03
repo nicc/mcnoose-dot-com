@@ -66,6 +66,7 @@ export const CONFIG = {
   PAPER_AGE_YELLOWING: 0.18, // uneven yellowing, heavier towards the ceiling
   PAPER_AGE_STAINS: 0, // blotches with tide-lines
   PAPER_AGE_SEAMS: 0, // seams between rolls, overall (0 = none at all)
+  PAPER_AGE_SEAM_OFFSET_CM: 48, // where a seam falls from the embroidery's centre: 0 centred … 53 (a roll) the next one centred
   PAPER_AGE_SEAM_GAP_MM: 0.3, // the joint between rolls; it wavers, opens and closes (0 = butted tight)
   PAPER_AGE_SEAM_LIFT: 0.4, // edges lifting off the wall: the lip catches light, shadows the paper beside it
   PAPER_AGE_SEAM_TEAR: 0.3, // strips torn back to the plaster

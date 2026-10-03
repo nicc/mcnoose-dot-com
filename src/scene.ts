@@ -37,6 +37,9 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, kids: No
 const live = import.meta.env.DEV ? import('./wallpaper') : undefined;
 
 // Pattern anchored to the wall's world origin so it stays put under resizes and window moves.
+// A reference seam's wall x: PAPER_AGE_SEAM_OFFSET_CM from the embroidery's centre.
+const seamOrigin = (c: Config) => roomFromConfig(c).embroidery.x + c.PAPER_AGE_SEAM_OFFSET_CM;
+
 // The wallpaper, anchored to the wall. With the seams' pattern mismatch on, it's hung as one strip
 // per roll (CSS backgrounds of the same baked image, no canvas work), each nudged up or down a
 // millimetre or two off the pattern's match, so the pattern steps at each seam.
@@ -46,7 +49,7 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
   const pageX = (xCm: number) => map.embroideryPage.x + (xCm - map.embroidery.x) * ppc;
   const strips =
     shift > 0
-      ? rollsIn(wallPoint(map, { x: 0, y: 0 }).x, wallPoint(map, { x: vp.width, y: 0 }).x).map((r) => {
+      ? rollsIn(wallPoint(map, { x: 0, y: 0 }).x, wallPoint(map, { x: vp.width, y: 0 }).x, seamOrigin(c)).map((r) => {
           const strip = document.createElement('div');
           strip.className = 'paper-roll';
           strip.setAttribute('aria-hidden', 'true');
@@ -86,7 +89,7 @@ function paperAge(c: Config, a: Anchor, topExtra: number, vp: Viewport): HTMLEle
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), e = embroidery(c, a.tile);
   const frame = { wCm: e.width / ppc, hCm: e.height / ppc, nail: { x: room.embroidery.x, y: room.embroidery.y + e.height / ppc / 2 } };
   const seam = { gapMm: c.PAPER_AGE_SEAM_GAP_MM, lift: c.PAPER_AGE_SEAM_LIFT, tear: c.PAPER_AGE_SEAM_TEAR, sharpness: c.PAPER_AGE_SEAM_SHARPNESS, dirt: c.PAPER_AGE_SEAM_DIRT };
-  const style = { yellowing: c.PAPER_AGE_YELLOWING, stains: c.PAPER_AGE_STAINS, seams: c.PAPER_AGE_SEAMS, seam, halo: c.PAPER_AGE_HALO, haloSpreadDeg: c.PAPER_AGE_HALO_SPREAD_DEG };
+  const style = { yellowing: c.PAPER_AGE_YELLOWING, stains: c.PAPER_AGE_STAINS, seams: c.PAPER_AGE_SEAMS, seam, seamOrigin: seamOrigin(c), halo: c.PAPER_AGE_HALO, haloSpreadDeg: c.PAPER_AGE_HALO_SPREAD_DEG };
   const light = blendedLight(lightsAt(room, room.embroidery));
   return ageLayers(wallMap(c, a, topExtra), vp.width, topExtra + c.HEADER_HEIGHT * a.tile, style, frame, light, Math.min(2, devicePixelRatio || 1));
 }

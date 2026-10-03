@@ -27,7 +27,7 @@ describe('the frame’s mark on the paper', () => {
 
 describe('seams', () => {
   it('fall a roll’s width apart', () => {
-    const xs = seamsIn(0, 300);
+    const xs = seamsIn(0, 300, 19);
     expect(xs.length).toBeGreaterThan(4);
     for (let i = 1; i < xs.length; i++) expect(xs[i] - xs[i - 1]).toBeCloseTo(53);
   });
@@ -35,12 +35,20 @@ describe('seams', () => {
 
 describe('rolls', () => {
   it('run seam to seam with no gaps, each hung a little off the match', () => {
-    const rolls = rollsIn(0, 300);
+    const rolls = rollsIn(0, 300, 19);
     for (let i = 1; i < rolls.length; i++) expect(rolls[i].x0).toBeCloseTo(rolls[i - 1].x1);
     expect(rolls[0].x0).toBeLessThanOrEqual(0);
     expect(rolls.at(-1)!.x1).toBeGreaterThanOrEqual(300);
     const shifts = rolls.map((r) => rollShift(r.k));
     for (const s of shifts) expect(Math.abs(s)).toBeLessThanOrEqual(1);
     expect(new Set(shifts).size).toBe(shifts.length);
+  });
+});
+
+describe('the reference seam', () => {
+  it('falls at the origin, and an offset of a whole roll lands the next seam there', () => {
+    expect(seamsIn(100, 140, 130)).toContain(130);
+    const a = seamsIn(0, 300, 130), b = seamsIn(0, 300, 130 + 53);
+    expect(a.map((x) => x.toFixed(3))).toEqual(b.map((x) => x.toFixed(3)));
   });
 });

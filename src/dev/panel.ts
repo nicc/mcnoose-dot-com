@@ -29,6 +29,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   PAPER_AGE_YELLOWING: [0, 1, 0.01],
   PAPER_AGE_STAINS: [0, 1, 0.01],
   PAPER_AGE_SEAMS: [0, 1, 0.01],
+  PAPER_AGE_SEAM_OFFSET_CM: [0, 53, 0.1],
   PAPER_AGE_SEAM_GAP_MM: [0, 2, 0.05],
   PAPER_AGE_SEAM_LIFT: [0, 1, 0.01],
   PAPER_AGE_SEAM_TEAR: [0, 1, 0.01],
