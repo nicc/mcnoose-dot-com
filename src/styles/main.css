@@ -454,17 +454,24 @@ body {
   inset: 0;
 }
 
-.tile-ink {
-  -webkit-mask-image: radial-gradient(circle at 50% var(--logo-y), transparent calc(var(--reveal) - 20%), #000 var(--reveal));
-  mask-image: radial-gradient(circle at 50% var(--logo-y), transparent calc(var(--reveal) - 20%), #000 var(--reveal));
-}
-
 .tile-clean {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(circle at 50% var(--logo-y), #000 calc(var(--reveal) - 20%), transparent var(--reveal));
-  mask-image: radial-gradient(circle at 50% var(--logo-y), #000 calc(var(--reveal) - 20%), transparent var(--reveal));
+  display: none;
+}
+
+/* Only when the reveal is on: no masks otherwise. Stops never go below 0: iOS Safari collapsed the
+   at-rest gradient (stops at −20% and 0%) to a point, leaving one dot of ink per print. */
+[data-reveal] .tile-ink {
+  -webkit-mask-image: radial-gradient(circle at 50% var(--logo-y), transparent max(0%, calc(var(--reveal) - 20%)), #000 max(0.1%, var(--reveal)));
+  mask-image: radial-gradient(circle at 50% var(--logo-y), transparent max(0%, calc(var(--reveal) - 20%)), #000 max(0.1%, var(--reveal)));
+}
+
+[data-reveal] .tile-clean {
+  display: block;
+  -webkit-mask-image: radial-gradient(circle at 50% var(--logo-y), #000 max(0%, calc(var(--reveal) - 20%)), transparent max(0.1%, var(--reveal)));
+  mask-image: radial-gradient(circle at 50% var(--logo-y), #000 max(0%, calc(var(--reveal) - 20%)), transparent max(0.1%, var(--reveal)));
 }
 
 @media (hover: hover) {

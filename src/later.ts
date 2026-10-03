@@ -40,11 +40,14 @@ export function soon(key: string, job: () => void): Promise<void> {
     requestAnimationFrame(() =>
       setTimeout(() => {
         soonDone = undefined;
-        for (const [k, j] of soonJobs) {
-          soonJobs.delete(k);
-          j();
+        try {
+          for (const [k, j] of soonJobs) {
+            soonJobs.delete(k);
+            j();
+          }
+        } finally {
+          resolve(); // a job that throws mustn't leave every later one waiting forever
         }
-        resolve();
       }, 0),
     ),
   ));
