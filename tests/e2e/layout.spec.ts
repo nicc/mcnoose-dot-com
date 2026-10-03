@@ -181,6 +181,33 @@ const moveWindowBy = (page: import('@playwright/test').Page, dx: number, dy: num
     [dx, dy],
   ).then(() => page.waitForSelector('html[data-pin="settled"]'));
 
+test('projects re-flow as soon as a window move brings a tile fully into or out of view', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await page.goto('/');
+  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
+  test.skip(!(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)), 'desktop only');
+  const fill = () => page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const cols = Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total'));
+    const row = [...document.querySelectorAll('.grid > .tile')].slice(0, cols);
+    const isFull = (t: Element) => t.getBoundingClientRect().left >= -0.5 && t.getBoundingClientRect().right <= vw + 0.5;
+    const first = row.find(isFull)!.getBoundingClientRect().left;
+    return { first, matches: row.every((t) => isFull(t) === t.classList.contains('tile-project')) };
+  });
+  const pitch = await page.evaluate(() => {
+    const [a, b] = document.querySelectorAll('.grid > .tile');
+    return b.getBoundingClientRect().left - a.getBoundingClientRect().left;
+  });
+  const before = await fill();
+  expect(before.matches).toBe(true);
+  // Well within the overscan margin: the first full tile's left edge crosses the window's.
+  await moveWindowBy(page, Math.ceil(before.first) + 2, 0);
+  const after = await fill();
+  expect(after.first).not.toBeCloseTo(before.first, 0);
+  expect(Math.abs(after.first - before.first)).toBeLessThan(pitch);
+  expect(after.matches).toBe(true);
+});
+
 test('pinned to the screen: left/top edge moves reveal wall instead of moving it', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');

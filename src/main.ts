@@ -1,7 +1,7 @@
 import './styles/main.css';
 import { CONFIG, type Config } from './config';
 import { loadProjects } from './projects';
-import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
+import { anchorFits, compensateTop, initialAnchor, shiftAnchor, visibleColumns, type Anchor } from './layout';
 import { PinFilter, zoomScale, type Point } from './pin';
 import { embroideryLost, resetReflection, skyInGlass, updateReflection } from './embroidery';
 import { startClouds } from './clouds';
@@ -92,8 +92,9 @@ function render(force = false): Frame {
   }
 
   // Everything but the window's sideways position: if only that changed, and not past the margin,
-  // slide the stage.
-  const m = overscan(wall.tile), key = JSON.stringify([vp, state, wall.tile, wall.pitch, wall.originX - wall.centreX, topExtra]);
+  // slide the stage. Unless a tile came fully into or out of view: projects re-flow to fill them.
+  const full = visibleColumns(wall, vp.width).full;
+  const m = overscan(wall.tile), key = JSON.stringify([vp, state, wall.tile, wall.pitch, wall.originX - wall.centreX, topExtra, full]);
   const dx = rendered ? wall.originX - rendered.originX : 0;
   if (force || key !== last || !rendered || Math.abs(dx) > m) {
     Object.assign(stage.style, { left: `${-m}px`, width: `${vp.width + 2 * m}px`, transform: '' });
