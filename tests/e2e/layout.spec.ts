@@ -261,7 +261,8 @@ test('no tile is left showing two prints once a re-flow fade ends', async ({ pag
 test('wallpaper is the build-time baked tile, applied with no runtime render', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
-  const bg = await page.$eval('.wallpaper', (el) => getComputedStyle(el).backgroundImage);
+  // On the header, or on per-roll strips when the seams' pattern mismatch is on.
+  const bg = await page.evaluate(() => [...document.querySelectorAll('.wallpaper, .paper-roll')].map((e) => getComputedStyle(e).backgroundImage).find((b) => b !== 'none'));
   expect(bg).toMatch(/^url\("data:image\/webp;base64,/);
 });
 

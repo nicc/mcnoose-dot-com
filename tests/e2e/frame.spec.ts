@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { CONFIG } from '../../src/config';
 
 test.skip(({ isMobile }) => isMobile, 'mouse drag; touch needs press-and-hold, not simulated here');
 
@@ -43,8 +44,15 @@ test('let go at a steep angle, it swings back and settles near where it hangs', 
   await page.waitForSelector('.skirting');
   const rest = await tiltOf(page);
   await hold(page, 0.1, 0.3, -60);
-  expect(Math.abs((await tiltOf(page)) - rest)).toBeGreaterThan(15);
+  const held = await tiltOf(page);
+  expect(Math.abs(held - rest)).toBeGreaterThan(15);
   await page.mouse.up();
+  if (CONFIG.EMBROIDERY_FALL && Math.abs(held) > CONFIG.EMBROIDERY_FALL_DEG) {
+    // The experiment's on and that's past its angle: it falls off the wall, leaving the nail.
+    await expect(page.locator('header .nail')).toBeVisible();
+    await expect(page.locator('header .frame')).toHaveCount(0);
+    return;
+  }
   // Wait until it has stopped moving, then it should be near where it hangs.
   await page.waitForSelector('html[data-frame="still"]', { timeout: 15000 });
   const left = await tiltOf(page);
