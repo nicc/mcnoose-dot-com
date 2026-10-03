@@ -66,7 +66,10 @@ Dots come from the `halftone-print` package (our own: ~/source/play/halftone-pri
 Chrome, Firefox, Safari on desktop and mobile, always. Check support before using new CSS/JS. `npm run test:e2e` covers chromium/firefox/webkit + Pixel/iPhone emulation; Playwright WebKit ≠ real iOS Safari.
 
 ## Commands
-`npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build`
+`npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build` · `node scripts/profile.ts [mobile]` (load / idle / scroll / window-drag CPU profile)
+
+## Performance
+Canvas caches key on wall position: round derived positions (float noise from page↔wall maps re-renders everything on every window move). Re-renders mustn't redo eye-dependent work (tile reflections memoise per eye). Per-frame loops (clouds) update ~15 Hz and set variables only on the elements that use them, never the root.
 
 ## Tracking
 Beads (`bd`); run `bd prime` for commands (auto-run at session start). `bd ready` → claim → note → close.

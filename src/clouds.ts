@@ -42,17 +42,20 @@ export function startClouds(config: () => Config): void {
   shade.setAttribute('aria-hidden', 'true');
   document.body.append(shade);
   const still = matchMedia('(prefers-reduced-motion: reduce)');
-  let last = -1, lastGlint = -1, lastSun = -1;
+  let last = -1, lastGlint = -1, lastSun = -1, frame = 0;
+  // Only what uses them: setting these on the root would restyle the whole page each time.
+  const set = (sel: string, name: string, v: number) => document.querySelectorAll<HTMLElement>(sel).forEach((e) => e.style.setProperty(name, String(v)));
   const tick = (now: number) => {
+    if (frame++ % 4) return void requestAnimationFrame(tick); // ~15 updates a second: clouds glide over seconds
     const c = config(), s = cloudStyle(c);
     const k = still.matches ? 1 - s.depth / 2 : cloudLevel(now / 1000, s);
     const { room, reflections } = cloudSplit(k, c.ROOM_CLOUD_BALANCE);
     const dark = Math.round((1 - exposure(roomFromConfig(c), room)) * 1000) / 1000;
     if (dark !== last) shade.style.opacity = String((last = dark));
     const glint = Math.round(reflections * 1000) / 1000;
-    if (glint !== lastGlint) document.documentElement.style.setProperty('--glint', String((lastGlint = glint)));
+    if (glint !== lastGlint || !document.querySelector<HTMLElement>('.wall')?.style.getPropertyValue('--glint')) set('.wall, .glass', '--glint', (lastGlint = glint)); // re-renders replace .wall
     const sun = Math.round(sunlit(k, s.depth) * 1000) / 1000; // direct sun: the sun patch
-    if (sun !== lastSun) document.documentElement.style.setProperty('--sunlit', String((lastSun = sun)));
+    if (sun !== lastSun || !document.querySelector<HTMLElement>('.sun-patch')?.style.getPropertyValue('--sunlit')) set('.sun-patch', '--sunlit', (lastSun = sun));
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

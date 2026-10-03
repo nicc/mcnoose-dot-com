@@ -127,7 +127,9 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
   for (let k = first; k <= last; k++) {
     const left = a.originX + k * seg;
     const lit = (x: number) => {
-      const at = wallPoint(map, { x, y: top + h / 2 });
+      // Rounded: the same wall point every render, so moving the window (which shifts page x and
+      // the map together) doesn't change the cache key by float noise and re-render every length.
+      const p = wallPoint(map, { x, y: top + h / 2 }), at = { x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000 };
       return { lights: lightsAt(room, at), view: viewAt(room, at) };
     };
     const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style);
@@ -333,6 +335,7 @@ const REFLECT_SAMPLES = 20;
 const reflectCanvases = new Map<string, HTMLCanvasElement>();
 let reflecting: { canvas: HTMLCanvasElement; tile: TileReflection; top: number; nx: number; ny: number }[] = []; // top: page px
 let reflectScene: { room: Room; look: RoomLook; ppc: number; follow: number; size: number } | undefined;
+let reflectSceneKey = '';
 
 function reflectionLayer(id: string, top: number, tile: TileReflection, nx = REFLECT_SAMPLES, ny = REFLECT_SAMPLES): HTMLCanvasElement {
   let canvas = reflectCanvases.get(id);
@@ -346,13 +349,21 @@ function reflectionLayer(id: string, top: number, tile: TileReflection, nx = REF
   return canvas;
 }
 
-export function updateTileReflections(scroll = scrollY) {
+// What each canvas was last traced for: re-renders (window moves, resizes) don't move the eye, so
+// they needn't re-trace; only scrolling does.
+const traced = new WeakMap<HTMLCanvasElement, { scene: string; eyeY: number; x: number; y: number; seed: number; nx: number }>();
+const same = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+
+export function updateTileReflections(scroll = scrollY, viewH = innerHeight) {
   if (!reflectScene) return;
   const { room, look, ppc, follow, size } = reflectScene;
   const eye: Vec3 = [room.embroidery.x, room.eyeCm - (follow * scroll) / ppc, room.viewCm];
-  const lo = scroll - size, hi = scroll + innerHeight + size; // the rest keep their last image
+  const lo = scroll - size, hi = scroll + viewH + size; // the rest keep their last image
   for (const { canvas, tile, top, nx, ny } of reflecting) {
     if (top + size < lo || top > hi) continue;
+    const was = traced.get(canvas); // tile settings are part of the scene key; position by number
+    if (was && was.scene === reflectSceneKey && same(was.eyeY, eye[1]) && same(was.x, tile.centre.x) && same(was.y, tile.centre.y) && was.seed === tile.seed && was.nx === nx) continue;
+    traced.set(canvas, { scene: reflectSceneKey, eyeY: eye[1], x: tile.centre.x, y: tile.centre.y, seed: tile.seed, nx });
     const px = reflectTile(room, look, tile, eye, nx, ny);
     canvas.getContext('2d')!.putImageData(new ImageData(px as Uint8ClampedArray<ArrayBuffer>, nx, ny), 0, 0);
   }
@@ -521,6 +532,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
+  reflectSceneKey = JSON.stringify([reflectScene, c.TILE_TILT_DEG, c.TILE_WAVINESS, c.TILE_REFLECTION]);
   beginSurfaces(wallMap(c, a, topExtra)); // wipeable canvases register as they're placed
   const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
   const rows = wallRows(projects.length, a, cols.full.length, c.TRAILING_ROWS);
@@ -535,7 +547,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   if (patch) root.append(patch);
   applyTint(c);
   // Signals tests and screenshots that every visible print has settled.
-  updateTileReflections();
+  updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
 
   const right = a.originX + (cols.first + cols.count - 1) * a.pitch;
