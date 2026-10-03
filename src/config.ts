@@ -90,9 +90,9 @@ export const CONFIG = {
   EMBROIDERY_FALL_DEG: 40, // the angle past which it slips off its nail
   EMBROIDERY_FALL_GRAVITY: 0.63, // 1 = real gravity at the room's scale; lower = slow motion
   EMBROIDERY_FALL_KICK: 1, // how hard catching the rail pitches it forward
-  EMBROIDERY_FALL_TUMBLE: 0.1, // how fast it tumbles once caught
+  EMBROIDERY_FALL_TUMBLE: 0.15, // how fast it tumbles once caught
   EMBROIDERY_FALL_CATCH: false, // it catches the rail and is kicked off it; off = it tumbles from the moment it leaves the nail
-  EMBROIDERY_FALL_BLUR: 0.6, // motion blur as it falls (0 = none)
+  EMBROIDERY_FALL_BLUR: 0.2, // motion blur as it falls (0 = none)
   EMBROIDERY_STANDOFF_CM: 1.3, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
   EMBROIDERY_DUST_TOP: 1.24, // dust on the frame's upper moulding
   EMBROIDERY_DUST_INNER: 0.93, // dust on the inner bottom lip, against the glass
