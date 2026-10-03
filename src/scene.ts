@@ -9,7 +9,7 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
-import { flush } from './later';
+import { flush, soonSettled } from './later';
 import { ageLayers, rollShift, rollsIn } from './wallpaper/age';
 import { applyTint, sunPatch } from './sunlight';
 import { noteElement } from './about';
@@ -157,7 +157,8 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
       return { lights: lightsAt(room, at), view: viewAt(room, at) };
     };
     const offScreen = left + seg < onScreen.x0 || left > onScreen.x1; // in the overscan margin: draw later
-    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, deferred || offScreen);
+    // On screen at first load: just after the first paint (wallpaper and tiles first); else now.
+    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, deferred || offScreen ? 'idle' : firstPaint ? 'soon' : false);
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
@@ -525,6 +526,7 @@ function frameShadow(c: Config, tile: number): Record<string, string> {
 }
 
 let generation = 0;
+let firstPaint = true; // the first render puts wallpaper and tiles up first; slow drawing follows (later.ts)
 let onScreen = { x0: 0, x1: Infinity }; // the window's span in stage x (see renderScene)
 let slid = 0; // how far the stage has slid since it was built (main.ts)
 // The stage slid by dx (window moved within the overscan margin): trace whatever newly came into view.
@@ -571,6 +573,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--print-color': c.PRINT_COLOR,
     '--wallpaper-color': c.WALLPAPER_GROUND, // shown until the pattern is ready
     '--skirting-color': c.SKIRTING_COLOR,
+    '--rail-color': c.RAIL_COLOR, // the rail shows as plain paint until its lengths are drawn
     '--notice-color': c.NOTICE_COLOR,
     '--notice-ink': c.NOTICE_INK,
   };
@@ -603,6 +606,8 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   applyTint(c);
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
+  pending.push(soonSettled()); // the painted rail and the sampler, just after the first paint
+  firstPaint = false;
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
 
   const vis = visible.anchor, right = vis.originX + (shown.first + shown.count - 1) * vis.pitch;

@@ -7,7 +7,7 @@ import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
 import { frameTilt } from '../frame';
-import { flush, later } from '../later';
+import { flush, later, soon } from '../later';
 import { drawBack, paperRect } from './back';
 import { drawEdges, drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
@@ -98,10 +98,14 @@ export function embroidery(c: Config, tile: number): Embroidered {
   const size = { width: natural.width * zoom, height: natural.height * zoom };
   const next = JSON.stringify([style, zoom, chartKey]);
   if (!canvas || next !== key) {
-    canvas = document.createElement('canvas');
-    drawEmbroidery(canvas, chart, style, zoom);
-    canvas.className = 'embroidery';
-    canvas.setAttribute('aria-hidden', 'true');
+    // The first time, just after the first paint (wallpaper and tiles first), fading in; after that
+    // (re-lit after a turn, settings changed) at once, so it doesn't blink.
+    const first = !canvas, fresh = (canvas = document.createElement('canvas'));
+    fresh.className = 'embroidery';
+    fresh.setAttribute('aria-hidden', 'true');
+    const draw = () => (drawEmbroidery(fresh, chart, style, zoom), fresh.classList.add('drawn'));
+    if (first) void soon('embroidery:front', draw);
+    else draw();
     key = next;
   }
   canvas.style.width = `${size.width}px`;

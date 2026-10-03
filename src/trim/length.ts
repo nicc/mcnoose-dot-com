@@ -11,7 +11,7 @@ import { PAINT_BARE, paintMaps, softenProfile } from '../wood/paint';
 import { weather } from '../wood/wear';
 import type { Profile } from './profile';
 import { scuff } from './scuffs';
-import { later } from '../later';
+import { later, soon } from '../later';
 
 export interface TrimStyle {
   profile: Profile;
@@ -52,8 +52,9 @@ const cache = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
 
 // trim: which piece ('rail', 'skirting'); index: which length along the wall; lenPx/heightPx in
 // CSS px; pxPerCm: scene scale; start/end: the room's light at its left and right ends.
-// deferred: hand back the (sized) canvas now and paint it later (later.ts), keyed `trim:<trim>:<index>`.
-export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle, deferred = false): HTMLCanvasElement {
+// deferred: hand back the (sized) canvas now and paint it later (later.ts), keyed `trim:<trim>:<index>`:
+// 'idle' when the browser is idle (off screen), 'soon' just after the first paint (on screen).
+export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle, deferred: false | 'soon' | 'idle' = false): HTMLCanvasElement {
   const key = JSON.stringify([lenPx, heightPx, pxPerCm, dpr, start, end, s, s.profile.heightCm, s.profile.depthCm]);
   const id = `${trim}:${index}`;
   const hit = cache.get(id);
@@ -65,7 +66,8 @@ export function trimLength(trim: string, index: number, lenPx: number, heightPx:
   [canvas.width, canvas.height] = [len, total];
   cache.set(id, { key, canvas });
   const draw = () => paintLength(canvas, trim, index, len, total, dpr, pxPerCm, start, end, s);
-  if (deferred) later(`trim:${id}`, draw);
+  if (deferred === 'idle') later(`trim:${id}`, draw);
+  else if (deferred === 'soon') void soon(`trim:${id}`, draw);
   else draw();
   return canvas;
 }

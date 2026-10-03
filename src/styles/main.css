@@ -256,6 +256,12 @@ body {
 
 .embroidery {
   display: block;
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+}
+
+.embroidery.drawn {
+  opacity: 1; /* first load: fades in once drawn, just after the wallpaper and tiles */
 }
 
 /* Where paper meets rail: contact shadow on the paper, joint line along the rail's top */
@@ -289,6 +295,10 @@ body {
   position: absolute;
   inset: 0;
   overflow: hidden;
+}
+
+.rail .trim-strip {
+  background: var(--rail-color); /* plain paint until the lengths are drawn */
 }
 
 .trim-length {
