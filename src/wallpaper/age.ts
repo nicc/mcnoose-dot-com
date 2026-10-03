@@ -48,6 +48,8 @@ export interface Frame {
 
 // Clean (0–1) and halo (0–1) at a wall point, averaged over the frame's wandering angle.
 export function frameMark(x: number, y: number, f: Frame, spreadDeg: number): { clean: number; halo: number } {
+  // Beyond the frame's reach from its nail (at any angle) plus the halo's spread, there's nothing.
+  if (Math.hypot(x - f.nail.x, y - f.nail.y) > Math.hypot(f.wCm / 2, f.hCm) + 6 * HALO_CM) return { clean: 0, halo: 0 };
   let clean = 0, halo = 0;
   for (let k = 0; k < SPREAD_SAMPLES; k++) {
     const a = ((k / (SPREAD_SAMPLES - 1) - 0.5) * 2 * spreadDeg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
