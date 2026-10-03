@@ -11,7 +11,13 @@
 // clouds (--sunlit, set by clouds.ts): direct sun is the first thing a cloud takes away.
 import type { Config } from './config';
 import { roomFromConfig, type Room } from './room';
+import type { Sky } from './sunset';
 import type { WallMap } from './tiles/surface';
+
+// The sky now (the sunset, sunset.ts) and how much direct sun the clouds let through (clouds.ts):
+// kept here so a re-render puts the tint and the patch straight back where they've got to.
+let sky: Sky | undefined;
+let sunNow = 1;
 
 const NEUTRAL_K = 6500;
 const ADAPTED = 0.6; // the eye adapts to a room's light: it sees ~60% of a camera's colour shift
@@ -36,9 +42,9 @@ export function lightTint(k: number): [number, number, number] {
 const windowShare = (r: Room) => (r.sun * (1 + r.bounce)) / (r.sun * (1 + r.bounce) + r.fill || 1);
 
 // The whole-scene tint, as a multiply colour (white = none).
-export function sceneTint(c: Config): string | undefined {
-  if (Math.abs(c.ROOM_LIGHT_KELVIN - NEUTRAL_K) < 1) return undefined;
-  const share = windowShare(roomFromConfig(c)), t = lightTint(c.ROOM_LIGHT_KELVIN);
+export function sceneTint(c: Config, kelvin = sky?.kelvin ?? c.ROOM_LIGHT_KELVIN): string | undefined {
+  if (Math.abs(kelvin - NEUTRAL_K) < 1) return undefined;
+  const share = windowShare(roomFromConfig(c)), t = lightTint(kelvin);
   return `rgb(${t.map((v) => Math.round(255 * (1 - share * (1 - v)))).join(',')})`;
 }
 
@@ -53,9 +59,9 @@ export function applyTint(c: Config): void {
 }
 
 // Where the sun puts the window on this wall, in wall cm (y up).
-export function patchRect(c: Config): { x0: number; x1: number; y0: number; y1: number } {
+export function patchRect(c: Config, elevation = c.ROOM_SUN_ELEVATION_DEG, azimuth = c.ROOM_SUN_AZIMUTH_DEG): { x0: number; x1: number; y0: number; y1: number } {
   const r = roomFromConfig(c), w = r.window, rad = Math.PI / 180;
-  const dx = r.depthCm * Math.tan(c.ROOM_SUN_AZIMUTH_DEG * rad), dy = -r.depthCm * Math.tan(c.ROOM_SUN_ELEVATION_DEG * rad);
+  const dx = r.depthCm * Math.tan(azimuth * rad), dy = -r.depthCm * Math.tan(elevation * rad);
   return { x0: w.x - w.width / 2 + dx, x1: w.x + w.width / 2 + dx, y0: w.bottom + dy, y1: w.bottom + w.height + dy };
 }
 
@@ -87,7 +93,27 @@ export function sunPatch(c: Config, map: WallMap): HTMLElement | undefined {
   const ppc = map.pxPerCm, canvas = patchCache.canvas;
   const left = map.embroideryPage.x + (rect.x0 - margin - map.embroidery.x) * ppc, top = map.embroideryPage.y - (rect.y1 + margin - map.embroidery.y) * ppc;
   Object.assign(canvas.style, { left: `${left}px`, top: `${top}px`, width: `${(rect.x1 - rect.x0 + 2 * margin) * ppc}px`, height: `${(rect.y1 - rect.y0 + 2 * margin) * ppc}px` });
+  canvas.dataset.ppc = String(ppc);
+  placePatch(c, canvas);
   return canvas;
+}
+
+// The sun patch where the sky has got to: slid (a lower sun puts it higher, a swung one across) and
+// faded, without redrawing it.
+function placePatch(c: Config, canvas: HTMLElement) {
+  const ppc = Number(canvas.dataset.ppc) || 0, from = patchRect(c), to = sky ? patchRect(c, sky.elevation, sky.azimuth) : from;
+  canvas.style.transform = sky ? `translate(${((to.x0 - from.x0) * ppc).toFixed(1)}px, ${(-(to.y1 - from.y1) * ppc).toFixed(1)}px)` : '';
+  canvas.style.setProperty('--sunlit', (sunNow * (sky?.patch ?? 1)).toFixed(3));
+}
+
+// The sky has moved on (the sunset) or the clouds have changed how much direct sun gets through.
+export function setSky(c: Config, s: Sky, sun: number) {
+  const tintChanged = !sky || Math.abs(s.kelvin - sky.kelvin) >= 5;
+  sky = s;
+  sunNow = sun;
+  if (tintChanged) applyTint(c);
+  const patch = document.querySelector<HTMLElement>('.sun-patch');
+  if (patch) placePatch(c, patch);
 }
 
 // How much direct sun there is at cloud level k (1 = clear): by how far the window light has

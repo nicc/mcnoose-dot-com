@@ -49,6 +49,7 @@ let topExtra = 0; // wallpaper grown above the header by top-edge drags
 let intendedScroll = 0; // unrounded scroll we last set, so small eased corrections don't lose fractions
 let last = '';
 let rendered: Anchor | undefined; // the wall as the scene was last built (window coords)
+export const renderCounts = { rebuilds: 0, slides: 0 }; // dev panel readout: spot unexpected re-renders
 let frame: Frame;
 
 function render(force = false): Frame {
@@ -81,9 +82,11 @@ function render(force = false): Frame {
     Object.assign(stage.style, { left: `${-m}px`, width: `${vp.width + 2 * m}px`, transform: '' });
     frame = renderScene(stage, state, { width: vp.width + 2 * m, height: vp.height }, shiftAnchor(wall, -m), topExtra, projects, { anchor: wall, width: vp.width });
     rendered = wall;
+    renderCounts.rebuilds++;
   } else {
     stage.style.transform = dx ? `translate3d(${dx}px, 0, 0)` : ''; // composited only while it slides
     slideStage(dx);
+    renderCounts.slides++;
   }
   last = key;
   if (scrollTarget !== undefined) scrollTo(scrollX, scrollTarget);
@@ -134,5 +137,5 @@ if (pinToScreen) {
 }
 
 if (import.meta.env.DEV) {
-  import('./dev/panel').then(({ mountPanel }) => mountPanel(state, render));
+  import('./dev/panel').then(({ mountPanel }) => mountPanel(state, render, renderCounts));
 }

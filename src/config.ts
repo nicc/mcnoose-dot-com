@@ -32,6 +32,19 @@ export const CONFIG = {
   ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
   ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
   ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
+  SUNSET: true, // the sun goes down: one pass from the daylight above to dusk, then held there
+  SUNSET_DELAY_S: 3, // daylight held this long first
+  SUNSET_MINUTES: 2, // how long the sun takes to go down
+  SUNSET_KELVIN: 2600, // the window light's colour at dusk
+  SUNSET_KELVIN_CURVE: 1.5, // each curve: 1 even, above 1 holds then goes, below 1 goes early
+  SUNSET_ELEVATION_DEG: -2, // the sun's height at dusk (lower: the patch climbs the wall)
+  SUNSET_ELEVATION_CURVE: 1,
+  SUNSET_AZIMUTH_DEG: 12, // where the sun has swung round to
+  SUNSET_AZIMUTH_CURVE: 1,
+  SUNSET_PATCH: 0, // the sun patch's strength at dusk, as a share of the daylight's
+  SUNSET_PATCH_CURVE: 2.5,
+  SUNSET_DIM: 0.3, // how much the room and its reflections darken by dusk
+  SUNSET_DIM_CURVE: 2,
   ROOM_CLOUD_DEPTH: 0.13, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.3, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
@@ -178,8 +191,8 @@ export const CONFIG = {
   GROUT_EDGE_CM: 0.1, // the fine caulked joints against the rail and the skirting
   GROUT_AGE: 0.35, // uneven yellowing/greying per joint
   GROUT_GRIME: 0.48, // dirt: more in horizontal joints and low down
-  GROUT_MOULD: 0.3, // dark spots at crossings, low down
-  GROUT_LIMESCALE: 0.55, // whitish crust along low horizontal joints
+  GROUT_MOULD: 0.39, // dark spots at crossings, low down
+  GROUT_LIMESCALE: 0.85, // whitish crust along low horizontal joints
   GROUT_EROSION: 0.55, // worn edges, crumbled crossings, soft pitting
   GROUT_CRACKS: 0.63, // the odd hairline crack
 

@@ -23,6 +23,18 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   ROOM_SUN: [0, 3, 0.01],
   ROOM_LIGHT_KELVIN: [2000, 12000, 50],
   ROOM_SUN_PATCH: [0, 2, 0.01],
+  SUNSET_DELAY_S: [0, 600, 1],
+  SUNSET_MINUTES: [0.1, 60, 0.1],
+  SUNSET_KELVIN: [1800, 6500, 50],
+  SUNSET_KELVIN_CURVE: [0.2, 5, 0.05],
+  SUNSET_ELEVATION_DEG: [-15, 45, 0.5],
+  SUNSET_ELEVATION_CURVE: [0.2, 5, 0.05],
+  SUNSET_AZIMUTH_DEG: [-45, 45, 0.5],
+  SUNSET_AZIMUTH_CURVE: [0.2, 5, 0.05],
+  SUNSET_PATCH: [0, 2, 0.01],
+  SUNSET_PATCH_CURVE: [0.2, 5, 0.05],
+  SUNSET_DIM: [0, 0.9, 0.01],
+  SUNSET_DIM_CURVE: [0.2, 5, 0.05],
   ROOM_SUN_ELEVATION_DEG: [-10, 45, 0.5],
   ROOM_SUN_AZIMUTH_DEG: [-45, 45, 0.5],
   ROOM_SUN_SOFTNESS_CM: [0.2, 10, 0.1],
@@ -159,7 +171,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   HALFTONE_OPACITY: [0, 1, 0.01],
 };
 
-export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
+export function mountPanel(state: Config, render: (force?: boolean) => Frame, counts?: { rebuilds: number; slides: number }) {
   const gui = new GUI({ title: 'config', closeFolders: true });
   gui.close(); // starts collapsed; click the title to open
   const values = state as Record<string, number | string | boolean>;
@@ -192,6 +204,7 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame) {
 
   const out = gui.addFolder('layout (read-only)');
   for (const k of Object.keys(readout)) out.add(readout, k as keyof typeof readout).disable().listen();
+  if (counts) for (const k of ['rebuilds', 'slides'] as const) out.add(counts, k).disable().listen(); // scene rebuilds / stage slides since load
 
   const actions = {
     save: async () => {

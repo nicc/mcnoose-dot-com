@@ -6,9 +6,11 @@
 // in the glass, the room in the tiles) dim with the sky too, through one CSS variable (--glint).
 // ROOM_CLOUD_BALANCE splits the effect: 0 the room only, 0.5 both in full, 1 the reflections only.
 // Direct sun (the sun patch, --sunlit) goes first: gone once a cloud dims the window by ROOM_SUN_HIDE.
+// The sunset (sunset.ts) rides the same loop: it dims the room and reflections, and moves the sky on.
 import type { Config } from './config';
 import { exposure, roomFromConfig } from './room';
-import { sunlit } from './sunlight';
+import { setSky, sunlit } from './sunlight';
+import { skyAt } from './sunset';
 import { hash2 } from './wood/noise';
 
 export interface CloudStyle {
@@ -42,7 +44,7 @@ export function startClouds(config: () => Config): void {
   shade.setAttribute('aria-hidden', 'true');
   document.body.append(shade);
   const still = matchMedia('(prefers-reduced-motion: reduce)');
-  let last = -1, lastGlint = -1, lastSun = -1, frame = 0;
+  let last = -1, lastGlint = -1, lastSky = '', frame = 0;
   // Only what uses them: setting these on the root would restyle the whole page each time.
   const set = (sel: string, name: string, v: number) => document.querySelectorAll<HTMLElement>(sel).forEach((e) => e.style.setProperty(name, String(v)));
   const tick = (now: number) => {
@@ -50,12 +52,14 @@ export function startClouds(config: () => Config): void {
     const c = config(), s = cloudStyle(c);
     const k = still.matches ? 1 - s.depth / 2 : cloudLevel(now / 1000, s);
     const { room, reflections } = cloudSplit(k, c.ROOM_CLOUD_BALANCE);
-    const dark = Math.round((1 - exposure(roomFromConfig(c), room)) * 1000) / 1000;
+    const sky = skyAt(c, still.matches ? 0 : now / 1000), dusk = 1 - sky.dim; // the sunset (sunset.ts)
+    const dark = Math.round((1 - exposure(roomFromConfig(c), room) * dusk) * 1000) / 1000;
     if (dark !== last) shade.style.opacity = String((last = dark));
-    const glint = Math.round(reflections * 1000) / 1000;
+    const glint = Math.round(reflections * dusk * 1000) / 1000;
     if (glint !== lastGlint || !document.querySelector<HTMLElement>('.wall')?.style.getPropertyValue('--glint')) set('.wall, .glass', '--glint', (lastGlint = glint)); // re-renders replace .wall
     const sun = Math.round(sunlit(k, c.ROOM_SUN_HIDE) * 1000) / 1000; // direct sun: the sun patch
-    if (sun !== lastSun || !document.querySelector<HTMLElement>('.sun-patch')?.style.getPropertyValue('--sunlit')) set('.sun-patch', '--sunlit', (lastSun = sun));
+    const skyKey = `${sun}|${sky.kelvin.toFixed(0)}|${sky.elevation.toFixed(2)}|${sky.azimuth.toFixed(2)}|${sky.patch.toFixed(3)}`;
+    if (skyKey !== lastSky) setSky(c, sky, (lastSky = skyKey, sun));
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
