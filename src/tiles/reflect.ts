@@ -32,16 +32,13 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] 
 // Colour seen along a ray from point p (on a tile face) in direction d.
 export function roomColour(r: Room, look: RoomLook, p: Vec3, d: Vec3): RGB {
   let best = Infinity, hit: 'back' | 'floor' | 'ceiling' | 'side' | null = null;
-  const plane = (axis: number, at: number, name: typeof hit) => {
-    if (Math.abs(d[axis]) < 1e-9) return;
-    const t = (at - p[axis]) / d[axis];
-    if (t > 1e-6 && t < best) [best, hit] = [t, name];
-  };
-  plane(2, r.depthCm, 'back');
-  plane(1, 0, 'floor');
-  plane(1, r.ceilingCm, 'ceiling');
-  plane(0, 0, 'side');
-  plane(0, r.widthCm, 'side');
+  // The nearest plane the ray reaches (inline: this runs for every sample of every tile).
+  let t: number;
+  if (Math.abs(d[2]) >= 1e-9 && (t = (r.depthCm - p[2]) / d[2]) > 1e-6 && t < best) (best = t), (hit = 'back');
+  if (Math.abs(d[1]) >= 1e-9 && (t = (0 - p[1]) / d[1]) > 1e-6 && t < best) (best = t), (hit = 'floor');
+  if (Math.abs(d[1]) >= 1e-9 && (t = (r.ceilingCm - p[1]) / d[1]) > 1e-6 && t < best) (best = t), (hit = 'ceiling');
+  if (Math.abs(d[0]) >= 1e-9 && (t = (0 - p[0]) / d[0]) > 1e-6 && t < best) (best = t), (hit = 'side');
+  if (Math.abs(d[0]) >= 1e-9 && (t = (r.widthCm - p[0]) / d[0]) > 1e-6 && t < best) (best = t), (hit = 'side');
   if (!hit) return look.wall;
   if (hit === 'floor') return look.floor;
   if (hit === 'ceiling') return look.ceiling;
@@ -75,6 +72,8 @@ export function tileTilt(seed: number, maxDeg: number): [number, number] {
 // window's frame, where wall meets ceiling) are re-sampled 3×3 and averaged, so edges come out
 // smooth rather than stepped; flat cells, most of them, cost nothing extra.
 const EDGE = 28; // colour difference (sum over channels) that marks a cell as straddling an edge
+// A tile's normals at its cell centres don't depend on the eye: kept per tile across re-traces.
+const normalCache = new Map<string, Vec3[]>();
 export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec3, nx: number, ny = nx): Uint8ClampedArray {
   const out = new Uint8ClampedArray(nx * ny * 4);
   const [ax, ay] = tileTilt(t.seed, t.tiltDeg);
@@ -86,10 +85,18 @@ export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec
     const nl = Math.hypot(sx, sy, 1);
     return [sx / nl, sy / nl, 1 / nl];
   };
+  const nKey = `${t.seed}|${t.tiltDeg}|${t.waviness}|${nx}|${ny}`;
+  let normals = normalCache.get(nKey);
+  if (!normals) {
+    normals = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) normals.push(normal((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5));
+    if (normalCache.size > 4000) normalCache.clear(); // bounded: a few hundred tiles at a time
+    normalCache.set(nKey, normals);
+  }
   const sample = (u: number, v: number, N = normal(u, v)): [number, number, number, number] => {
     const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, 0];
     let dx = p[0] - eye[0], dy = p[1] - eye[1], dz = p[2] - eye[2];
-    const dl = Math.hypot(dx, dy, dz);
+    const dl = Math.sqrt(dx * dx + dy * dy + dz * dz); // not Math.hypot: far slower, per sample
     [dx, dy, dz] = [dx / dl, dy / dl, dz / dl];
     const dn = dx * N[0] + dy * N[1] + dz * N[2];
     const R: Vec3 = [dx - 2 * dn * N[0], dy - 2 * dn * N[1], dz - 2 * dn * N[2]];
@@ -102,7 +109,7 @@ export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec
   };
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
-      const k = (j * nx + i) * 4, c = sample((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5);
+      const k = (j * nx + i) * 4, c = sample((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5, normals[j * nx + i]);
       out[k] = c[0];
       out[k + 1] = c[1];
       out[k + 2] = c[2];
@@ -120,7 +127,7 @@ export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec
   }
   for (let e = 0; e < edges.length; e += 2) {
     const i = edges[e], j = edges[e + 1], acc = [0, 0, 0, 0];
-    const N = normal((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5); // waviness is slow: one normal per cell
+    const N = normals[j * nx + i]; // waviness is slow: one normal per cell
     for (let sj = 0; sj < 3; sj++)
       for (let si = 0; si < 3; si++) {
         const c = sample((i + (si + 0.5) / 3) / nx - 0.5, (j + (sj + 0.5) / 3) / ny - 0.5, N);

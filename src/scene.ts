@@ -261,6 +261,27 @@ function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: numb
 // The joint where tile meets paper: a thin, slightly wavering shadow line with the caulk's lit
 // lip just below it. Wobble keyed to wall position, so it holds still under resizes.
 const SEAM_ABOVE_PX = 3; // of the seam canvas's 7, over the paper (.seam-line in main.css)
+const seamColumns = new Map<number, Uint8Array>();
+let seamKey = '';
+// One device-pixel column of the paper/rail crevice at wall x (CSS px from the wall origin): alphas.
+function seamColumn(x: number, dpr: number, H: number, k: number): Uint8Array {
+  const out = new Uint8Array(H);
+  // The paper was trimmed to the rail by hand: its edge drifts either side of the joint.
+  const yc = SEAM_ABOVE_PX + 0.4 + 0.7 * fbm(x / 40, 0.5, 17, 3) + 0.5 * fbm(x / 9, 2.5, 23, 2) + 0.2 * fbm(x / 2.5, 6.5, 43, 1);
+  const gap = 0.22 + 0.4 * Math.max(0, fbm(x / 18, 3.5, 29, 3) + 0.35); // crevice half-width, px
+  const bridged = Math.min(1, Math.max(0, (fbm(x / 60, 4.5, 31, 2) - 0.05) * 4)); // paint filled it
+  const depth = (1 - 0.9 * bridged) * Math.min(1, 0.3 + 1.2 * Math.max(0, fbm(x / 90, 1.5, 19, 2) + 0.4));
+  const grime = 0.4 + Math.max(0, fbm(x / 35, 5.5, 37, 3)) * 2;
+  for (let py = 0; py < H; py++) {
+    const y = (py + 0.5) / dpr, d = y - yc, fibre = 0.9 + 0.25 * fbm(x / 1.5, y / 0.8, 41, 2);
+    const core = Math.exp(-0.5 * (d / gap) ** 2) * 0.55 * depth;
+    const above = d < 0 ? Math.exp(d / 0.7) * 0.04 * grime : 0; // into the paper
+    const alpha = Math.min(1, (core + above) * fibre * k);
+    out[py] = Math.round(alpha * 255);
+  }
+  return out;
+}
+
 function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
   const dpr = Math.min(2, devicePixelRatio || 1), hpx = 7;
   const canvas = el('canvas', 'seam-line');
@@ -271,22 +292,17 @@ function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
   // The crevice where the paper meets the rail, built per pixel so nothing about it is ruled: it
   // wanders, the gap opens and closes, paint has bridged it in places, a little grime has crept up
   // into the paper above, and the paper's fibres break its edge. A shadow, so only ever darkening.
+  // Columns are kept by wall device-pixel, so rebuilds (window drags) copy rather than recompute.
   const W = canvas.width, H = canvas.height, img = ctx.createImageData(W, H), k = c.SEAM_LINE;
+  const key = `${dpr}|${k}`;
+  if (key !== seamKey || seamColumns.size > 20000) (seamKey = key), seamColumns.clear(); // bounded: the wall seen so far
   for (let px = 0; px < W; px++) {
-    const x = px / dpr - a.originX; // wall-anchored
-    // The paper was trimmed to the rail by hand: its edge drifts either side of the joint.
-    const yc = SEAM_ABOVE_PX + 0.4 + 0.7 * fbm(x / 40, 0.5, 17, 3) + 0.5 * fbm(x / 9, 2.5, 23, 2) + 0.2 * fbm(x / 2.5, 6.5, 43, 1);
-    const gap = 0.22 + 0.4 * Math.max(0, fbm(x / 18, 3.5, 29, 3) + 0.35); // crevice half-width, px
-    const bridged = Math.min(1, Math.max(0, (fbm(x / 60, 4.5, 31, 2) - 0.05) * 4)); // paint filled it
-    const depth = (1 - 0.9 * bridged) * Math.min(1, 0.3 + 1.2 * Math.max(0, fbm(x / 90, 1.5, 19, 2) + 0.4));
-    const grime = 0.4 + Math.max(0, fbm(x / 35, 5.5, 37, 3)) * 2;
+    const ix = Math.round((px / dpr - a.originX) * dpr);
+    let column = seamColumns.get(ix);
+    if (!column) seamColumns.set(ix, (column = seamColumn(ix / dpr, dpr, H, k)));
     for (let py = 0; py < H; py++) {
-      const y = (py + 0.5) / dpr, d = y - yc, fibre = 0.9 + 0.25 * fbm(x / 1.5, y / 0.8, 41, 2);
-      const core = Math.exp(-0.5 * (d / gap) ** 2) * 0.55 * depth;
-      const above = d < 0 ? Math.exp(d / 0.7) * 0.04 * grime : 0; // into the paper
-      const alpha = Math.min(1, (core + above) * fibre * k);
       const i = (py * W + px) * 4;
-      img.data[i] = 52, img.data[i + 1] = 42, img.data[i + 2] = 32, img.data[i + 3] = Math.round(alpha * 255);
+      img.data[i] = 52, img.data[i + 1] = 42, img.data[i + 2] = 32, img.data[i + 3] = column[py];
     }
   }
   ctx.putImageData(img, 0, 0);
