@@ -56,8 +56,8 @@ export const CONFIG = {
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
   ROOM_BOUNCE: 0.12, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
-  ROOM_WALL_COLOR: '#dbc9a8', // walls reflected in the tiles
-  ROOM_CEILING_COLOR: '#dadedf',
+  ROOM_WALL_COLOR: '#f2debc', // walls reflected in the tiles
+  ROOM_CEILING_COLOR: '#ede4ce',
   ROOM_FLOOR_COLOR: '#dbdfe0',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
@@ -103,7 +103,7 @@ export const CONFIG = {
   EMBROIDERY_SWING_DAMPING: 0.3, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
   EMBROIDERY_SWING_STICK_DEG: 2.5, // how far off its rest the hanger's friction can hold it
   EMBROIDERY_FALL: true, // experiment: let go (or swung) past EMBROIDERY_FALL_DEG, it falls off the wall
-  EMBROIDERY_FALL_DEG: 45, // the angle past which it slips off its nail
+  EMBROIDERY_FALL_DEG: 40, // the angle past which it slips off its nail
   EMBROIDERY_FALL_GRAVITY: 0.63, // 1 = real gravity at the room's scale; lower = slow motion
   EMBROIDERY_FALL_KICK: 1, // how hard catching the rail pitches it forward
   EMBROIDERY_FALL_TUMBLE: 0.15, // how fast it tumbles once caught
@@ -159,7 +159,7 @@ export const CONFIG = {
   RAIL_FLAT_CM: 2.2, // flat face: extends the rail's height
   RAIL_WEAR: 0.14, // chipped paint on the raised edges
   RAIL_GRIME: 0.08, // dirt in the routing
-  RAIL_DUST: 0.34, // dust settled along the top
+  RAIL_DUST: 0.26, // dust settled along the top
   RAIL_SHADOW: 0.23, // shadow it casts onto the top row of tiles
 
   // Paint: shared by every painted surface (rail, skirting)
