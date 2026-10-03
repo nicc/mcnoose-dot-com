@@ -9,44 +9,44 @@ export const CONFIG = {
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
   TRAILING_ROWS: 6, // blank rows after the last project row
   REFLOW_FADE_MS: 220, // crossfade when projects move tiles as columns appear/disappear
-  PIN_SMOOTH_MS: 35, // screen pinning: easing as the window moves
+  PIN_SMOOTH_MS: 125, // screen pinning: easing as the window moves
 
   // Room & light (cm): one physical scene for every surface's light and reflections. Daylight
   // comes from a window on the wall behind the viewer; a ceiling light fills from above. x is
   // measured from the left wall as you face the embroidery. Water marks share one droplet size.
   ROOM_TILE_CM: 15, // real tile edge: sets the px ↔ cm scale
-  ROOM_WIDTH_CM: 220,
-  ROOM_DEPTH_CM: 260, // embroidery wall to window wall
+  ROOM_WIDTH_CM: 256,
+  ROOM_DEPTH_CM: 161, // embroidery wall to window wall
   ROOM_CEILING_CM: 240,
-  ROOM_EYE_CM: 168, // a 180cm viewer, standing
+  ROOM_EYE_CM: 175, // a 180cm viewer, standing
   ROOM_VIEW_CM: 150, // how far from the wall the viewer stands
   ROOM_EMBROIDERY_X_CM: 130,
   ROOM_EMBROIDERY_Y_CM: 132, // sternum height
-  ROOM_WINDOW_X_CM: 90, // window centre
-  ROOM_WINDOW_BOTTOM_CM: 80, // sill
-  ROOM_WINDOW_WIDTH_CM: 70,
-  ROOM_WINDOW_HEIGHT_CM: 110,
-  ROOM_SUN: 1.2, // window light strength
-  ROOM_LIGHT_KELVIN: 6500, // the window light's colour: 2500 golden late light … 6500 neutral … 9000 cool north sky
+  ROOM_WINDOW_X_CM: 82, // window centre
+  ROOM_WINDOW_BOTTOM_CM: 83, // sill
+  ROOM_WINDOW_WIDTH_CM: 74,
+  ROOM_WINDOW_HEIGHT_CM: 101,
+  ROOM_SUN: 1.22, // window light strength
+  ROOM_LIGHT_KELVIN: 5100, // the window light's colour: 2500 golden late light … 6500 neutral … 9000 cool north sky
   ROOM_SUN_PATCH: 0.2, // direct sun throwing the window, bars and all, onto this wall (0 = none)
-  ROOM_SUN_ELEVATION_DEG: 5, // how steeply the sun comes in: lowers the patch
-  ROOM_SUN_AZIMUTH_DEG: 0, // from the side: slides the patch across
+  ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
+  ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
   ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
-  ROOM_CLOUD_DEPTH: 0.7, // how far passing clouds dim the window light (0 = clear sky)
+  ROOM_CLOUD_DEPTH: 0, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.4, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
   ROOM_CLOUD_BALANCE: 0.95, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
-  ROOM_BOUNCE: 0.25, // window light bounced up off the floor, as a share of it: lifts undersides
+  ROOM_BOUNCE: 0.12, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
   ROOM_WALL_COLOR: '#dbc9a8', // walls reflected in the tiles
-  ROOM_CEILING_COLOR: '#f1efe9',
-  ROOM_FLOOR_COLOR: '#9c6f48',
+  ROOM_CEILING_COLOR: '#dadedf',
+  ROOM_FLOOR_COLOR: '#dbdfe0',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
   WATER_SPOT_SIZE: 0.008, // droplet radius, in tiles
 
   // Wallpaper (header) and its seam with the tiles. Ink colours default to the 1875 scan's own.
-  HEADER_HEIGHT: 2,
+  HEADER_HEIGHT: 2.2,
   WALLPAPER_ZOOM: 2, // pattern repeat width, in tiles (~32cm at real scale)
   WALLPAPER_GROUND: '#beb091', // ink: ground
   WALLPAPER_FOLIAGE: '#a3a28d', // ink: foliage
@@ -54,45 +54,45 @@ export const CONFIG = {
   WALLPAPER_PETAL: '#c1ab83', // ink: petal
   WALLPAPER_BERRY: '#a68d6e', // ink: berry
   WALLPAPER_OUTLINE: '#817462', // ink: outline
-  WALLPAPER_RELIEF: 0.62, // pebble emboss depth
-  WALLPAPER_PEBBLE_PX: 3, // pebble size
+  WALLPAPER_RELIEF: 2, // pebble emboss depth
+  WALLPAPER_PEBBLE_PX: 2.6, // pebble size
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
-  WALLPAPER_AMBIENT: 0.75, // how dark shadowed slopes get (1 = no shadow)
-  WALLPAPER_SHEEN: 0.1, // satin highlight
+  WALLPAPER_AMBIENT: 0.85, // how dark shadowed slopes get (1 = no shadow)
+  WALLPAPER_SHEEN: 0.55, // satin highlight
   SEAM_SHADOW: 0.28, // contact shadow on the paper where it meets the tiles
   SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
   SEAM_LINE: 1.5, // the joint line between paper and tile
   PAPER_AGE: true, // the wallpaper's age, laid over the pattern without repeating
-  PAPER_AGE_YELLOWING: 0.18, // uneven yellowing, heavier towards the ceiling
+  PAPER_AGE_YELLOWING: 0.11, // uneven yellowing, heavier towards the ceiling
   PAPER_AGE_STAINS: 0, // blotches with tide-lines
-  PAPER_AGE_SEAMS: 0, // seams between rolls, overall (0 = none at all)
-  PAPER_AGE_SEAM_OFFSET_CM: 48, // where a seam falls from the embroidery's centre: 0 centred … 53 (a roll) the next one centred
-  PAPER_AGE_SEAM_GAP_MM: 0.3, // the joint between rolls; it wavers, opens and closes (0 = butted tight)
-  PAPER_AGE_SEAM_LIFT: 0.4, // edges lifting off the wall: the lip catches light, shadows the paper beside it
+  PAPER_AGE_SEAMS: 0.22, // seams between rolls, overall (0 = none at all)
+  PAPER_AGE_SEAM_OFFSET_CM: 51.2, // where a seam falls from the embroidery's centre: 0 centred … 53 (a roll) the next one centred
+  PAPER_AGE_SEAM_GAP_MM: 0.95, // the joint between rolls; it wavers, opens and closes (0 = butted tight)
+  PAPER_AGE_SEAM_LIFT: 0.6, // edges lifting off the wall: the lip catches light, shadows the paper beside it
   PAPER_AGE_SEAM_TEAR: 0.3, // strips torn back to the plaster
   PAPER_AGE_SEAM_SHARPNESS: 0.5, // paper edges: 0 worn soft, 1 crisply cut
   PAPER_AGE_SEAM_DIRT: 0.4, // paste and handling grime along the joint
-  PAPER_AGE_SEAM_SHIFT_MM: 1.5, // hand-hung rolls rarely matched: the pattern steps up or down at each seam
-  PAPER_AGE_HALO: 0.1, // grime round where the frame has hung (the paper behind it stayed clean)
+  PAPER_AGE_SEAM_SHIFT_MM: 2.5, // hand-hung rolls rarely matched: the pattern steps up or down at each seam
+  PAPER_AGE_HALO: 0.12, // grime round where the frame has hung (the paper behind it stayed clean)
   PAPER_AGE_HALO_SPREAD_DEG: 3, // how far the frame's angle has wandered over the years
 
   // Embroidery (framed cross-stitch on the wallpaper). Hand-charted: stitch size scales the piece.
-  EMBROIDERY_STITCH_SIZE: 0.06, // one cross-stitch, in tiles: sets the detail
+  EMBROIDERY_STITCH_SIZE: 0.0594, // one cross-stitch, in tiles: sets the detail
   EMBROIDERY_ZOOM: 0.38, // scales the finished framed piece; < 1 shrinks a detailed render
-  EMBROIDERY_CLOTH_W: 76, // cloth size in stitches; florals stay in the corners
-  EMBROIDERY_CLOTH_H: 53,
+  EMBROIDERY_CLOTH_W: 83, // cloth size in stitches; florals stay in the corners
+  EMBROIDERY_CLOTH_H: 55,
   EMBROIDERY_FRAME: 0.2, // moulding width
   EMBROIDERY_TILT_DEG: 1, // clockwise
-  EMBROIDERY_SWING_DAMPING: 0.12, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
+  EMBROIDERY_SWING_DAMPING: 0.3, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
   EMBROIDERY_SWING_STICK_DEG: 2.5, // how far off its rest the hanger's friction can hold it
-  EMBROIDERY_FALL: false, // experiment: let go (or swung) past EMBROIDERY_FALL_DEG, it falls off the wall
+  EMBROIDERY_FALL: true, // experiment: let go (or swung) past EMBROIDERY_FALL_DEG, it falls off the wall
   EMBROIDERY_FALL_DEG: 40, // the angle past which it slips off its nail
-  EMBROIDERY_FALL_GRAVITY: 0.6, // 1 = real gravity at the room's scale; lower = slow motion
+  EMBROIDERY_FALL_GRAVITY: 0.63, // 1 = real gravity at the room's scale; lower = slow motion
   EMBROIDERY_FALL_KICK: 1, // how hard catching the rail pitches it forward
-  EMBROIDERY_FALL_TUMBLE: 1, // how fast it tumbles once caught
-  EMBROIDERY_STANDOFF_CM: 2, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
-  EMBROIDERY_DUST_TOP: 1.28, // dust on the frame's upper moulding
-  EMBROIDERY_DUST_INNER: 1.46, // dust on the inner bottom lip, against the glass
+  EMBROIDERY_FALL_TUMBLE: 0.1, // how fast it tumbles once caught
+  EMBROIDERY_STANDOFF_CM: 1.3, // frame depth: how far it stands off the wall; sets its sides and its cast shadows
+  EMBROIDERY_DUST_TOP: 1.24, // dust on the frame's upper moulding
+  EMBROIDERY_DUST_INNER: 0.93, // dust on the inner bottom lip, against the glass
   EMBROIDERY_CLOTH: '#f6f3ea',
   EMBROIDERY_THREAD: '#2f4f8f', // blue lettering
   EMBROIDERY_PETAL: '#e8a283', // peach
@@ -156,7 +156,7 @@ export const CONFIG = {
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
 
   // Tiles: the room reflected in the glaze
-  TILE_REFLECTION: 0.13, // how strongly the room shows in the glaze
+  TILE_REFLECTION: 0.12, // how strongly the room shows in the glaze
   TILE_TILT_DEG: 2.65, // tiles sit at slightly different angles, breaking reflections at the grout
   TILE_WAVINESS: 0.89, // glaze undulation: reflections wobble softly within a tile
 
