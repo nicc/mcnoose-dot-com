@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorFits, compensateTop, computeLayout, initialAnchor, rowCount, shiftAnchor, visibleColumns, wallRows } from './layout';
+import { anchorFits, compensateTop, computeLayout, initialAnchor, projectMargin, rowCount, shiftAnchor, visibleColumns, wallRows } from './layout';
 
 const base = { height: 2000, tileMax: 400, grout: 0, minPeek: 0.25 };
 
@@ -80,6 +80,15 @@ describe('anchor', () => {
     }
     expect(visibleColumns(a, 1100).full).toEqual([1, 2]);
     expect(visibleColumns(a, 1900).full).toEqual([1, 2, 3, 4]);
+  });
+
+  it('gives projects only the full tiles that show enough of each neighbour', () => {
+    const k = 1, x = a.grout + 0.1 * a.tile; // column 1 full, its left neighbour showing 0.1 of a tile
+    const moved = shiftAnchor(a, a.originX + k * a.pitch - x);
+    expect(visibleColumns(moved, 1440).full[0]).toBe(k);
+    expect(visibleColumns(moved, 1440, projectMargin(moved, 0.2)).full[0]).toBe(k + 1);
+    expect(visibleColumns(moved, 1440, projectMargin(moved, 0.05)).full[0]).toBe(k);
+    expect(projectMargin(moved, 0)).toBe(0); // no peek asked: any full tile
   });
 
   it('holds until one full tile with minPeek either side no longer fits', () => {

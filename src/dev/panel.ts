@@ -66,6 +66,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   ROOM_EYE_FOLLOW: [0, 1, 0.01],
   GROUT_PX: [0, 24, 0.5],
   MIN_PEEK: [0, 0.5, 0.01],
+  PROJECT_PEEK: [0, 0.5, 0.01],
   TILE_TONE: [0, 0.15, 0.001],
   TILE_EDGE_CM: [0, 1.5, 0.01],
   TILE_EDGE_SHEEN: [0, 1.5, 0.01],

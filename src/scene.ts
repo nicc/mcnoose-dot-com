@@ -1,6 +1,6 @@
 // Builds the wall: wallpaper header, dado rail, tile grid, skirting.
 import type { Config } from './config';
-import { visibleColumns, wallRows, type Anchor, type Columns } from './layout';
+import { projectMargin, visibleColumns, wallRows, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
 import { embroidery, forgetEmbroidery, SAMPLER_LINES } from './embroidery';
@@ -396,7 +396,7 @@ function projectTile(c: Config, tile: number, p: Project, slot: string, now: num
   return a;
 }
 
-// Projects fill fully visible tiles row by row; partly visible tiles stay blank.
+// Projects fill full tiles (showing PROJECT_PEEK of each neighbour) row by row; the rest stay blank.
 // Each tile's glaze tone and cushion-edge lighting, from where it sits in the room.
 type TileSurface = (row: number, col: number) => { background: string; boxShadow: string; at: { x: number; y: number } };
 
@@ -567,7 +567,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
 
 export interface Frame {
   tile: number;
-  columns: number; // fully visible
+  columns: number; // holding projects
   peekLeft: number; // px of the left edge tile showing
   peekRight: number;
 }
@@ -600,7 +600,7 @@ export function slideStage(dx: number) {
 // window itself (its anchor and width) — projects fill only the tiles fully inside it, and
 // off-screen painted lengths are drawn later.
 export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[], visible = { anchor: a, width: vp.width }): Frame {
-  const shown = visibleColumns(visible.anchor, visible.width);
+  const shown = visibleColumns(visible.anchor, visible.width, projectMargin(visible.anchor, c.PROJECT_PEEK));
   const cols = { ...visibleColumns(a, vp.width), full: shown.full }; // column k is the same tile in both
   onScreen = { x0: a.originX - visible.anchor.originX, x1: a.originX - visible.anchor.originX + visible.width };
   slid = 0;

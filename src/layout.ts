@@ -72,19 +72,23 @@ export function compensateTop(scrollY: number, dy: number, topExtra: number): { 
 export interface Columns {
   first: number; // leftmost column index (relative to origin) with any part visible
   count: number;
-  full: number[]; // indices of fully visible columns: projects go here
+  full: number[]; // indices of fully visible columns (clear of the margin): projects go here
 }
 
-export function visibleColumns(a: Anchor, width: number): Columns {
+// `margin`: px a full tile must also stand clear of each window edge to count (see projectMargin).
+export function visibleColumns(a: Anchor, width: number, margin = 0): Columns {
   const first = Math.floor((-a.originX - a.tile) / a.pitch + EPS) + 1;
   const last = Math.ceil((width - a.originX) / a.pitch - EPS) - 1;
   const full: number[] = [];
   for (let k = first; k <= last; k++) {
     const x = a.originX + k * a.pitch;
-    if (x >= -EPS && x + a.tile <= width + EPS) full.push(k);
+    if (x >= margin - EPS && x + a.tile <= width - margin + EPS) full.push(k);
   }
   return { first, count: last - first + 1, full };
 }
+
+// Projects fill only full tiles that show `peek` of a tile of each neighbour (past the grout).
+export const projectMargin = (a: Anchor, peek: number): number => (peek > 0 ? a.grout + peek * a.tile : 0);
 
 // The anchor holds while some full tile still shows minPeek of each neighbour and fits the height.
 export function anchorFits(a: Anchor, width: number, height: number, minPeek: number): boolean {

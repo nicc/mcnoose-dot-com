@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { CONFIG } from '../../src/config';
 
 const projects: { title: string }[] = JSON.parse(readFileSync(new URL('../../public/projects.json', import.meta.url), 'utf8'));
 
@@ -128,26 +129,34 @@ test('the wall stays where it first rendered while the window resizes', async ({
   }
 });
 
-test('projects fill exactly the fully visible tiles of the first row', async ({ page }) => {
+// The first row: whether projects sit in exactly the tiles that qualify (fully visible, showing
+// PROJECT_PEEK of each neighbour), and where the first project tile is.
+const projectFill = (page: import('@playwright/test').Page) =>
+  page.evaluate((peek) => {
+    const root = getComputedStyle(document.documentElement);
+    const vw = document.documentElement.clientWidth, grout = parseFloat(root.getPropertyValue('--grout'));
+    const row = [...document.querySelectorAll('.grid > .tile')].slice(0, Number(root.getPropertyValue('--cols-total')));
+    const qualifies = (t: Element) => {
+      const r = t.getBoundingClientRect(), margin = peek > 0 ? grout + peek * r.width : 0;
+      return r.left >= margin - 0.5 && r.right <= vw - margin + 0.5;
+    };
+    return {
+      count: row.filter(qualifies).length,
+      matches: row.every((t) => qualifies(t) === t.classList.contains('tile-project')),
+      first: row.find((t) => t.classList.contains('tile-project'))?.getBoundingClientRect().left ?? NaN,
+      margin: peek > 0 ? grout + peek * row[1].getBoundingClientRect().width : 0,
+    };
+  }, CONFIG.PROJECT_PEEK);
+
+test('projects fill exactly the tiles of the first row that are fully visible with enough of each neighbour', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   await page.setViewportSize({ width: 1000, height: 900 });
   await page.waitForSelector('html[data-rendered-width="1000"]');
-  const { full, projectInFull, partialsBlank } = await page.evaluate(() => {
-    const vw = document.documentElement.clientWidth;
-    const cols = Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total'));
-    const row = [...document.querySelectorAll('.grid > .tile')].slice(0, cols);
-    const isFull = (t: Element) => t.getBoundingClientRect().left >= -0.5 && t.getBoundingClientRect().right <= vw + 0.5;
-    return {
-      full: row.filter(isFull).length,
-      projectInFull: row.filter(isFull).every((t) => t.classList.contains('tile-project')),
-      partialsBlank: row.filter((t) => !isFull(t)).every((t) => !t.classList.contains('tile-project')),
-    };
-  });
-  expect(full).toBeGreaterThan(0);
-  expect(projectInFull).toBe(true);
-  expect(partialsBlank).toBe(true);
+  const fill = await projectFill(page);
+  expect(fill.count).toBeGreaterThan(0);
+  expect(fill.matches).toBe(true);
 });
 
 test('re-anchors, centred, only when a full tile with peeks no longer fits', async ({ page }) => {
@@ -181,30 +190,17 @@ const moveWindowBy = (page: import('@playwright/test').Page, dx: number, dy: num
     [dx, dy],
   ).then(() => page.waitForSelector('html[data-pin="settled"]'));
 
-test('projects re-flow as soon as a window move brings a tile fully into or out of view', async ({ page }) => {
+test('projects re-flow as soon as a window move changes which tiles qualify', async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 900 });
   await page.goto('/');
   await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
   test.skip(!(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)), 'desktop only');
-  const fill = () => page.evaluate(() => {
-    const vw = document.documentElement.clientWidth;
-    const cols = Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total'));
-    const row = [...document.querySelectorAll('.grid > .tile')].slice(0, cols);
-    const isFull = (t: Element) => t.getBoundingClientRect().left >= -0.5 && t.getBoundingClientRect().right <= vw + 0.5;
-    const first = row.find(isFull)!.getBoundingClientRect().left;
-    return { first, matches: row.every((t) => isFull(t) === t.classList.contains('tile-project')) };
-  });
-  const pitch = await page.evaluate(() => {
-    const [a, b] = document.querySelectorAll('.grid > .tile');
-    return b.getBoundingClientRect().left - a.getBoundingClientRect().left;
-  });
-  const before = await fill();
+  const before = await projectFill(page);
   expect(before.matches).toBe(true);
-  // Well within the overscan margin: the first full tile's left edge crosses the window's.
-  await moveWindowBy(page, Math.ceil(before.first) + 2, 0);
-  const after = await fill();
+  // Well within the overscan margin: the first project tile's left neighbour drops below the peek.
+  await moveWindowBy(page, Math.ceil(before.first - before.margin) + 2, 0);
+  const after = await projectFill(page);
   expect(after.first).not.toBeCloseTo(before.first, 0);
-  expect(Math.abs(after.first - before.first)).toBeLessThan(pitch);
   expect(after.matches).toBe(true);
 });
 

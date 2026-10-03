@@ -29,7 +29,7 @@ The vibe is the key outcome, not a finish. Treat look and feel with the same rig
 - Tests wait on `html[data-rendered-width]` after resizes (resize event lags the viewport change in Chromium).
 - Re-anchor only when tile geometry config changes or one full tile + `MIN_PEEK` either side no longer fits (`anchorFits`).
 - Tiles square, ≤ `TILE_MAX_PX`; sized at anchor time to fit width and height (svh) with `MIN_PEEK` peeks. Never grow back until re-anchor.
-- Projects fill fully visible tiles row by row; partial tiles blank; `TRAILING_ROWS` after; page ends at skirting. Wall height (rows) is fixed at anchor time (`wallRows`): narrowing re-flows projects into trailing rows, the skirting stays put.
+- Projects fill fully visible tiles that show `PROJECT_PEEK` of each neighbour, row by row; other tiles blank; re-flow as soon as a window move or resize changes which tiles qualify; `TRAILING_ROWS` after; page ends at skirting. Wall height (rows) is fixed at anchor time (`wallRows`): narrowing re-flows projects into trailing rows, the skirting stays put.
 - Halftone prints are cached per project; resizes move canvases, never re-print.
 
 ## Projects

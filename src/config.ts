@@ -7,6 +7,7 @@ export const CONFIG = {
   TILE_MAX_PX: 150, // largest tile edge
   GROUT_PX: 4,
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
+  PROJECT_PEEK: 0.2, // projects fill only full tiles showing this much of each neighbour (≤ MIN_PEEK, or none may qualify)
   TRAILING_ROWS: 4, // blank rows after the last project row
   REFLOW_FADE_MS: 220, // crossfade when projects move tiles as columns appear/disappear
   PIN_SMOOTH_MS: 125, // screen pinning: easing as the window moves
