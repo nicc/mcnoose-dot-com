@@ -29,6 +29,16 @@ body {
   pointer-events: none;
 }
 
+/* The scene renders into #stage, a margin wider than the window each side; #app clips it, and
+   window moves slide the stage (main.ts). */
+#app {
+  overflow-x: clip;
+}
+
+#stage {
+  position: relative;
+}
+
 /* Wallpaper header */
 .wallpaper {
   position: relative;

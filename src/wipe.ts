@@ -71,7 +71,8 @@ export function startWiping(config: () => Config): void {
   let last: { x: number; y: number } | undefined, moved = 0, startX = 0, startY = 0;
   const dabAt = (clientX: number, clientY: number) => {
     if (!map) return;
-    const c = config(), w = wallPoint(map, { x: clientX, y: clientY + scrollY }), r = c.WIPE_WIDTH_CM / 2;
+    const stageX = document.getElementById('stage')?.getBoundingClientRect().left ?? 0; // the scene's own x (overscan, slides)
+    const c = config(), w = wallPoint(map, { x: clientX - stageX, y: clientY + scrollY }), r = c.WIPE_WIDTH_CM / 2;
     const add = (x: number, y: number) => {
       for (const d of [
         { x, y, r, kind: 'dust' as const, alpha: 1 },

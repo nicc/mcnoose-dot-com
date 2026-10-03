@@ -43,9 +43,19 @@ test('limescale on the tiles takes more than one pass, and a wipe is not a click
   await page.waitForSelector('.skirting');
   // The bottom row has the most limescale.
   await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
-  const tile = page.locator('.grid > .tile').last();
-  const box = (await tile.boundingBox())!;
-  const marks = '.grid > .tile:last-child .tile-age:last-of-type';
+  // A bottom-row tile inside the window (the scene renders a margin wider than it: overscan).
+  const n = await page.evaluate(() => {
+    const tiles = [...document.querySelectorAll('.grid > .tile')], vw = document.documentElement.clientWidth;
+    const bottom = Math.max(...tiles.map((t) => t.getBoundingClientRect().top));
+    let last = -1;
+    tiles.forEach((t, i) => {
+      const r = t.getBoundingClientRect();
+      if (r.top === bottom && r.left >= 0 && r.right <= vw) last = i;
+    });
+    return last + 1;
+  });
+  const box = (await page.locator(`.grid > .tile:nth-child(${n})`).boundingBox())!;
+  const marks = `.grid > .tile:nth-child(${n}) .tile-age:last-of-type`;
   const span = { x0: box.x + 10, x1: box.x + box.width - 10 };
   const start = await alphaIn(page, marks, span);
   expect(start).toBeGreaterThan(0);

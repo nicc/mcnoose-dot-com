@@ -156,7 +156,8 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
       const p = wallPoint(map, { x, y: top + h / 2 }), at = { x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000 };
       return { lights: lightsAt(room, at), view: viewAt(room, at) };
     };
-    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, deferred);
+    const offScreen = left + seg < onScreen.x0 || left > onScreen.x1; // in the overscan margin: draw later
+    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, deferred || offScreen);
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
@@ -373,11 +374,11 @@ const tileSeed = (col: number, row: number) => Math.imul(col + 1000, 7919) ^ Mat
 // moves (scrolling), only for tiles on or near the screen. See tiles/reflect.ts.
 const REFLECT_SAMPLES = 20;
 const reflectCanvases = new Map<string, HTMLCanvasElement>();
-let reflecting: { canvas: HTMLCanvasElement; tile: TileReflection; top: number; nx: number; ny: number }[] = []; // top: page px
+let reflecting: { canvas: HTMLCanvasElement; tile: TileReflection; top: number; x: number; nx: number; ny: number }[] = []; // top: page px; x: stage px
 let reflectScene: { room: Room; look: RoomLook; ppc: number; follow: number; size: number } | undefined;
 let reflectSceneKey = '';
 
-function reflectionLayer(id: string, top: number, tile: TileReflection, nx = REFLECT_SAMPLES, ny = REFLECT_SAMPLES): HTMLCanvasElement {
+function reflectionLayer(id: string, top: number, x: number, tile: TileReflection, nx = REFLECT_SAMPLES, ny = REFLECT_SAMPLES): HTMLCanvasElement {
   let canvas = reflectCanvases.get(id);
   if (!canvas) {
     canvas = el('canvas', 'tile-reflect');
@@ -385,7 +386,7 @@ function reflectionLayer(id: string, top: number, tile: TileReflection, nx = REF
     reflectCanvases.set(id, canvas);
   }
   if (canvas.width !== nx || canvas.height !== ny) [canvas.width, canvas.height] = [nx, ny];
-  reflecting.push({ canvas, tile, top, nx, ny });
+  reflecting.push({ canvas, tile, top, x, nx, ny });
   return canvas;
 }
 
@@ -399,8 +400,9 @@ export function updateTileReflections(scroll = scrollY, viewH = innerHeight) {
   const { room, look, ppc, follow, size } = reflectScene;
   const eye: Vec3 = [room.embroidery.x, room.eyeCm - (follow * scroll) / ppc, room.viewCm];
   const lo = scroll - size, hi = scroll + viewH + size; // the rest keep their last image
-  for (const { canvas, tile, top, nx, ny } of reflecting) {
-    if (top + size < lo || top > hi) continue;
+  const left = onScreen.x0 - slid - size, right = onScreen.x1 - slid + size; // only what's in (or at) the window
+  for (const { canvas, tile, top, x, nx, ny } of reflecting) {
+    if (top + size < lo || top > hi || x + size < left || x > right) continue;
     const was = traced.get(canvas); // tile settings are part of the scene key; position by number
     if (was && was.scene === reflectSceneKey && same(was.eyeY, eye[1]) && same(was.x, tile.centre.x) && same(was.y, tile.centre.y) && was.seed === tile.seed && was.nx === nx) continue;
     traced.set(canvas, { scene: reflectSceneKey, eyeY: eye[1], x: tile.centre.x, y: tile.centre.y, seed: tile.seed, nx });
@@ -479,7 +481,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
       const { at, ...style } = surface(r, k);
       Object.assign(t.style, style);
       t.append(
-        reflectionLayer(`${k}:${r}`, firstTileTop + r * a.pitch, {
+        reflectionLayer(`${k}:${r}`, firstTileTop + r * a.pitch, a.originX + k * a.pitch, {
           centre: at,
           wCm: c.ROOM_TILE_CM,
           hCm: c.ROOM_TILE_CM,
@@ -523,9 +525,22 @@ function frameShadow(c: Config, tile: number): Record<string, string> {
 }
 
 let generation = 0;
+let onScreen = { x0: 0, x1: Infinity }; // the window's span in stage x (see renderScene)
+let slid = 0; // how far the stage has slid since it was built (main.ts)
+// The stage slid by dx (window moved within the overscan margin): trace whatever newly came into view.
+export function slideStage(dx: number) {
+  slid = dx;
+  updateTileReflections();
+}
 
-export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[]): Frame {
-  const cols = visibleColumns(a, vp.width);
+// Rendered over `vp`, which may be wider than the window (overscan, see main.ts): `visible` is the
+// window itself (its anchor and width) — projects fill only the tiles fully inside it, and
+// off-screen painted lengths are drawn later.
+export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Anchor, topExtra: number, projects: Project[], visible = { anchor: a, width: vp.width }): Frame {
+  const shown = visibleColumns(visible.anchor, visible.width);
+  const cols = { ...visibleColumns(a, vp.width), full: shown.full }; // column k is the same tile in both
+  onScreen = { x0: a.originX - visible.anchor.originX, x1: a.originX - visible.anchor.originX + visible.width };
+  slid = 0;
   const gridLeft = a.originX + cols.first * a.pitch;
   const vars: Record<string, string> = {
     '--tile': `${a.tile}px`,
@@ -565,7 +580,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const pending: Promise<unknown>[] = [];
   const gen = ++generation;
   document.documentElement.dataset.printed = 'false';
-  document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
+  document.documentElement.dataset.renderedWidth = String(visible.width); // lets tests wait for a resize render
   const top = header(c, a.tile);
   if (c.PAPER_AGE) top.firstElementChild!.after(...paperAge(c, a, topExtra, vp)); // under the frame
   hangWallpaper(top, c, a, topExtra, pending, vp);
@@ -590,6 +605,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
   Promise.all(pending).then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
 
-  const right = a.originX + (cols.first + cols.count - 1) * a.pitch;
-  return { tile: a.tile, columns: cols.full.length, peekLeft: gridLeft + a.tile, peekRight: vp.width - right };
+  const vis = visible.anchor, right = vis.originX + (shown.first + shown.count - 1) * vis.pitch;
+  return { tile: a.tile, columns: cols.full.length, peekLeft: vis.originX + shown.first * vis.pitch + vis.tile, peekRight: visible.width - right };
 }

@@ -69,6 +69,7 @@ Chrome, Firefox, Safari on desktop and mobile, always. Check support before usin
 `npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build` · `node scripts/profile.ts [mobile]` (load / idle / scroll / window-drag CPU profile)
 
 ## Performance
+The scene renders into `#stage`, 1.5 tiles wider than the window each side (`#app` clips); window moves within that slide the stage (`translate3d`) and only past it rebuild. `renderScene(…, visible)`: projects fill only tiles fully in the window; overscan trim lengths draw later; tile reflections trace only near the window (`slideStage` traces what slides into view). Tests measure tiles within the window, not row ends.
 Canvas caches key on wall position: round derived positions (float noise from page↔wall maps re-renders everything on every window move). Re-renders mustn't redo eye-dependent work (tile reflections memoise per eye). Per-frame loops (clouds) update ~15 Hz and set variables only on the elements that use them, never the root. `tests/e2e/memory.spec.ts` (Chromium) repeats drags, resizes, scrolls, flips and idling and fails on steady heap/node/listener growth.
 
 ## Tracking

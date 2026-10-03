@@ -17,7 +17,9 @@ for (const size of SIZES) {
     await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
     const m = await page.evaluate(() => {
       const vw = document.documentElement.clientWidth;
-      const row = [...document.querySelectorAll('.grid > .tile')].slice(0, Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total')));
+      // The top row's tiles within the window (the scene renders a margin wider: overscan).
+      const row = [...document.querySelectorAll('.grid > .tile')].slice(0, Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total')))
+        .filter((t) => t.getBoundingClientRect().right > 0 && t.getBoundingClientRect().left < vw);
       const boxes = row.map((t) => t.getBoundingClientRect());
       const first = boxes[0], last = boxes[boxes.length - 1];
       const skirting = document.querySelector('.skirting')!.getBoundingClientRect();
@@ -81,13 +83,14 @@ test('every project tile prints halftone ink, with the title kept for screen rea
 const wallState = () => {
   const lefts = (sel: string) => [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect().left);
   const cols = Number(getComputedStyle(document.documentElement).getPropertyValue('--cols-total'));
-  const row = [...document.querySelectorAll('.grid > .tile')].slice(0, cols);
-  const f = document.querySelector('.frame-shadow')!.getBoundingClientRect(); // unturned: where it hangs
   const vw = document.documentElement.clientWidth;
+  const inWindow = (e: Element) => e.getBoundingClientRect().right > 0 && e.getBoundingClientRect().left < vw; // overscan renders wider
+  const row = [...document.querySelectorAll('.grid > .tile')].slice(0, cols).filter(inWindow);
+  const f = document.querySelector('.frame-shadow')!.getBoundingClientRect(); // unturned: where it hangs
   return {
     tile: row[0].getBoundingClientRect().width,
     pitch: row[1].getBoundingClientRect().left - row[0].getBoundingClientRect().left,
-    tiles: lefts('.grid > .tile').slice(0, cols),
+    tiles: row.map((t) => t.getBoundingClientRect().left),
     rail: lefts('.rail .trim-length'),
     railPitch: lefts('.rail .trim-length')[1] - lefts('.rail .trim-length')[0],
     frameX: f.left + f.width / 2,
@@ -188,7 +191,11 @@ test('pinned to the screen: left/top edge moves reveal wall instead of moving it
     tile: document.querySelector('.grid > .tile')!.getBoundingClientRect().left,
     frame: document.querySelector('.frame')!.getBoundingClientRect(),
     rail: document.querySelector('.rail .trim-length')!.getBoundingClientRect().left,
-    wallpaperX: parseFloat((document.querySelector('.wallpaper') as HTMLElement).style.backgroundPositionX),
+    // Where the pattern's origin is on screen (it may be on the header or on per-roll strips).
+    wallpaperX: (() => {
+      const e = [...document.querySelectorAll<HTMLElement>('.wallpaper, .paper-roll')].find((x) => x.style.backgroundImage)!;
+      return e.getBoundingClientRect().left + parseFloat(e.style.backgroundPositionX);
+    })(),
     scrollY,
   }));
   const before = await at();

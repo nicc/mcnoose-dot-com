@@ -8,9 +8,16 @@ import { startClouds } from './clouds';
 import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
-import { renderScene, updateTileReflections, type Frame, type Viewport } from './scene';
+import { renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
 
-const root = document.getElementById('app')!;
+// The wall renders into a stage a margin wider than the window each side (overscan); #app clips
+// it. Window moves within the margin just slide the stage (a GPU transform, no redraw); past it,
+// or on any other change, the scene is rebuilt — cheaply, as everything's cached.
+const app = document.getElementById('app')!;
+const stage = document.createElement('div');
+stage.id = 'stage';
+app.append(stage);
+const overscan = (tile: number) => Math.round(1.5 * tile);
 const probe = document.getElementById('svh-probe')!;
 // ?fixtures swaps in the dev test logos; the branch is dropped from production builds.
 const projects =
@@ -41,6 +48,7 @@ let lastScreenY = 0;
 let topExtra = 0; // wallpaper grown above the header by top-edge drags
 let intendedScroll = 0; // unrounded scroll we last set, so small eased corrections don't lose fractions
 let last = '';
+let rendered: Anchor | undefined; // the wall as the scene was last built (window coords)
 let frame: Frame;
 
 function render(force = false): Frame {
@@ -65,8 +73,18 @@ function render(force = false): Frame {
     lastScreenY = pos.y;
   }
 
-  const key = JSON.stringify([vp, state, wall, topExtra]);
-  if (force || key !== last) frame = renderScene(root, state, vp, wall, topExtra, projects);
+  // Everything but the window's sideways position: if only that changed, and not past the margin,
+  // slide the stage.
+  const m = overscan(wall.tile), key = JSON.stringify([vp, state, wall.tile, wall.pitch, wall.originX - wall.centreX, topExtra]);
+  const dx = rendered ? wall.originX - rendered.originX : 0;
+  if (force || key !== last || !rendered || Math.abs(dx) > m) {
+    Object.assign(stage.style, { left: `${-m}px`, width: `${vp.width + 2 * m}px`, transform: '' });
+    frame = renderScene(stage, state, { width: vp.width + 2 * m, height: vp.height }, shiftAnchor(wall, -m), topExtra, projects, { anchor: wall, width: vp.width });
+    rendered = wall;
+  } else {
+    stage.style.transform = dx ? `translate3d(${dx}px, 0, 0)` : ''; // composited only while it slides
+    slideStage(dx);
+  }
   last = key;
   if (scrollTarget !== undefined) scrollTo(scrollX, scrollTarget);
   updateReflection(shown);
