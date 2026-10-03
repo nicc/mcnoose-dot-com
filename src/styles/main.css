@@ -37,6 +37,14 @@ body {
   background: var(--wallpaper-color);
 }
 
+/* One strip per roll when the seams' pattern mismatch is on (scene.ts hangWallpaper). */
+.paper-roll {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
 /* The paper's age (wallpaper/age.ts): a multiplied tint and the seams, wall-anchored. */
 .paper-age,
 .paper-seam {

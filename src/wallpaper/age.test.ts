@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { frameMark, seamsIn } from './age';
+import { frameMark, rollShift, rollsIn, seamsIn } from './age';
 
 const frame = { wCm: 28, hCm: 20, nail: { x: 100, y: 150 } }; // hangs from (100, 150), down to y = 130
 
@@ -30,5 +30,17 @@ describe('seams', () => {
     const xs = seamsIn(0, 300);
     expect(xs.length).toBeGreaterThan(4);
     for (let i = 1; i < xs.length; i++) expect(xs[i] - xs[i - 1]).toBeCloseTo(53);
+  });
+});
+
+describe('rolls', () => {
+  it('run seam to seam with no gaps, each hung a little off the match', () => {
+    const rolls = rollsIn(0, 300);
+    for (let i = 1; i < rolls.length; i++) expect(rolls[i].x0).toBeCloseTo(rolls[i - 1].x1);
+    expect(rolls[0].x0).toBeLessThanOrEqual(0);
+    expect(rolls.at(-1)!.x1).toBeGreaterThanOrEqual(300);
+    const shifts = rolls.map((r) => rollShift(r.k));
+    for (const s of shifts) expect(Math.abs(s)).toBeLessThanOrEqual(1);
+    expect(new Set(shifts).size).toBe(shifts.length);
   });
 });

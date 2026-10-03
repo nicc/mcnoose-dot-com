@@ -71,6 +71,7 @@ export const CONFIG = {
   PAPER_AGE_SEAM_TEAR: 0.3, // strips torn back to the plaster
   PAPER_AGE_SEAM_SHARPNESS: 0.5, // paper edges: 0 worn soft, 1 crisply cut
   PAPER_AGE_SEAM_DIRT: 0.4, // paste and handling grime along the joint
+  PAPER_AGE_SEAM_SHIFT_MM: 1.5, // hand-hung rolls rarely matched: the pattern steps up or down at each seam
   PAPER_AGE_HALO: 0.1, // grime round where the frame has hung (the paper behind it stayed clean)
   PAPER_AGE_HALO_SPREAD_DEG: 3, // how far the frame's angle has wandered over the years
 

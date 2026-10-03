@@ -117,6 +117,13 @@ export function drawTint(area: AgeArea, s: AgeStyle, f: Frame): HTMLCanvasElemen
   return canvas;
 }
 
+// The rolls (seam to seam, wall cm) across an area, and how far each was hung off the pattern's
+// match: −1…1 of the greatest mismatch. Hand-hung paper rarely matched exactly.
+export function rollsIn(x0: number, x1: number): { k: number; x0: number; x1: number }[] {
+  return seamsIn(x0 - ROLL_CM, x1 + ROLL_CM).slice(0, -1).map((x, i, all) => ({ k: Math.round(x / ROLL_CM), x0: x, x1: all[i + 1] ?? x + ROLL_CM }));
+}
+export const rollShift = (k: number) => 2 * hash2(k, 0, 351) - 1;
+
 // Seam x positions (wall cm) across an area.
 export function seamsIn(x0: number, x1: number): number[] {
   const out: number[] = [];

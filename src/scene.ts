@@ -9,7 +9,7 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
-import { ageLayers } from './wallpaper/age';
+import { ageLayers, rollShift, rollsIn } from './wallpaper/age';
 import { applyTint, sunPatch } from './sunlight';
 import { noteElement } from './about';
 import { isFallen, resetFall } from './fall';
@@ -37,11 +37,31 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, kids: No
 const live = import.meta.env.DEV ? import('./wallpaper') : undefined;
 
 // Pattern anchored to the wall's world origin so it stays put under resizes and window moves.
-function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[]) {
+// The wallpaper, anchored to the wall. With the seams' pattern mismatch on, it's hung as one strip
+// per roll (CSS backgrounds of the same baked image, no canvas work), each nudged up or down a
+// millimetre or two off the pattern's match, so the pattern steps at each seam.
+function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[], vp: Viewport) {
+  const ppc = pxPerCm(roomFromConfig(c), a.tile), map = wallMap(c, a, topExtra);
+  const shift = c.PAPER_AGE ? (c.PAPER_AGE_SEAM_SHIFT_MM / 10) * Math.min(1, c.PAPER_AGE_SEAMS) * ppc : 0;
+  const pageX = (xCm: number) => map.embroideryPage.x + (xCm - map.embroidery.x) * ppc;
+  const strips =
+    shift > 0
+      ? rollsIn(wallPoint(map, { x: 0, y: 0 }).x, wallPoint(map, { x: vp.width, y: 0 }).x).map((r) => {
+          const strip = document.createElement('div');
+          strip.className = 'paper-roll';
+          strip.setAttribute('aria-hidden', 'true');
+          const left = pageX(r.x0);
+          Object.assign(strip.style, { left: `${left}px`, width: `${pageX(r.x1) - left}px` });
+          return { strip, left, dy: rollShift(r.k) * shift };
+        })
+      : [];
+  if (strips.length) el.firstElementChild!.after(...strips.map((s) => s.strip)); // under the age layers and the frame
   const apply = (url: string, width: number, height: number) => {
-    el.style.backgroundImage = `url("${url}")`;
-    el.style.backgroundSize = `${width}px ${height}px`;
-    el.style.backgroundPosition = `${a.originX}px ${topExtra}px`;
+    for (const [target, x, y] of strips.length ? strips.map((s) => [s.strip, a.originX - s.left, topExtra + s.dy] as const) : [[el, a.originX, topExtra] as const]) {
+      target.style.backgroundImage = `url("${url}")`;
+      target.style.backgroundSize = `${width}px ${height}px`;
+      target.style.backgroundPosition = `${x}px ${y}px`;
+    }
   };
   const width = c.WALLPAPER_ZOOM * a.tile;
   if (baked) return apply(baked.url, width, width * baked.aspect);
@@ -528,7 +548,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   document.documentElement.dataset.renderedWidth = String(vp.width); // lets tests wait for a resize render
   const top = header(c, a.tile);
   if (c.PAPER_AGE) top.firstElementChild!.after(...paperAge(c, a, topExtra, vp)); // under the frame
-  hangWallpaper(top, c, a, topExtra, pending);
+  hangWallpaper(top, c, a, topExtra, pending, vp);
   const room = roomFromConfig(c);
   reflecting = []; // the bull-nose row and the grid both register reflecting tiles
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };

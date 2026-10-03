@@ -34,6 +34,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   PAPER_AGE_SEAM_TEAR: [0, 1, 0.01],
   PAPER_AGE_SEAM_SHARPNESS: [0, 1, 0.01],
   PAPER_AGE_SEAM_DIRT: [0, 1, 0.01],
+  PAPER_AGE_SEAM_SHIFT_MM: [0, 10, 0.1],
   PAPER_AGE_HALO: [0, 1, 0.01],
   PAPER_AGE_HALO_SPREAD_DEG: [0, 30, 0.5],
   ROOM_CLOUD_DEPTH: [0, 1, 0.01],
