@@ -184,8 +184,7 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
   const shadow = el('div', 'rail-shadow');
   shadow.style.height = `${(reach * 1.6 + 2).toFixed(1)}px`;
   shadow.style.setProperty('--rail-shadow-a', String(0.32 * c.RAIL_SHADOW)); // custom properties need setProperty
-  strip.lastElementChild!.before(seamLine(c, vp, a)); // under the dust
-  row.append(strip, shadow);
+  row.append(strip, seamLine(c, vp, a), shadow); // outside the strip: its feathered mask would clip the paper side
   return row;
 }
 
@@ -254,32 +253,36 @@ function trimDust(c: Config, vp: Viewport, a: Anchor, band: number, amount: numb
 
 // The joint where tile meets paper: a thin, slightly wavering shadow line with the caulk's lit
 // lip just below it. Wobble keyed to wall position, so it holds still under resizes.
+const SEAM_ABOVE_PX = 3; // of the seam canvas's 7, over the paper (.seam-line in main.css)
 function seamLine(c: Config, vp: Viewport, a: Anchor): HTMLCanvasElement {
-  const dpr = Math.min(2, devicePixelRatio || 1), hpx = 4;
+  const dpr = Math.min(2, devicePixelRatio || 1), hpx = 7;
   const canvas = el('canvas', 'seam-line');
   canvas.width = Math.ceil(vp.width * dpr);
   canvas.height = hpx * dpr;
   canvas.setAttribute('aria-hidden', 'true');
   const ctx = canvas.getContext('2d')!;
-  ctx.scale(dpr, dpr);
-  // The paper's edge against the rail: wavering, drawn soft (a wider faint pass under a narrow one)
-  // rather than ruled, then made patchy along its length (it sits tighter in places) by a mask.
-  const y = (x: number) => 1 + 0.6 * fbm((x - a.originX) / 40, 0.5, 17, 3);
-  const line = (dy: number, colour: string, width: number) => {
-    ctx.beginPath();
-    for (let x = 0; x <= vp.width; x += 3) x ? ctx.lineTo(x, y(x) + dy) : ctx.moveTo(x, y(x) + dy);
-    ctx.strokeStyle = colour;
-    ctx.lineWidth = width;
-    ctx.stroke();
-  };
-  line(0.2, `rgba(55,45,35,${(0.16 * c.SEAM_LINE).toFixed(3)})`, 2.4);
-  line(0, `rgba(55,45,35,${(0.34 * c.SEAM_LINE).toFixed(3)})`, 0.9);
-  line(1.1, `rgba(255,255,255,${(0.32 * c.SEAM_LINE).toFixed(3)})`, 0.8);
-  const patchy = ctx.createLinearGradient(0, 0, vp.width, 0);
-  for (let x = 0; x <= vp.width; x += 30) patchy.addColorStop(x / vp.width, `rgba(0,0,0,${Math.min(1, 0.45 + 0.9 * Math.max(0, fbm((x - a.originX) / 90, 1.5, 19, 2) + 0.5)).toFixed(3)})`);
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.fillStyle = patchy;
-  ctx.fillRect(0, 0, vp.width, hpx);
+  // The crevice where the paper meets the rail, built per pixel so nothing about it is ruled: it
+  // wanders, the gap opens and closes, paint has bridged it in places, a little grime has crept up
+  // into the paper above, and the paper's fibres break its edge. A shadow, so only ever darkening.
+  const W = canvas.width, H = canvas.height, img = ctx.createImageData(W, H), k = c.SEAM_LINE;
+  for (let px = 0; px < W; px++) {
+    const x = px / dpr - a.originX; // wall-anchored
+    // The paper was trimmed to the rail by hand: its edge drifts either side of the joint.
+    const yc = SEAM_ABOVE_PX + 0.4 + 0.7 * fbm(x / 40, 0.5, 17, 3) + 0.5 * fbm(x / 9, 2.5, 23, 2) + 0.2 * fbm(x / 2.5, 6.5, 43, 1);
+    const gap = 0.22 + 0.4 * Math.max(0, fbm(x / 18, 3.5, 29, 3) + 0.35); // crevice half-width, px
+    const bridged = Math.min(1, Math.max(0, (fbm(x / 60, 4.5, 31, 2) - 0.05) * 4)); // paint filled it
+    const depth = (1 - 0.9 * bridged) * Math.min(1, 0.3 + 1.2 * Math.max(0, fbm(x / 90, 1.5, 19, 2) + 0.4));
+    const grime = 0.4 + Math.max(0, fbm(x / 35, 5.5, 37, 3)) * 2;
+    for (let py = 0; py < H; py++) {
+      const y = (py + 0.5) / dpr, d = y - yc, fibre = 0.9 + 0.25 * fbm(x / 1.5, y / 0.8, 41, 2);
+      const core = Math.exp(-0.5 * (d / gap) ** 2) * 0.55 * depth;
+      const above = d < 0 ? Math.exp(d / 0.7) * 0.04 * grime : 0; // into the paper
+      const alpha = Math.min(1, (core + above) * fibre * k);
+      const i = (py * W + px) * 4;
+      img.data[i] = 52, img.data[i + 1] = 42, img.data[i + 2] = 32, img.data[i + 3] = Math.round(alpha * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
   return canvas;
 }
 
