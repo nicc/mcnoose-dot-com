@@ -13,6 +13,7 @@ import { drawPending, turnReflection } from './embroidery';
 import { fall } from './fall';
 
 let flipped = false;
+export const showingBack = () => flipped;
 let settled: { tilt: number; base: number } | undefined; // where it came to rest; base: the config tilt then
 let live: number | undefined; // the tilt while it's held or swinging
 

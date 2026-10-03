@@ -3,21 +3,21 @@ import type { Config } from './config';
 import { visibleColumns, wallRows, type Anchor, type Columns } from './layout';
 import { printTile } from './halftone/print';
 import { baked } from 'virtual:wallpaper';
-import { embroidery, SAMPLER_LINES } from './embroidery';
+import { embroidery, forgetEmbroidery, SAMPLER_LINES } from './embroidery';
 import { blendedLight, lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, type Room, type Vec3 } from './room';
 import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/glaze';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
 import { flush, soonSettled } from './later';
-import { ageLayers, rollShift, rollsIn } from './wallpaper/age';
+import { ageLayers, forgetAge, rollShift, rollsIn } from './wallpaper/age';
 import { applyTint, sunPatch } from './sunlight';
 import { noteElement } from './about';
 import { isFallen, resetFall } from './fall';
 import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
-import { trimLength, type TrimStyle } from './trim/length';
+import { forgetLengths, trimLength, type TrimStyle } from './trim/length';
 import { railProfile, skirtingProfile, type Profile, type RailDims, type SkirtingDims } from './trim/profile';
 import { hexToRgb } from './wallpaper/relief';
 import type { Project } from './projects';
@@ -472,6 +472,17 @@ const roomLook = (c: Config): RoomLook => ({
 
 // Ageing canvases (crazing + water marks) cached by wall position, redrawn only when they change.
 const ageing = new Map<string, { key: string; fixed: HTMLCanvasElement; marks: HTMLCanvasElement }>();
+
+// Every kept canvas's pixels were lost (a GPU reset): drop them all so the next render redraws.
+export function forgetCanvases() {
+  forgetLengths();
+  forgetEmbroidery();
+  forgetAge();
+  prints.clear();
+  printsKey = '';
+  reflectCanvases.clear();
+  ageing.clear();
+}
 
 // fresh: just drawn (so wipes are replayed onto its marks).
 function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, grout?: GroutAround): { fixed: HTMLCanvasElement; marks: HTMLCanvasElement; dpr: number; fresh: boolean } {

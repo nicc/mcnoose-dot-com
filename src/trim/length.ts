@@ -49,6 +49,7 @@ export function ledgeShade(lights: Light[]): number {
 const board = (lights: Light[]) => lights.map(({ dir, weight }) => ({ dir, weight }));
 
 const cache = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
+export const forgetLengths = () => cache.clear(); // their pixels were lost (see main.ts)
 
 // trim: which piece ('rail', 'skirting'); index: which length along the wall; lenPx/heightPx in
 // CSS px; pxPerCm: scene scale; start/end: the room's light at its left and right ends.

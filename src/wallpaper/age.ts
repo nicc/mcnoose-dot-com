@@ -319,6 +319,8 @@ let cached: { key: string; area: AgeArea; tint: HTMLCanvasElement; seams: { x: n
 
 // The age layers for the header, placed in page px. Redrawn only when settings change or the view
 // leaves the area already drawn.
+export const forgetAge = () => void (cached = undefined); // their pixels were lost (see main.ts)
+
 export function ageLayers(map: WallMap, vpWidth: number, headerH: number, s: AgeStyle, f: Frame, light: Vec3, dpr: number): HTMLElement[] {
   const ppc = map.pxPerCm, key = JSON.stringify([s, f, ppc, dpr, light]);
   const want = areaFor(map, vpWidth, headerH), have = cached?.area;

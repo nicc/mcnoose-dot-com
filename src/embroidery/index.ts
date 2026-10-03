@@ -6,7 +6,7 @@ import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig, vie
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
-import { frameTilt } from '../frame';
+import { frameTilt, showingBack } from '../frame';
 import { flush, later, soon } from '../later';
 import { drawBack, nailDrop, paperRect } from './back';
 import { drawEdges, drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
@@ -31,6 +31,18 @@ let parallax = 0;
 let tilt = 0; // the tilt the reflection was drawn at
 let turn = 0; // degrees the frame has turned since (live, while it's dragged or swinging)
 let shift: [number, number] = [0, 0]; // parallax slide
+
+// The cloth at the frame's centre is always opaque: if that pixel reads back clear, the canvas's
+// pixels were lost (a GPU reset: Firefox, plugging in a monitor) — see main.ts.
+export function embroideryLost(): boolean {
+  if (!canvas || !canvas.isConnected || !canvas.classList.contains('drawn')) return false;
+  return canvas.getContext('2d')!.getImageData(canvas.width >> 1, canvas.height >> 1, 1, 1).data[3] === 0;
+}
+
+// Redraw everything next time, into fresh canvases.
+export function forgetEmbroidery() {
+  key = edgesKey = backKey = reflectionKey = '';
+}
 
 // Draw anything still waiting: call before revealing the back or the sides.
 export const drawPending = () => flush('embroidery:');
@@ -121,7 +133,10 @@ export function embroidery(c: Config, tile: number): Embroidered {
     const canvas = (back = document.createElement('canvas'));
     canvas.className = 'embroidery-back';
     canvas.setAttribute('aria-hidden', 'true');
-    later('embroidery:back', () => drawBack(canvas, size.width, size.height, style.frame * zoom, { ...style, wood }, backStyle, bdpr));
+    const draw = () => drawBack(canvas, size.width, size.height, style.frame * zoom, { ...style, wood }, backStyle, bdpr);
+    // Re-lit while it's showing (settled after a swing, turned over): at once, or it blanks and redraws.
+    if (showingBack()) draw();
+    else later('embroidery:back', draw);
     backKey = nextBack;
   }
   paper = paperRect(size.width, size.height, style.frame * zoom);

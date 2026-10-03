@@ -3,12 +3,12 @@ import { CONFIG, type Config } from './config';
 import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
-import { resetReflection, skyInGlass, updateReflection } from './embroidery';
+import { embroideryLost, resetReflection, skyInGlass, updateReflection } from './embroidery';
 import { startClouds } from './clouds';
 import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
-import { renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
+import { forgetCanvases, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
 
 // The wall renders into a stage a margin wider than the window each side (overscan); #app clips
 // it. Window moves within the margin just slide the stage (a GPU transform, no redraw); past it,
@@ -118,6 +118,22 @@ render();
 addEventListener('resize', () => render());
 onFrameTurned(() => render(true)); // re-light the frame at its new angle
 startClouds(() => state, skyInGlass);
+
+// Canvases are drawn once and kept, but a GPU reset (Firefox when a monitor is plugged in, say) can
+// wipe them, and nothing reliably reports that for 2D canvases. So check one kept canvas now and
+// then (one pixel, ~free), and redraw everything if it has gone blank.
+const recover = () => {
+  if (document.hidden || !embroideryLost()) return;
+  forgetCanvases();
+  render(true);
+};
+setInterval(recover, 2000);
+document.addEventListener('visibilitychange', recover);
+
+// Moved to a screen with another pixel density: redraw sharp for it.
+const watchDensity = () =>
+  matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener('change', () => (render(true), watchDensity()), { once: true });
+watchDensity();
 startWiping(() => state);
 showNotice();
 
