@@ -7,6 +7,7 @@
 // The frame is moved into a fixed 3D layer so it can leave the header; its sides and papered back
 // show as it turns. A nail is left on the wall; it comes back on reload (or with the toggle off).
 import type { Config } from './config';
+import { drawPending } from './embroidery';
 import { roomFromConfig } from './room';
 
 let fallen = false;
@@ -54,6 +55,7 @@ export const offLip = (st: { pitch: number; roll: number }) => st.pitch > RELEAS
 export function fall(shadow: HTMLElement, tiltDeg: number, spinDegS: number, c: Config, pxPerCm: number, done: () => void): void {
   if (fallen) return;
   fallen = true;
+  drawPending(); // it's about to show its sides and back
   const rail = document.querySelector('.rail')?.getBoundingClientRect().top ?? innerHeight;
   const r = shadow.getBoundingClientRect(); // the unturned box (its wrapper isn't rotated)
   const box = { x: r.left, y: r.top, w: r.width, h: r.height };

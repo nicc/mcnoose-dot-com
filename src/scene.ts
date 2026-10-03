@@ -9,6 +9,7 @@ import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/g
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
 import { beginSurfaces, wipeable } from './wipe';
+import { flush } from './later';
 import { ageLayers, rollShift, rollsIn } from './wallpaper/age';
 import { applyTint, sunPatch } from './sunlight';
 import { noteElement } from './about';
@@ -142,7 +143,7 @@ const paintOf = (c: Config) => ({ grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, bu
 
 // A strip of painted lengths across the window at page y `top`, clipped to the window, with dust
 // on its top (the visible ledge, when it has one). Returns the strip and the height it occupies.
-function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number): { strip: HTMLElement; h: number } {
+function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number, deferred = false): { strip: HTMLElement; h: number } {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
   const ledge = (style.ledgeCm ?? 0) * ppc, h = style.profile.heightCm * ppc + ledge, seg = a.tile, dpr = Math.min(2, devicePixelRatio || 1);
   const strip = el('div', 'trim-strip');
@@ -155,7 +156,7 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
       const p = wallPoint(map, { x, y: top + h / 2 }), at = { x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000 };
       return { lights: lightsAt(room, at), view: viewAt(room, at) };
     };
-    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style);
+    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, deferred);
     Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length);
   }
@@ -194,11 +195,27 @@ function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: num
   const ledgeCm = (Math.max(0, profile.topDepthCm - TILE_FACE_CM) * Math.max(0, -view[1])) / view[2];
   const style: TrimStyle = { profile, colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, ledgeCm,
     scuffs: { amount: c.SKIRTING_SCUFFS, low: c.SKIRTING_SCUFF_LOW, faceTopCm: profile.heightCm - c.SKIRTING_FLAT_CM } };
-  const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST);
+  // Below the fold on load: painted when the browser is idle, or as it nears the screen.
+  const below = top > scrollY + vp.height + SKIRTING_EARLY_PX;
+  const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST, below);
   const footer = el('footer', 'skirting', [strip]);
   footer.style.height = `${h}px`;
+  skirtingWatch?.disconnect(); // one at a time: re-renders replace the footer
+  skirtingWatch = undefined;
+  if (below) {
+    const near = (skirtingWatch = new IntersectionObserver((seen) => {
+      if (!seen.some((e) => e.isIntersecting)) return;
+      near.disconnect();
+      flush('trim:skirting:');
+    }, { rootMargin: `${SKIRTING_EARLY_PX}px 0px` }));
+    near.observe(footer);
+  }
   return footer;
 }
+
+let skirtingWatch: IntersectionObserver | undefined;
+
+const SKIRTING_EARLY_PX = 600; // how far off screen the skirting starts painting as you scroll towards it
 
 const DUST_PX_PER_CM = 10; // dust sizes in trim/dust.ts are px at this scene scale (desktop)
 

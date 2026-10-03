@@ -9,7 +9,7 @@
 // the frame's own lighting turns with it once it settles. With EMBROIDERY_FALL on, past
 // EMBROIDERY_FALL_DEG and not held, it slips off its nail (fall.ts).
 import type { Config } from './config';
-import { turnReflection } from './embroidery';
+import { drawPending, turnReflection } from './embroidery';
 import { fall } from './fall';
 
 let flipped = false;
@@ -114,6 +114,7 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
   frame.setAttribute('aria-label', 'Turn the sampler over to read the note on the back');
   sync();
   const flip = () => {
+    drawPending(); // the back and sides, if they're still waiting for an idle moment
     flipped = !flipped;
     sync();
   };

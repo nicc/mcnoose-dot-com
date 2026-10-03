@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { corners, offLip, tipStep } from './fall';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./embroidery', () => ({ drawPending: () => {} }));
+const { corners, offLip, tipStep } = await import('./fall');
 
 const box = { x: 100, y: 50, w: 280, h: 200 };
 

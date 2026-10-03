@@ -322,3 +322,20 @@ test('direct sun throws the window onto the wall without getting in the pointerâ
   await expect(patch).toHaveCSS('pointer-events', 'none');
   await expect(patch).toHaveCSS('mix-blend-mode', 'color-dodge');
 });
+
+test('the skirting, painted later when it starts off screen, is painted by the time you get there', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  await page.evaluate(() => scrollTo(0, document.body.scrollHeight)); // straight to the bottom
+  await expect
+    .poll(() =>
+      page.locator('.skirting .trim-length').first().evaluate((c: HTMLCanvasElement) => {
+        const d = c.getContext('2d')!.getImageData(0, Math.floor(c.height / 2), c.width, 1).data;
+        let painted = 0;
+        for (let i = 3; i < d.length; i += 4) if (d[i] > 0) painted++;
+        return painted;
+      }),
+      { timeout: 2000 },
+    )
+    .toBeGreaterThan(10);
+});

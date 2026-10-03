@@ -7,7 +7,8 @@ import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../wallpaper/relief';
 import { layoutSampler, type Chart } from './chart';
 import { frameTilt } from '../frame';
-import { drawBack } from './back';
+import { flush, later } from '../later';
+import { drawBack, paperRect } from './back';
 import { drawEdges, drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
 export const SAMPLER_LINES = ['Snickers', 'McNoose'];
@@ -30,6 +31,16 @@ let parallax = 0;
 let tilt = 0; // the tilt the reflection was drawn at
 let turn = 0; // degrees the frame has turned since (live, while it's dragged or swinging)
 let shift: [number, number] = [0, 0]; // parallax slide
+
+// Draw anything still waiting: call before revealing the back or the sides.
+export const drawPending = () => flush('embroidery:');
+
+const edgeCanvas = (side: string) => {
+  const e = document.createElement('canvas');
+  e.className = `frame-edge frame-edge-${side}`;
+  e.setAttribute('aria-hidden', 'true');
+  return e;
+};
 
 export interface Embroidered {
   canvas: HTMLCanvasElement;
@@ -96,17 +107,19 @@ export function embroidery(c: Config, tile: number): Embroidered {
   canvas.style.width = `${size.width}px`;
   canvas.style.height = `${size.height}px`;
 
-  // The back: drawn at its finished size (it has no fine detail to supersample).
+  // The back and the sides: only seen when it's turned over (or falls), so drawn when the browser is
+  // next idle rather than holding up the first paint — or at once if something reveals them first.
   const backStyle = { paper: hexToRgb(c.ABOUT_PAPER), stains: c.ABOUT_STAINS, wear: c.ABOUT_EDGE_WEAR, tarnish: c.ABOUT_HANGER_TARNISH, pxPerCm: pxPerCm(room, tile) };
+  const wood = { ...style.wood, ring: style.wood.ring * zoom }, bdpr = Math.min(2, dpr);
   const nextBack = JSON.stringify([style, zoom, size, backStyle]);
   if (!back || nextBack !== backKey) {
-    back = document.createElement('canvas');
-    back.className = 'embroidery-back';
-    back.setAttribute('aria-hidden', 'true');
-    const wood = { ...style.wood, ring: style.wood.ring * zoom };
-    paper = drawBack(back, size.width, size.height, style.frame * zoom, { ...style, wood }, backStyle, Math.min(2, dpr));
+    const canvas = (back = document.createElement('canvas'));
+    canvas.className = 'embroidery-back';
+    canvas.setAttribute('aria-hidden', 'true');
+    later('embroidery:back', () => drawBack(canvas, size.width, size.height, style.frame * zoom, { ...style, wood }, backStyle, bdpr));
     backKey = nextBack;
   }
+  paper = paperRect(size.width, size.height, style.frame * zoom);
   back.style.width = `${size.width}px`;
   back.style.height = `${size.height}px`;
 
@@ -114,11 +127,15 @@ export function embroidery(c: Config, tile: number): Embroidered {
   const depth = c.EMBROIDERY_STANDOFF_CM * pxPerCm(room, tile);
   const nextEdges = JSON.stringify([style, zoom, size, depth]);
   if (!edges || nextEdges !== edgesKey) {
-    edges = drawEdges({ ...style, wood: { ...style.wood, ring: style.wood.ring * zoom } }, size.width, size.height, depth, Math.min(2, dpr));
-    for (const [side, edge] of Object.entries(edges)) {
-      edge.className = `frame-edge frame-edge-${side}`;
-      edge.setAttribute('aria-hidden', 'true');
-    }
+    const placed = (edges = { top: edgeCanvas('top'), bottom: edgeCanvas('bottom'), left: edgeCanvas('left'), right: edgeCanvas('right') });
+    later('embroidery:edges', () => {
+      const drawn = drawEdges({ ...style, wood }, size.width, size.height, depth, bdpr);
+      for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+        const to = placed[side], from = drawn[side];
+        [to.width, to.height] = [from.width, from.height];
+        to.getContext('2d')!.drawImage(from, 0, 0);
+      }
+    });
     edgesKey = nextEdges;
   }
 

@@ -23,6 +23,9 @@ const FOX: RGB = [0.78, 0.6, 0.45];
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
+// Where the paper sits on the back (css px): known before (and without) drawing it.
+export const paperRect = (W: number, H: number, f: number) => ({ x: f * PAPER_INSET, y: f * PAPER_INSET, w: W - 2 * f * PAPER_INSET, h: H - 2 * f * PAPER_INSET });
+
 // W, H, f in css px; dpr: canvas px per css px. Returns the paper's rectangle (css px).
 export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: number, o: Pick<EmbroideryStyle, 'wood' | 'view' | 'tiltDeg' | 'lights'>, b: BackStyle, dpr: number) {
   canvas.width = Math.max(1, Math.round(W * dpr));

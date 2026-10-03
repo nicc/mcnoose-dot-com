@@ -11,6 +11,7 @@ import { PAINT_BARE, paintMaps, softenProfile } from '../wood/paint';
 import { weather } from '../wood/wear';
 import type { Profile } from './profile';
 import { scuff } from './scuffs';
+import { later } from '../later';
 
 export interface TrimStyle {
   profile: Profile;
@@ -51,13 +52,25 @@ const cache = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
 
 // trim: which piece ('rail', 'skirting'); index: which length along the wall; lenPx/heightPx in
 // CSS px; pxPerCm: scene scale; start/end: the room's light at its left and right ends.
-export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle): HTMLCanvasElement {
+// deferred: hand back the (sized) canvas now and paint it later (later.ts), keyed `trim:<trim>:<index>`.
+export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle, deferred = false): HTMLCanvasElement {
   const key = JSON.stringify([lenPx, heightPx, pxPerCm, dpr, start, end, s, s.profile.heightCm, s.profile.depthCm]);
   const id = `${trim}:${index}`;
   const hit = cache.get(id);
   if (hit && hit.key === key) return hit.canvas;
-
   const len = Math.max(1, Math.round(lenPx * dpr)), total = Math.max(2, Math.round(heightPx * dpr));
+  const canvas = hit?.canvas ?? document.createElement('canvas');
+  canvas.className = 'trim-length';
+  canvas.setAttribute('aria-hidden', 'true');
+  [canvas.width, canvas.height] = [len, total];
+  cache.set(id, { key, canvas });
+  const draw = () => paintLength(canvas, trim, index, len, total, dpr, pxPerCm, start, end, s);
+  if (deferred) later(`trim:${id}`, draw);
+  else draw();
+  return canvas;
+}
+
+function paintLength(canvas: HTMLCanvasElement, trim: string, index: number, len: number, total: number, dpr: number, pxPerCm: number, start: TrimLight, end: TrimLight, s: TrimStyle) {
   const scale = pxPerCm * dpr, u0 = index * len;
   const ledge = Math.min(total - 2, Math.round((s.ledgeCm ?? 0) * scale)), wid = total - ledge;
   const profile = softenProfile(s.profile.at, s.paint.buildup, s.profile.heightCm);
@@ -90,12 +103,5 @@ export function trimLength(trim: string, index: number, lenPx: number, heightPx:
     }
   }
 
-  const canvas = hit?.canvas ?? document.createElement('canvas');
-  canvas.className = 'trim-length';
-  canvas.setAttribute('aria-hidden', 'true');
-  canvas.width = len;
-  canvas.height = total;
   canvas.getContext('2d')!.putImageData(new ImageData(out as Uint8ClampedArray<ArrayBuffer>, len, total), 0, 0);
-  cache.set(id, { key, canvas });
-  return canvas;
 }
