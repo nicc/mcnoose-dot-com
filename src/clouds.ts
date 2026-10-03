@@ -38,13 +38,14 @@ export function cloudSplit(k: number, b: number): { room: number; reflections: n
 
 // Runs for the page's life; reads config live so the panel's sliders apply at once. Holds still
 // for people who ask for reduced motion.
-export function startClouds(config: () => Config): void {
+// skyInGlass: repaints the glass's reflected panes when the sky in them changes colour (the sunset).
+export function startClouds(config: () => Config, skyInGlass: (sky: { top: number[]; low: number[] }) => void): void {
   const shade = document.createElement('div');
   shade.className = 'cloud-shade';
   shade.setAttribute('aria-hidden', 'true');
   document.body.append(shade);
   const still = matchMedia('(prefers-reduced-motion: reduce)');
-  let last = -1, lastGlint = -1, lastSky = '', frame = 0;
+  let last = -1, lastGlint = -1, lastSky = '', lastPanes = '', frame = 0;
   // Only what uses them: setting these on the root would restyle the whole page each time.
   const set = (sel: string, name: string, v: number) => document.querySelectorAll<HTMLElement>(sel).forEach((e) => e.style.setProperty(name, String(v)));
   const tick = (now: number) => {
@@ -55,11 +56,13 @@ export function startClouds(config: () => Config): void {
     const sky = skyAt(c, still.matches ? 0 : now / 1000), dusk = 1 - sky.dim; // the sunset (sunset.ts)
     const dark = Math.round((1 - exposure(roomFromConfig(c), room) * dusk) * 1000) / 1000;
     if (dark !== last) shade.style.opacity = String((last = dark));
-    const glint = Math.round(reflections * dusk * 1000) / 1000;
+    const glint = Math.round(reflections * (1 - sky.fade) * 1000) / 1000; // the sky in them dims
     if (glint !== lastGlint || !document.querySelector<HTMLElement>('.wall')?.style.getPropertyValue('--glint')) set('.wall, .glass', '--glint', (lastGlint = glint)); // re-renders replace .wall
     const sun = Math.round(sunlit(k, c.ROOM_SUN_HIDE) * 1000) / 1000; // direct sun: the sun patch
     const skyKey = `${sun}|${sky.kelvin.toFixed(0)}|${sky.elevation.toFixed(2)}|${sky.azimuth.toFixed(2)}|${sky.patch.toFixed(3)}|${sky.softness.toFixed(2)}|${sky.tint}`;
     if (skyKey !== lastSky) setSky(c, sky, (lastSky = skyKey, sun));
+    const panes = `${sky.skyTop}|${sky.skyLow}`;
+    if (panes !== lastPanes) skyInGlass({ top: sky.skyTop, low: sky.skyLow }), (lastPanes = panes);
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

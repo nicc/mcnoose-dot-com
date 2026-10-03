@@ -3,7 +3,7 @@ import { CONFIG, type Config } from './config';
 import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, type Anchor } from './layout';
 import { PinFilter, type Point } from './pin';
-import { resetReflection, updateReflection } from './embroidery';
+import { resetReflection, skyInGlass, updateReflection } from './embroidery';
 import { startClouds } from './clouds';
 import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
@@ -117,7 +117,7 @@ addEventListener(
 render();
 addEventListener('resize', () => render());
 onFrameTurned(() => render(true)); // re-light the frame at its new angle
-startClouds(() => state);
+startClouds(() => state, skyInGlass);
 startWiping(() => state);
 showNotice();
 

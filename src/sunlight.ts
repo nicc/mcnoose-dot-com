@@ -18,6 +18,7 @@ import type { WallMap } from './tiles/surface';
 // kept here so a re-render puts the tint and the patch straight back where they've got to.
 let sky: Sky | undefined;
 let sunNow = 1;
+let tinted: Sky | undefined; // the sky the tint layer was last coloured for
 
 const NEUTRAL_K = 6500;
 const BAR_CM = 5; // sash frame and glazing bars, as in the glass's reflection
@@ -53,6 +54,7 @@ export function applyTint(c: Config): void {
   tintLayer ??= Object.assign(document.createElement('div'), { className: 'light-tint' });
   tintLayer.setAttribute('aria-hidden', 'true');
   const tint = sceneTint(c);
+  tinted = sky;
   if (!tint) return void tintLayer.remove();
   tintLayer.style.background = tint;
   if (!tintLayer.isConnected) document.body.append(tintLayer);
@@ -108,12 +110,17 @@ function placePatch(c: Config, canvas: HTMLElement) {
   canvas.style.setProperty('--sunlit', (sunNow * (sky?.patch ?? 1)).toFixed(3));
 }
 
+// Whether the tint layer needs recolouring for sky `s`: against the sky it was last coloured for, not
+// the last tick's (a sunset moves the kelvin a little each tick, never 5 K at once).
+export function needsTint(applied: Sky | undefined, s: Sky): boolean {
+  return !applied || Math.abs(s.kelvin - applied.kelvin) >= 5 || s.tint !== applied.tint;
+}
+
 // The sky has moved on (the sunset) or the clouds have changed how much direct sun gets through.
 export function setSky(c: Config, s: Sky, sun: number) {
-  const tintChanged = !sky || Math.abs(s.kelvin - sky.kelvin) >= 5 || s.tint !== sky.tint;
   sky = s;
   sunNow = sun;
-  if (tintChanged) applyTint(c);
+  if (needsTint(tinted, s)) applyTint(c);
   const patch = document.querySelector<HTMLElement>('.sun-patch');
   if (patch) placePatch(c, patch);
 }

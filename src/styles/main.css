@@ -241,16 +241,20 @@ body {
   filter: drop-shadow(var(--nail-sx) var(--nail-sy) 1px rgb(0 0 0 / 0.45));
 }
 
-/* Glass reflection: its own layer, screen-blended so it brightens without greying, slid by JS. */
+/* Glass reflection: its own layer, screen-blended so it brightens without greying, slid by JS. The
+   blend and the clip are on the glass itself (the reflection is its only child, so it looks the
+   same): Firefox let the oversized, cloud-faded reflection escape an overflow clip now and then,
+   flickering a bright band below the frame. */
 .glass {
   position: absolute;
   overflow: hidden;
+  clip-path: inset(0);
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
 .reflection {
   position: absolute;
-  mix-blend-mode: screen;
   will-change: transform;
   opacity: var(--glint, 1);
 }

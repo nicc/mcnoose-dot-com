@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from './config';
-import { kelvinRgb, lightTint, patchRect, sunlit } from './sunlight';
+import { kelvinRgb, lightTint, needsTint, patchRect, sunlit } from './sunlight';
+import { skyAt } from './sunset';
 
 describe('window light colour', () => {
   it('is neutral at 6500 K, warm below, cool above', () => {
@@ -16,6 +17,16 @@ describe('window light colour', () => {
 
   it('follows a black body: warmer light has less blue', () => {
     expect(kelvinRgb(2500)[2]).toBeLessThan(kelvinRgb(4000)[2]);
+  });
+
+  it('re-tints through a sunset that moves the kelvin only a little each tick', () => {
+    const start = skyAt(CONFIG, 0);
+    let applied = start, retints = 0;
+    for (let k = 1; k <= 20; k++) {
+      const s = { ...start, kelvin: start.kelvin - k };
+      if (needsTint(applied, s)) (applied = s), retints++;
+    }
+    expect(retints).toBe(4);
   });
 });
 

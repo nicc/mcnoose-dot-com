@@ -7,10 +7,11 @@ export interface WindowReflection {
   strength: number; // 0–1
   rect: { x0: number; y0: number; x1: number; y1: number }; // the window's reflection, surface px (y down)
   bars: number; // sash frame and glazing bar width, px
+  sky?: { top: number[]; low: number[] }; // the sky through the panes (sunset.ts), else daylight
 }
 
-const SKY_TOP = [214, 228, 242];
-const SKY_LOW = [238, 242, 244];
+export const SKY_TOP = [214, 228, 242]; // daylight
+export const SKY_LOW = [238, 242, 244];
 
 // Draws the reflected window: four daylit panes, the sash frame and bars left dark (they reflect
 // nothing bright). Caller sets any rotation (a level window in tilted glass) and parallax offset.
@@ -25,8 +26,8 @@ export function drawWindowReflection(ctx: CanvasRenderingContext2D, o: WindowRef
     for (const j of [0, 1]) {
       const x = x0 + b + i * (pw + b), y = y0 + b + j * (ph + b);
       const g = ctx.createLinearGradient(0, y, 0, y + ph);
-      g.addColorStop(0, `rgb(${SKY_TOP})`);
-      g.addColorStop(1, `rgb(${SKY_LOW})`);
+      g.addColorStop(0, `rgb(${o.sky?.top ?? SKY_TOP})`);
+      g.addColorStop(1, `rgb(${o.sky?.low ?? SKY_LOW})`);
       ctx.fillStyle = g;
       ctx.fillRect(x, y, pw, ph);
     }

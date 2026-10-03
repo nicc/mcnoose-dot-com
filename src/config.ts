@@ -44,10 +44,15 @@ export const CONFIG = {
   SUNSET_AZIMUTH_CURVE: 1,
   SUNSET_PATCH: 0, // the sun patch's strength at dusk, as a share of the daylight's
   SUNSET_PATCH_CURVE: 2.5,
-  SUNSET_DIM: 0.08, // how much the room and its reflections darken by dusk
+  SUNSET_DIM: 0.08, // how much the room darkens by dusk
   SUNSET_DIM_CURVE: 2,
   SUNSET_SOFTNESS_CM: 4, // the sun patch's edges at dusk: a low sun's light crosses more air
   SUNSET_SOFTNESS_CURVE: 2,
+  SUNSET_REFLECTION: 0.35, // how much the window's reflections (glass, tiles) fade by dusk: the sky in them dims
+  SUNSET_REFLECTION_CURVE: 1.5,
+  SUNSET_SKY_TOP: '#8d9cc6', // the sky in the glass's reflected window at dusk: deeper blue up high…
+  SUNSET_SKY_LOW: '#f3b58a', // … and warm low down, towards the horizon
+  SUNSET_SKY_CURVE: 1.5,
   ROOM_CLOUD_DEPTH: 0.13, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.3, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them

@@ -163,13 +163,18 @@ export function embroidery(c: Config, tile: number): Embroidered {
     // about its nail: draw it turned back by −tilt about the nail (top centre, above the glass).
     const ppc = pxPerCm(room, tile), win = reflectedWindow(room), e = room.embroidery;
     const rect = { x0: (win.x0 - e.x) * ppc + gw / 2, x1: (win.x1 - e.x) * ppc + gw / 2, y0: (e.y - win.y1) * ppc + gh / 2, y1: (e.y - win.y0) * ppc + gh / 2 };
-    const ctx = reflection.getContext('2d')!;
-    ctx.scale(dpr, dpr);
-    ctx.translate(margin + gw / 2, margin - inset);
-    ctx.rotate((-tilt * Math.PI) / 180);
-    ctx.translate(-gw / 2, inset);
+    const ctx = reflection.getContext('2d')!, angle = (-tilt * Math.PI) / 180, bars = WINDOW_BAR_CM * win.scale * ppc, strength = c.EMBROIDERY_GLASS_REFLECTION;
     reflection.style.transformOrigin = `${margin + gw / 2}px ${margin - inset}px`; // the nail, for live turns
-    drawWindowReflection(ctx, { strength: c.EMBROIDERY_GLASS_REFLECTION, rect, bars: WINDOW_BAR_CM * win.scale * ppc });
+    paintPanes = () => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.scale(dpr, dpr);
+      ctx.translate(margin + gw / 2, margin - inset);
+      ctx.rotate(angle);
+      ctx.translate(-gw / 2, inset);
+      drawWindowReflection(ctx, { strength, rect, bars, sky: paneSky });
+    };
+    paintPanes();
     glass.replaceChildren(reflection);
     reflectionKey = rKey;
     rest = undefined;
@@ -180,6 +185,15 @@ export function embroidery(c: Config, tile: number): Embroidered {
 }
 
 const WINDOW_BAR_CM = 5; // sash frame and glazing bars
+
+let paneSky: { top: number[]; low: number[] } | undefined; // the sky in the reflected panes (sunset.ts)
+let paintPanes: (() => void) | undefined;
+
+// The sky through the window has changed colour (the sunset): repaint the reflected panes.
+export function skyInGlass(sky: { top: number[]; low: number[] }) {
+  paneSky = sky;
+  paintPanes?.();
+}
 
 let rest: [number, number] | undefined; // the glass's screen position when its reflection is at rest
 
