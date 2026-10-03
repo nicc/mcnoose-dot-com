@@ -34,7 +34,7 @@ export const CONFIG = {
   ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
   SUNSET: true, // the sun goes down: one pass from the daylight above to dusk, then held there
   SUNSET_DELAY_S: 3, // daylight held this long first
-  SUNSET_MINUTES: 2, // how long the sun takes to go down
+  SUNSET_MINUTES: 3, // how long the sun takes to go down
   SUNSET_KELVIN: 4000, // the window light's colour at dusk
   SUNSET_KELVIN_CURVE: 1.5, // each curve: 1 even, above 1 holds then goes, below 1 goes early
   SUNSET_ELEVATION_DEG: -2, // the sun's height at dusk (lower: the patch climbs the wall)
@@ -100,7 +100,7 @@ export const CONFIG = {
   EMBROIDERY_SWING_DAMPING: 0.3, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
   EMBROIDERY_SWING_STICK_DEG: 2.5, // how far off its rest the hanger's friction can hold it
   EMBROIDERY_FALL: true, // experiment: let go (or swung) past EMBROIDERY_FALL_DEG, it falls off the wall
-  EMBROIDERY_FALL_DEG: 40, // the angle past which it slips off its nail
+  EMBROIDERY_FALL_DEG: 45, // the angle past which it slips off its nail
   EMBROIDERY_FALL_GRAVITY: 0.63, // 1 = real gravity at the room's scale; lower = slow motion
   EMBROIDERY_FALL_KICK: 1, // how hard catching the rail pitches it forward
   EMBROIDERY_FALL_TUMBLE: 0.15, // how fast it tumbles once caught
@@ -115,62 +115,62 @@ export const CONFIG = {
   EMBROIDERY_LEAF: '#3f9c94', // teal
 
   // Embroidery: oak frame
-  EMBROIDERY_WOOD: '#613e27', // base colour
-  EMBROIDERY_WOOD_LATE: '#2c1a0d', // growth-ring colour
-  EMBROIDERY_WOOD_RINGS: 0.025, // ring spacing, in tiles (before EMBROIDERY_ZOOM)
-  EMBROIDERY_WOOD_FIGURE: 0.6, // how strongly rings arch (cathedral figure)
-  EMBROIDERY_WOOD_PORES: 0.5, // open-pore flecks
+  EMBROIDERY_WOOD: '#71482e', // base colour
+  EMBROIDERY_WOOD_LATE: '#543219', // growth-ring colour
+  EMBROIDERY_WOOD_RINGS: 0.029, // ring spacing, in tiles (before EMBROIDERY_ZOOM)
+  EMBROIDERY_WOOD_FIGURE: 0.14, // how strongly rings arch (cathedral figure)
+  EMBROIDERY_WOOD_PORES: 0.6, // open-pore flecks
   EMBROIDERY_WOOD_DRIFT: 0.4, // colour variation along each board
   EMBROIDERY_WOOD_VARIATION: 0.2, // tone difference between the four boards
   EMBROIDERY_WOOD_DEPTH: 0.35, // moulding profile depth
-  EMBROIDERY_WOOD_SHEEN: 0.5, // finish highlight strength, broken up by the grain
-  EMBROIDERY_WOOD_GLOSS: 0.44, // highlight tightness
-  EMBROIDERY_WOOD_WEAR: 0.15, // finish rubbed off raised edges
-  EMBROIDERY_WOOD_GRIME: 0.25, // dirt in hollows and corner joints
+  EMBROIDERY_WOOD_SHEEN: 0.25, // finish highlight strength, broken up by the grain
+  EMBROIDERY_WOOD_GLOSS: 0.48, // highlight tightness
+  EMBROIDERY_WOOD_WEAR: 0.26, // finish rubbed off raised edges
+  EMBROIDERY_WOOD_GRIME: 0.71, // dirt in hollows and corner joints
   EMBROIDERY_WOOD_PATCHES: 0.5, // how unevenly wear and grime vary along each board
 
   // Embroidery: glass over the cloth
-  EMBROIDERY_GLASS_TINT: 0.45, // slight green colour cast
+  EMBROIDERY_GLASS_TINT: 0.38, // slight green colour cast
   EMBROIDERY_GLASS_REFLECTION: 0.33, // crisp window reflection
-  EMBROIDERY_GLASS_SPOTS: 0.21, // dried water spots
+  EMBROIDERY_GLASS_SPOTS: 0.22, // dried water spots
 
   // Embroidery: back (the about note): click the frame to turn it over
-  ABOUT_FLIP_MS: 900, // how long turning it over takes
+  ABOUT_FLIP_MS: 700, // how long turning it over takes
   ABOUT_PAPER: '#b8946a', // aged kraft dust-cover
-  ABOUT_STAINS: 0.45, // water tide-marks and foxing
-  ABOUT_EDGE_WEAR: 0.5, // edges darkened, rubbed and torn back
+  ABOUT_STAINS: 0.3, // water tide-marks and foxing
+  ABOUT_EDGE_WEAR: 0.04, // edges darkened, rubbed and torn back
   ABOUT_INK: '#2b2420', // the handwriting's ink
-  ABOUT_INK_STRENGTH: 1, // ink density: below 1 fainter, above 1 blacker
+  ABOUT_INK_STRENGTH: 1.5, // ink density: below 1 fainter, above 1 blacker
   ABOUT_NOTE_ZOOM: 0.96, // 1 = the longest line spans the paper
   ABOUT_NOTE_SPACING: 1.05, // between lines: 1 = as written
-  ABOUT_HANGER_TARNISH: 0.6, // the sawtooth hanger's brass: 0 bright, 1 dark patina and verdigris
-  ABOUT_HANGER_DROP_CM: 0.3, // how far below the frame's top the hanger was fixed (the nail sits in its notch)
-  ABOUT_HANGER_TILT_DEG: 1.5, // and how crookedly
+  ABOUT_HANGER_TARNISH: 0.48, // the sawtooth hanger's brass: 0 bright, 1 dark patina and verdigris
+  ABOUT_HANGER_DROP_CM: 0.1, // how far below the frame's top the hanger was fixed (the nail sits in its notch)
+  ABOUT_HANGER_TILT_DEG: -0.5, // and how crookedly
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
-  RAIL_COLOR: '#bfb093',
-  RAIL_DEPTH_CM: 1.95, // how far it stands off the wall
-  RAIL_ROUND_CM: 1.35, // rounded top, falling back to the wall
+  RAIL_COLOR: '#dbd6cb',
+  RAIL_DEPTH_CM: 1.5, // how far it stands off the wall
+  RAIL_ROUND_CM: 1.45, // rounded top, falling back to the wall
   RAIL_BEAD_CM: 0.6, // routed bead below the round
-  RAIL_COVE_CM: 0.3, // cove stepping back to the face
+  RAIL_COVE_CM: 0.1, // cove stepping back to the face
   RAIL_FLAT_CM: 2.2, // flat face: extends the rail's height
-  RAIL_WEAR: 0.28, // chipped paint on the raised edges
-  RAIL_GRIME: 0.36, // dirt in the routing
-  RAIL_DUST: 0.45, // dust settled along the top
-  RAIL_SHADOW: 1.14, // shadow it casts onto the top row of tiles
+  RAIL_WEAR: 0.14, // chipped paint on the raised edges
+  RAIL_GRIME: 0.08, // dirt in the routing
+  RAIL_DUST: 0.34, // dust settled along the top
+  RAIL_SHADOW: 0.23, // shadow it casts onto the top row of tiles
 
   // Paint: shared by every painted surface (rail, skirting)
   PAINT_GRAIN: 0.36, // wood grain telegraphing through the paint
   PAINT_BRUSH: 0.49, // brush-stroke ridges
-  PAINT_BUILDUP: 0.85, // layers of old paint softening the routing
-  PAINT_YELLOWING: 0.31, // aged oil paint, most in the recesses
-  PAINT_SHEEN: 0.26, // satin highlight: catches on the curved top and bead, not the flat face
-  PAINT_GLOSS: 0.63, // highlight tightness
+  PAINT_BUILDUP: 0.74, // layers of old paint softening the routing
+  PAINT_YELLOWING: 0.2, // aged oil paint, most in the recesses
+  PAINT_SHEEN: 0.19, // satin highlight: catches on the curved top and bead, not the flat face
+  PAINT_GLOSS: 0.9, // highlight tightness
 
   // Tiles: glaze
   TILE_COLOR: '#f1efe9', // warm white glaze, a little below pure white so rims can catch the light
   TILE_TONE: 0.012, // glaze tone variation between tiles
-  TILE_EDGE_CM: 0.35, // cushion edge radius
+  TILE_EDGE_CM: 0.4, // cushion edge radius
   TILE_EDGE_SHEEN: 0.6, // highlight on rims facing a light
 
   // Tiles: the room reflected in the glaze
@@ -179,7 +179,7 @@ export const CONFIG = {
   TILE_WAVINESS: 0.89, // glaze undulation: reflections wobble softly within a tile
 
   // Tiles: ageing (crazing, dried water marks)
-  TILE_CRAZING: 0.3, // hairline crack network in the old glaze
+  TILE_CRAZING: 0.26, // hairline crack network in the old glaze
   TILE_SPOTS: 0.12, // dried water marks on tiles high up
   TILE_SPOTS_LOW: 0.6, // … and on the bottom row
   TILE_LIMESCALE: 0.7, // limescale reached on the bottom row
@@ -190,7 +190,7 @@ export const CONFIG = {
   GROUT_RECESS: 0.93, // shadow tiles cast onto the recessed grout
   GROUT_EDGE_CM: 0.1, // the fine caulked joints against the rail and the skirting
   GROUT_AGE: 0.35, // uneven yellowing/greying per joint
-  GROUT_GRIME: 0.48, // dirt: more in horizontal joints and low down
+  GROUT_GRIME: 0.52, // dirt: more in horizontal joints and low down
   GROUT_MOULD: 0.39, // dark spots at crossings, low down
   GROUT_LIMESCALE: 0.85, // whitish crust along low horizontal joints
   GROUT_EROSION: 0.55, // worn edges, crumbled crossings, soft pitting
@@ -215,16 +215,16 @@ export const CONFIG = {
   HALFTONE_OPACITY: 0.8,
 
   // Skirting: painted board along the floor (the page ends with it). Geometry in cm.
-  SKIRTING_COLOR: '#bfb093', // same paint as the rail
-  SKIRTING_DEPTH_CM: 0.75, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
-  SKIRTING_TORUS_CM: 1.9, // diameter of the round along the top
+  SKIRTING_COLOR: '#dbd6cb', // same paint as the rail
+  SKIRTING_DEPTH_CM: 0.5, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
+  SKIRTING_TORUS_CM: 2.5, // diameter of the round along the top
   SKIRTING_RELIEF_CM: 0.3, // how far the round stands proud of the face: small = a lip, half the torus = a full half-round
   SKIRTING_FLAT_CM: 10.7, // face height down to the floor
-  SKIRTING_WEAR: 0.28, // chipped paint on the torus
-  SKIRTING_GRIME: 0.28, // dirt in the groove
-  SKIRTING_SCUFFS: 0.51, // rub line, shoe scuffs and chips on the face
-  SKIRTING_SCUFF_LOW: 0.65, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
-  SKIRTING_DUST: 0.75, // dust along the top
+  SKIRTING_WEAR: 0.11, // chipped paint on the torus
+  SKIRTING_GRIME: 0.1, // dirt in the groove
+  SKIRTING_SCUFFS: 0.2, // rub line, shoe scuffs and chips on the face
+  SKIRTING_SCUFF_LOW: 0.27, // 1 = scuffs and chips hug the floor; 0 = kicks and knocks all over the face
+  SKIRTING_DUST: 0.33, // dust along the top
 
   // Wiping with a finger (mouse): dust on the rail and skirting, limescale and marks on the tiles
   WIPE_WIDTH_CM: 2, // brush width: about a fingertip
