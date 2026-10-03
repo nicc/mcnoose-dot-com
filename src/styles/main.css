@@ -74,6 +74,7 @@ body {
   left: var(--frame-x);
   transform: translate(-50%, -50%);
   filter: var(--frame-shadow);
+  will-change: transform; /* its own layer: repaints nearby (wiping the rail's dust) mustn't re-render the shadow's blur, which flickered */
 }
 
 .frame {

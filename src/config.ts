@@ -28,6 +28,7 @@ export const CONFIG = {
   ROOM_WINDOW_HEIGHT_CM: 101,
   ROOM_SUN: 1.22, // window light strength
   ROOM_LIGHT_KELVIN: 5100, // the window light's colour: 2500 golden late light … 6500 neutral … 9000 cool north sky
+  ROOM_LIGHT_TINT: 0.6, // how much of that colour shows: 1 = as a camera sees it, lower = as an eye adapted to the room does
   ROOM_SUN_PATCH: 0.2, // direct sun throwing the window, bars and all, onto this wall (0 = none)
   ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
   ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
@@ -45,6 +46,8 @@ export const CONFIG = {
   SUNSET_PATCH_CURVE: 2.5,
   SUNSET_DIM: 0.08, // how much the room and its reflections darken by dusk
   SUNSET_DIM_CURVE: 2,
+  SUNSET_SOFTNESS_CM: 4, // the sun patch's edges at dusk: a low sun's light crosses more air
+  SUNSET_SOFTNESS_CURVE: 2,
   ROOM_CLOUD_DEPTH: 0.13, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.3, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them

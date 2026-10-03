@@ -58,7 +58,7 @@ export function startClouds(config: () => Config): void {
     const glint = Math.round(reflections * dusk * 1000) / 1000;
     if (glint !== lastGlint || !document.querySelector<HTMLElement>('.wall')?.style.getPropertyValue('--glint')) set('.wall, .glass', '--glint', (lastGlint = glint)); // re-renders replace .wall
     const sun = Math.round(sunlit(k, c.ROOM_SUN_HIDE) * 1000) / 1000; // direct sun: the sun patch
-    const skyKey = `${sun}|${sky.kelvin.toFixed(0)}|${sky.elevation.toFixed(2)}|${sky.azimuth.toFixed(2)}|${sky.patch.toFixed(3)}`;
+    const skyKey = `${sun}|${sky.kelvin.toFixed(0)}|${sky.elevation.toFixed(2)}|${sky.azimuth.toFixed(2)}|${sky.patch.toFixed(3)}|${sky.softness.toFixed(2)}|${sky.tint}`;
     if (skyKey !== lastSky) setSky(c, sky, (lastSky = skyKey, sun));
     requestAnimationFrame(tick);
   };

@@ -20,7 +20,6 @@ let sky: Sky | undefined;
 let sunNow = 1;
 
 const NEUTRAL_K = 6500;
-const ADAPTED = 0.6; // the eye adapts to a room's light: it sees ~60% of a camera's colour shift
 const BAR_CM = 5; // sash frame and glazing bars, as in the glass's reflection
 
 // Approximate sRGB of a black body at kelvin k (Tanner Helland's fit), 0–255.
@@ -32,11 +31,12 @@ export function kelvinRgb(k: number): [number, number, number] {
   return [c(r), c(g), c(b)];
 }
 
-// The window light's colour relative to neutral daylight, as the eye sees it once adapted,
-// brightest channel 1 (a multiply tint).
-export function lightTint(k: number): [number, number, number] {
+// The window light's colour relative to neutral daylight, as the eye sees it (`seen`: the share of a
+// camera's colour shift that's left once the eye has adapted, ROOM_LIGHT_TINT), brightest channel 1
+// (a multiply tint).
+export function lightTint(k: number, seen = 0.6): [number, number, number] {
   const a = kelvinRgb(k), n = kelvinRgb(NEUTRAL_K), rel = a.map((v, i) => v / n[i]), m = Math.max(...rel);
-  return rel.map((v) => 1 - ADAPTED * (1 - v / m)) as [number, number, number];
+  return rel.map((v) => 1 - seen * (1 - v / m)) as [number, number, number];
 }
 
 const windowShare = (r: Room) => (r.sun * (1 + r.bounce)) / (r.sun * (1 + r.bounce) + r.fill || 1);
@@ -44,7 +44,7 @@ const windowShare = (r: Room) => (r.sun * (1 + r.bounce)) / (r.sun * (1 + r.boun
 // The whole-scene tint, as a multiply colour (white = none).
 export function sceneTint(c: Config, kelvin = sky?.kelvin ?? c.ROOM_LIGHT_KELVIN): string | undefined {
   if (Math.abs(kelvin - NEUTRAL_K) < 1) return undefined;
-  const share = windowShare(roomFromConfig(c)), t = lightTint(kelvin);
+  const share = windowShare(roomFromConfig(c)), t = lightTint(kelvin, c.ROOM_LIGHT_TINT);
   return `rgb(${t.map((v) => Math.round(255 * (1 - share * (1 - v)))).join(',')})`;
 }
 
@@ -73,7 +73,7 @@ export function sunPatch(c: Config, map: WallMap): HTMLElement | undefined {
   const rect = patchRect(c), soft = Math.max(0.2, c.ROOM_SUN_SOFTNESS_CM), margin = soft * 2;
   // Drawn at about one pixel per softness and scaled up smoothly: the scaling is the soft edge.
   const res = Math.max(0.3, Math.min(4, 1 / soft));
-  const tint = lightTint(c.ROOM_LIGHT_KELVIN), boost = c.ROOM_SUN_PATCH;
+  const tint = lightTint(c.ROOM_LIGHT_KELVIN, c.ROOM_LIGHT_TINT), boost = c.ROOM_SUN_PATCH;
   const key = JSON.stringify([rect, soft, tint, boost]);
   if (!patchCache || patchCache.key !== key) {
     const wCm = rect.x1 - rect.x0 + 2 * margin, hCm = rect.y1 - rect.y0 + 2 * margin;
@@ -103,12 +103,14 @@ export function sunPatch(c: Config, map: WallMap): HTMLElement | undefined {
 function placePatch(c: Config, canvas: HTMLElement) {
   const ppc = Number(canvas.dataset.ppc) || 0, from = patchRect(c), to = sky ? patchRect(c, sky.elevation, sky.azimuth) : from;
   canvas.style.transform = sky ? `translate(${((to.x0 - from.x0) * ppc).toFixed(1)}px, ${(-(to.y1 - from.y1) * ppc).toFixed(1)}px)` : '';
+  const softer = sky ? Math.max(0, sky.softness - c.ROOM_SUN_SOFTNESS_CM) * ppc : 0; // a low sun's patch blurs (more air in the way)
+  canvas.style.filter = softer > 0.3 ? `blur(${softer.toFixed(1)}px)` : '';
   canvas.style.setProperty('--sunlit', (sunNow * (sky?.patch ?? 1)).toFixed(3));
 }
 
 // The sky has moved on (the sunset) or the clouds have changed how much direct sun gets through.
 export function setSky(c: Config, s: Sky, sun: number) {
-  const tintChanged = !sky || Math.abs(s.kelvin - sky.kelvin) >= 5;
+  const tintChanged = !sky || Math.abs(s.kelvin - sky.kelvin) >= 5 || s.tint !== sky.tint;
   sky = s;
   sunNow = sun;
   if (tintChanged) applyTint(c);

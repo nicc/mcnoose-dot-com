@@ -11,6 +11,8 @@ export interface Sky {
   azimuth: number;
   patch: number; // the sun patch's strength, × its daylight strength
   dim: number; // 0–1 how much the room (and its reflections) has darkened
+  softness: number; // cm: the sun patch's edges
+  tint: number; // ROOM_LIGHT_TINT, carried so a change to it re-tints at once
 }
 
 export const progressAt = (c: Config, seconds: number) => (c.SUNSET ? Math.max(0, Math.min(1, (seconds - c.SUNSET_DELAY_S) / Math.max(1, c.SUNSET_MINUTES * 60))) : 0);
@@ -23,5 +25,7 @@ export function skyAt(c: Config, seconds: number): Sky {
     azimuth: at(c.ROOM_SUN_AZIMUTH_DEG, c.SUNSET_AZIMUTH_DEG, c.SUNSET_AZIMUTH_CURVE),
     patch: at(1, c.SUNSET_PATCH, c.SUNSET_PATCH_CURVE),
     dim: at(0, c.SUNSET_DIM, c.SUNSET_DIM_CURVE),
+    softness: at(c.ROOM_SUN_SOFTNESS_CM, c.SUNSET_SOFTNESS_CM, c.SUNSET_SOFTNESS_CURVE),
+    tint: c.ROOM_LIGHT_TINT,
   };
 }
