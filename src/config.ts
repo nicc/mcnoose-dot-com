@@ -124,7 +124,7 @@ export const CONFIG = {
   RAIL_WEAR: 0.28, // chipped paint on the raised edges
   RAIL_GRIME: 0.36, // dirt in the routing
   RAIL_DUST: 0.45, // dust settled along the top
-  RAIL_SHADOW: 0.6, // shadow it casts onto the top row of tiles
+  RAIL_SHADOW: 1.14, // shadow it casts onto the top row of tiles
 
   // Paint: shared by every painted surface (rail, skirting)
   PAINT_GRAIN: 0.36, // wood grain telegraphing through the paint
