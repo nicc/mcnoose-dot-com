@@ -58,11 +58,11 @@ export const CONFIG = {
   SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
   SEAM_LINE: 1.5, // the joint line between paper and tile
   PAPER_AGE: true, // the wallpaper's age, laid over the pattern without repeating
-  PAPER_AGE_YELLOWING: 0.45, // uneven yellowing, heavier towards the ceiling
-  PAPER_AGE_STAINS: 0.35, // blotches with tide-lines
-  PAPER_AGE_SEAMS: 0.5, // seams between rolls: lifting edges and tears back to the plaster
-  PAPER_AGE_HALO: 0.5, // grime round where the frame has hung (the paper behind it stayed clean)
-  PAPER_AGE_HALO_SPREAD_DEG: 5, // how far the frame's angle has wandered over the years
+  PAPER_AGE_YELLOWING: 0.18, // uneven yellowing, heavier towards the ceiling
+  PAPER_AGE_STAINS: 0, // blotches with tide-lines
+  PAPER_AGE_SEAMS: 0, // seams between rolls: lifting edges and tears back to the plaster
+  PAPER_AGE_HALO: 0.1, // grime round where the frame has hung (the paper behind it stayed clean)
+  PAPER_AGE_HALO_SPREAD_DEG: 3, // how far the frame's angle has wandered over the years
 
   // Embroidery (framed cross-stitch on the wallpaper). Hand-charted: stitch size scales the piece.
   EMBROIDERY_STITCH_SIZE: 0.06, // one cross-stitch, in tiles: sets the detail
