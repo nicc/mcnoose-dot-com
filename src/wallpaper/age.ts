@@ -13,9 +13,18 @@ import { fbm, hash2 } from '../wood/noise';
 export interface AgeStyle {
   yellowing: number;
   stains: number;
-  seams: number;
+  seams: number; // master: 0 = no seams at all
+  seam: SeamStyle;
   halo: number;
   haloSpreadDeg: number;
+}
+
+export interface SeamStyle {
+  gapMm: number; // the joint between rolls (0 = butted tight)
+  lift: number; // 0–1 how often and how far edges lift
+  tear: number; // 0–1 how often and how big the tears are
+  sharpness: number; // 0 worn soft edges … 1 crisply cut
+  dirt: number; // 0–1 paste and handling grime along the seam
 }
 
 const RES = 3; // tint cells per cm
@@ -113,71 +122,135 @@ export function seamsIn(x0: number, x1: number): number[] {
   return out;
 }
 
-// One seam's strip (STRIP_CM wide, centred on the seam): joint, lifted edges, tears to plaster.
-// light: blended room light direction (screen coords), for which side shadows fall.
-export function drawSeam(seamX: number, area: AgeArea, s: AgeStyle, ppc: number, dpr: number, light: Vec3): HTMLCanvasElement {
-  const k = Math.round(seamX / ROLL_CM), scale = ppc * dpr;
+const SEG_CM = 12; // seams are considered in lengths this long for lifts and tears
+const DIRT_CM = 1.2; // how far paste and handling grime spreads from the joint
+const LIFT_CM = 0.25; // greatest lift of an edge off the wall
+
+interface Lift {
+  y0: number; // wall cm, bottom
+  y1: number;
+  side: number; // which roll's edge: −1 left, 1 right
+  height: number; // cm
+}
+
+// One seam's strip (STRIP_CM wide, centred on the seam), lit by the room (light: blended light
+// direction, screen coords). The joint is a narrow gap that wavers and opens and closes along its
+// length; the paper edge facing the light catches it and the other shades the gap. Lifted edges
+// catch light along the lip and shadow the paper beyond. Grime gathers, patchily, along the joint.
+// Tears are strips torn back to the plaster. The master amount scales how visible the joint is and
+// how often lifts and tears happen (each is drawn in full); at 0 it's empty.
+export function drawSeam(seamX: number, area: AgeArea, amount: number, s: SeamStyle, ppc: number, dpr: number, light: Vec3): HTMLCanvasElement {
+  const k = Math.round(seamX / ROLL_CM), scale = ppc * dpr; // canvas px per cm
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(STRIP_CM * scale);
   canvas.height = Math.ceil((area.yTop - area.yBottom) * scale);
-  const ctx = canvas.getContext('2d')!, cx = canvas.width / 2, py = (yCm: number) => (area.yTop - yCm) * scale;
-  const away = light[0] > 0 ? -1 : 1; // shadows fall away from the light, sideways
-  ctx.fillStyle = `rgba(50,38,26,${(0.12 + 0.25 * s.seams).toFixed(3)})`;
-  ctx.fillRect(cx - 0.5 * dpr, 0, 1 * dpr, canvas.height); // the butt joint
-  if (s.seams <= 0) return canvas;
-  for (let seg = Math.floor(area.yBottom / 12); seg * 12 < area.yTop; seg++) {
-    const y0 = seg * 12 + 12 * hash2(k, seg, 311), side = hash2(k, seg, 312) < 0.5 ? -1 : 1;
-    const roll = hash2(k, seg, 313);
-    if (roll < 0.3 * s.seams) {
-      // A lifted edge: catches the light along its lip, shadows the wall beside it.
-      const len = (4 + 12 * hash2(k, seg, 314)) * scale, top = py(y0) - len, lift = (0.08 + 0.12 * hash2(k, seg, 315)) * scale;
-      const g = ctx.createLinearGradient(cx, 0, cx + away * lift * 2, 0);
-      g.addColorStop(0, 'rgba(30,20,10,0.35)');
-      g.addColorStop(1, 'rgba(30,20,10,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.ellipse(cx + away * lift, top + len / 2, lift * 1.5, len / 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,250,236,0.55)';
-      ctx.fillRect(cx - (away * dpr) / 2, top + len * 0.1, dpr, len * 0.8);
-    } else if (roll < 0.3 * s.seams + 0.38 * s.seams) {
-      // A tear back to the plaster: a strip torn away from the seam, widest near where it started
-      // and tapering as it ran down, its far edge jagged with torn fibres.
-      const wT = (0.8 + 1.8 * hash2(k, seg, 316)) * scale, hT = (2 + 5 * hash2(k, seg, 317)) * scale, top = py(y0) - hT;
-      const path = new Path2D();
-      path.moveTo(cx, top);
-      const steps = 36;
-      for (let i = 1; i < steps; i++) {
-        const t = i / steps, width = Math.sin(Math.PI * t) ** 0.7 * (1 - 0.55 * t);
-        const ragged = 1 + 0.45 * fbm(i * 0.35, seg, 318 + k, 3) + 0.18 * (hash2(i, seg, 322 + k) - 0.5);
-        path.lineTo(cx + side * wT * width * ragged, top + t * hT + (hash2(i, seg, 323) - 0.5) * 0.06 * scale);
+  if (amount <= 0) return canvas;
+  const ctx = canvas.getContext('2d')!, W = canvas.width, H = canvas.height, cx = W / 2;
+  const rowCm = (j: number) => area.yTop - (j + 0.5) / scale;
+  const grazing = Math.min(1, Math.abs(light[0]) / Math.max(0.2, light[2]) + 0.25); // side light shows edges more
+  const lit = light[0] < 0 ? 1 : -1; // the edge facing the light: light from the left lights the right roll's edge
+  const blur = (0.25 + 1.6 * (1 - s.sharpness)) * dpr; // edge softness, canvas px
+  const gapPx = (s.gapMm / 10) * scale;
+
+  // Lifted lengths, seeded by seam and length.
+  const lifts: Lift[] = [];
+  for (let seg = Math.floor(area.yBottom / SEG_CM); seg * SEG_CM < area.yTop; seg++) {
+    if (hash2(k, seg, 312) >= 0.4 * s.lift * amount) continue;
+    const len = 4 + 10 * hash2(k, seg, 314), y0 = seg * SEG_CM + (SEG_CM - len) * hash2(k, seg, 311);
+    lifts.push({ y0, y1: y0 + len, side: hash2(k, seg, 313) < 0.5 ? -1 : 1, height: LIFT_CM * s.lift * (0.3 + 0.7 * hash2(k, seg, 315)) });
+  }
+
+  const img = ctx.createImageData(W, H), px = img.data;
+  const over = (i: number, r: number, g: number, b: number, a: number) => {
+    if (a <= 0.002) return;
+    const keep = 1 - a;
+    px[i] = r * a + px[i] * keep; // premultiplied in effect: we unpremultiply at the end
+    px[i + 1] = g * a + px[i + 1] * keep;
+    px[i + 2] = b * a + px[i + 2] * keep;
+    px[i + 3] = 255 * a + px[i + 3] * keep;
+  };
+  const ramp = (v: number) => Math.max(0, Math.min(1, 0.5 + v / (2 * blur)));
+  const line = (d: number, w: number) => Math.exp(-((d / w) ** 2));
+  const reach = Math.min(cx, gapPx / 2 + DIRT_CM * scale * 2 + LIFT_CM * scale * 3 + 4 * blur);
+  for (let j = 0; j < H; j++) {
+    const y = rowCm(j);
+    const wob = fbm(y / 35, k * 3.1, 331, 2) * 0.08 * scale; // edges not quite straight
+    const grime = s.dirt * (0.3 + 1.1 * Math.max(0, fbm(y / 18, k * 2.3, 335, 3) + 0.5)); // patchy along its length
+    const open = gapPx * Math.max(0, Math.min(1, 0.15 + 1.1 * (fbm(y / 14, k * 1.7, 333, 2) + 0.5))); // opens and closes
+    const lift = lifts.find((l) => y >= l.y0 && y <= l.y1);
+    const bump = lift ? Math.sin((Math.PI * (y - lift.y0)) / (lift.y1 - lift.y0)) ** 2 : 0;
+    const liftPx = lift ? lift.height * bump * scale : 0;
+    const x0 = Math.max(0, Math.floor(cx - reach)), x1 = Math.min(W - 1, Math.ceil(cx + reach));
+    for (let x = x0; x <= x1; x++) {
+      const i = (j * W + x) * 4, d = x + 0.5 - (cx + wob);
+      if (grime > 0) over(i, 70, 58, 42, amount * grime * 0.16 * line(d, DIRT_CM * scale)); // grime along the joint
+      if (open > 0) {
+        over(i, 46, 36, 26, amount * 0.55 * ramp(open / 2 - Math.abs(d))); // the gap: wall and paste in shadow
+        over(i, 40, 30, 20, amount * grazing * 0.35 * line(d + lit * open / 2, blur)); // edge in shadow
+        over(i, 255, 250, 236, amount * grazing * 0.45 * line(d - lit * open / 2, blur)); // edge catching the light
       }
-      path.lineTo(cx, top + hT);
-      path.closePath();
-      ctx.save();
-      ctx.fillStyle = `rgb(${PLASTER.join(',')})`;
-      ctx.fill(path);
-      ctx.clip(path);
-      for (let i = 0; i < 90; i++) {
-        const r = (0.04 + 0.14 * hash2(i, seg, 324)) * scale; // mottling: old grime and paste
-        ctx.fillStyle = `rgba(120,108,88,${(0.04 + 0.08 * hash2(i, seg, 319)).toFixed(2)})`;
-        ctx.beginPath();
-        ctx.arc(cx + side * wT * hash2(i, seg, 320), top + hT * hash2(i, seg, 321), r, 0, Math.PI * 2);
-        ctx.fill();
+      if (liftPx > 0) {
+        const e = lift!.side * open / 2, away = -lit;
+        over(i, 30, 22, 14, 0.4 * bump * line(d - e - away * liftPx * 0.8, Math.max(blur, liftPx))); // shadow beyond the lip
+        over(i, 255, 251, 238, 0.6 * bump * line(d - e, blur * 1.2)); // the lifted lip
       }
-      ctx.restore();
-      ctx.save();
-      ctx.translate(away * dpr * 0.8, dpr * 0.6); // paper thickness: a shadow on the plaster
-      ctx.strokeStyle = 'rgba(40,30,20,0.35)';
-      ctx.lineWidth = dpr;
-      ctx.stroke(path);
-      ctx.restore();
-      ctx.strokeStyle = `rgba(${CORE.join(',')},0.85)`; // the paper's pale torn core
-      ctx.lineWidth = dpr * 0.7;
-      ctx.stroke(path);
     }
   }
+  for (let i = 0; i < px.length; i += 4) {
+    const a = px[i + 3] / 255;
+    if (a > 0) (px[i] /= a), (px[i + 1] /= a), (px[i + 2] /= a);
+  }
+  ctx.putImageData(img, 0, 0);
+  if (s.tear > 0) tears(ctx, k, area, amount, s, scale, dpr, -lit, rowCm);
   return canvas;
+}
+
+// Strips torn back to the plaster, starting at the seam, widest where they began and tapering,
+// with a jagged edge of torn fibres and the paper's pale core showing.
+function tears(ctx: CanvasRenderingContext2D, k: number, area: AgeArea, amount: number, s: SeamStyle, scale: number, dpr: number, away: number, rowCm: (j: number) => number) {
+  const cx = ctx.canvas.width / 2, py = (yCm: number) => (area.yTop - yCm) * scale;
+  void rowCm;
+  for (let seg = Math.floor(area.yBottom / SEG_CM); seg * SEG_CM < area.yTop; seg++) {
+    if (hash2(k, seg, 341) >= 0.35 * s.tear * amount) continue;
+    const side = hash2(k, seg, 342) < 0.5 ? -1 : 1, size = 0.5 + s.tear;
+    const wT = (0.6 + 1.6 * hash2(k, seg, 316)) * size * scale, hT = (1.5 + 4.5 * hash2(k, seg, 317)) * size * scale;
+    const top = py(seg * SEG_CM + SEG_CM * hash2(k, seg, 343)) - hT;
+    const path = new Path2D();
+    path.moveTo(cx, top);
+    const steps = 36;
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps, width = Math.sin(Math.PI * t) ** 0.7 * (1 - 0.55 * t);
+      const ragged = 1 + 0.45 * fbm(i * 0.35, seg, 318 + k, 3) + 0.18 * s.sharpness * (hash2(i, seg, 322 + k) - 0.5);
+      path.lineTo(cx + side * wT * width * ragged, top + t * hT);
+    }
+    path.lineTo(cx, top + hT);
+    path.closePath();
+    ctx.save();
+    ctx.fillStyle = `rgb(${PLASTER.join(',')})`;
+    ctx.fill(path);
+    ctx.clip(path);
+    for (let i = 0; i < 90; i++) {
+      const r = (0.04 + 0.14 * hash2(i, seg, 324)) * scale; // mottling: old grime and paste
+      ctx.fillStyle = `rgba(120,108,88,${(0.04 + 0.08 * hash2(i, seg, 319)).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(cx + side * wT * hash2(i, seg, 320), top + hT * hash2(i, seg, 321), r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    // Paper thickness: a shadow on the plaster, then the torn core. Softer edges spread wider, fainter.
+    const soft = 1 - s.sharpness;
+    ctx.save();
+    ctx.translate(away * dpr * 0.8, dpr * 0.6);
+    ctx.strokeStyle = `rgba(40,30,20,${(0.35 - 0.15 * soft).toFixed(2)})`;
+    ctx.lineWidth = dpr * (1 + 1.5 * soft);
+    ctx.stroke(path);
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = `rgba(${CORE.join(',')},${(0.85 - 0.4 * soft).toFixed(2)})`;
+    ctx.lineWidth = dpr * (0.6 + 1.4 * soft);
+    ctx.stroke(path);
+    ctx.restore();
+  }
 }
 
 export const STRIP_WIDTH_CM = STRIP_CM;
@@ -199,7 +272,8 @@ export function ageLayers(map: WallMap, vpWidth: number, headerH: number, s: Age
   const want = areaFor(map, vpWidth, headerH), have = cached?.area;
   const covered = have && cached!.key === key && want.x0 + (want.x1 - want.x0) / 3 >= have.x0 && want.x1 - (want.x1 - want.x0) / 3 <= have.x1 && want.yTop - 20 <= have.yTop;
   if (!covered) {
-    cached = { key, area: want, tint: drawTint(want, s, f), seams: seamsIn(want.x0 - STRIP_CM, want.x1 + STRIP_CM).map((x) => ({ x, canvas: drawSeam(x, want, s, ppc, dpr, light) })) };
+    const seams = s.seams > 0 ? seamsIn(want.x0 - STRIP_CM, want.x1 + STRIP_CM) : []; // none at all at 0
+    cached = { key, area: want, tint: drawTint(want, s, f), seams: seams.map((x) => ({ x, canvas: drawSeam(x, want, s.seams, s.seam, ppc, dpr, light) })) };
     cached.tint.className = 'paper-age';
     for (const seam of cached.seams) seam.canvas.className = 'paper-seam';
   }

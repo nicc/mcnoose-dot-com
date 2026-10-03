@@ -65,7 +65,8 @@ const NAIL_CM = 0.35; // head diameter
 function paperAge(c: Config, a: Anchor, topExtra: number, vp: Viewport): HTMLElement[] {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), e = embroidery(c, a.tile);
   const frame = { wCm: e.width / ppc, hCm: e.height / ppc, nail: { x: room.embroidery.x, y: room.embroidery.y + e.height / ppc / 2 } };
-  const style = { yellowing: c.PAPER_AGE_YELLOWING, stains: c.PAPER_AGE_STAINS, seams: c.PAPER_AGE_SEAMS, halo: c.PAPER_AGE_HALO, haloSpreadDeg: c.PAPER_AGE_HALO_SPREAD_DEG };
+  const seam = { gapMm: c.PAPER_AGE_SEAM_GAP_MM, lift: c.PAPER_AGE_SEAM_LIFT, tear: c.PAPER_AGE_SEAM_TEAR, sharpness: c.PAPER_AGE_SEAM_SHARPNESS, dirt: c.PAPER_AGE_SEAM_DIRT };
+  const style = { yellowing: c.PAPER_AGE_YELLOWING, stains: c.PAPER_AGE_STAINS, seams: c.PAPER_AGE_SEAMS, seam, halo: c.PAPER_AGE_HALO, haloSpreadDeg: c.PAPER_AGE_HALO_SPREAD_DEG };
   const light = blendedLight(lightsAt(room, room.embroidery));
   return ageLayers(wallMap(c, a, topExtra), vp.width, topExtra + c.HEADER_HEIGHT * a.tile, style, frame, light, Math.min(2, devicePixelRatio || 1));
 }

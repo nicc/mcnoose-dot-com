@@ -65,7 +65,12 @@ export const CONFIG = {
   PAPER_AGE: true, // the wallpaper's age, laid over the pattern without repeating
   PAPER_AGE_YELLOWING: 0.18, // uneven yellowing, heavier towards the ceiling
   PAPER_AGE_STAINS: 0, // blotches with tide-lines
-  PAPER_AGE_SEAMS: 0, // seams between rolls: lifting edges and tears back to the plaster
+  PAPER_AGE_SEAMS: 0, // seams between rolls, overall (0 = none at all)
+  PAPER_AGE_SEAM_GAP_MM: 0.3, // the joint between rolls; it wavers, opens and closes (0 = butted tight)
+  PAPER_AGE_SEAM_LIFT: 0.4, // edges lifting off the wall: the lip catches light, shadows the paper beside it
+  PAPER_AGE_SEAM_TEAR: 0.3, // strips torn back to the plaster
+  PAPER_AGE_SEAM_SHARPNESS: 0.5, // paper edges: 0 worn soft, 1 crisply cut
+  PAPER_AGE_SEAM_DIRT: 0.4, // paste and handling grime along the joint
   PAPER_AGE_HALO: 0.1, // grime round where the frame has hung (the paper behind it stayed clean)
   PAPER_AGE_HALO_SPREAD_DEG: 3, // how far the frame's angle has wandered over the years
 
