@@ -32,11 +32,11 @@ export const CONFIG = {
   ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
   ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
   ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
-  ROOM_CLOUD_DEPTH: 0, // how far passing clouds dim the window light (0 = clear sky)
-  ROOM_CLOUD_RATE_HZ: 0.4, // how often the cloud cover changes
+  ROOM_CLOUD_DEPTH: 0.13, // how far passing clouds dim the window light (0 = clear sky)
+  ROOM_CLOUD_RATE_HZ: 0.3, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
-  ROOM_CLOUD_BALANCE: 0.95, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
-  ROOM_SUN_HIDE: 0.2, // how much a cloud must dim the window light to hide the sun patch completely
+  ROOM_CLOUD_BALANCE: 0.98, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
+  ROOM_SUN_HIDE: 0.25, // how much a cloud must dim the window light to hide the sun patch completely
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
   ROOM_BOUNCE: 0.12, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
@@ -55,20 +55,20 @@ export const CONFIG = {
   WALLPAPER_PETAL: '#c1ab83', // ink: petal
   WALLPAPER_BERRY: '#a68d6e', // ink: berry
   WALLPAPER_OUTLINE: '#817462', // ink: outline
-  WALLPAPER_RELIEF: 2, // pebble emboss depth
-  WALLPAPER_PEBBLE_PX: 2.6, // pebble size
+  WALLPAPER_RELIEF: 2.21, // pebble emboss depth
+  WALLPAPER_PEBBLE_PX: 1.4, // pebble size
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
-  WALLPAPER_AMBIENT: 0.85, // how dark shadowed slopes get (1 = no shadow)
-  WALLPAPER_SHEEN: 0.55, // satin highlight
+  WALLPAPER_AMBIENT: 0.88, // how dark shadowed slopes get (1 = no shadow)
+  WALLPAPER_SHEEN: 0.5, // satin highlight
   SEAM_SHADOW: 0.28, // contact shadow on the paper where it meets the tiles
   SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
   SEAM_LINE: 1.5, // the joint line between paper and tile
   PAPER_AGE: true, // the wallpaper's age, laid over the pattern without repeating
   PAPER_AGE_YELLOWING: 0.11, // uneven yellowing, heavier towards the ceiling
   PAPER_AGE_STAINS: 0, // blotches with tide-lines
-  PAPER_AGE_SEAMS: 0.22, // seams between rolls, overall (0 = none at all)
-  PAPER_AGE_SEAM_OFFSET_CM: 51.2, // where a seam falls from the embroidery's centre: each 53cm (a roll) brings the next seam there; up to ten rolls to choose from
-  PAPER_AGE_SEAM_GAP_MM: 0.95, // the joint between rolls; it wavers, opens and closes (0 = butted tight)
+  PAPER_AGE_SEAMS: 0.2, // seams between rolls, overall (0 = none at all)
+  PAPER_AGE_SEAM_OFFSET_CM: 129, // where a seam falls from the embroidery's centre: each 53cm (a roll) brings the next seam there; up to ten rolls to choose from
+  PAPER_AGE_SEAM_GAP_MM: 0.8, // the joint between rolls; it wavers, opens and closes (0 = butted tight)
   PAPER_AGE_SEAM_LIFT: 0.6, // edges lifting off the wall: the lip catches light, shadows the paper beside it
   PAPER_AGE_SEAM_TEAR: 0.3, // strips torn back to the plaster
   PAPER_AGE_SEAM_SHARPNESS: 0.5, // paper edges: 0 worn soft, 1 crisply cut
