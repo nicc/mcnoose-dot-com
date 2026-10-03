@@ -7,7 +7,7 @@ export const CONFIG = {
   TILE_MAX_PX: 150, // largest tile edge
   GROUT_PX: 4,
   MIN_PEEK: 0.25, // fraction of a tile always visible on each side of a full tile
-  TRAILING_ROWS: 6, // blank rows after the last project row
+  TRAILING_ROWS: 4, // blank rows after the last project row
   REFLOW_FADE_MS: 220, // crossfade when projects move tiles as columns appear/disappear
   PIN_SMOOTH_MS: 125, // screen pinning: easing as the window moves
 
@@ -61,7 +61,7 @@ export const CONFIG = {
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
   ROOM_BOUNCE: 0.12, // window light bounced up off the floor, as a share of it: lifts undersides
   ROOM_EYE_FOLLOW: 0.67, // how far the eye moves down the wall as you scroll: 1 = like a camera; drives all reflections
-  ROOM_WALL_COLOR: '#f2debc', // walls reflected in the tiles
+  ROOM_WALL_COLOR: '#cebda1', // walls reflected in the tiles
   ROOM_CEILING_COLOR: '#ede4ce',
   ROOM_FLOOR_COLOR: '#dbdfe0',
   DUST_SHADE: 0.64, // dust grey everywhere in the room: 0 dark → 1 light
