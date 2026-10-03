@@ -28,16 +28,16 @@ export const CONFIG = {
   ROOM_WINDOW_HEIGHT_CM: 101,
   ROOM_SUN: 1.22, // window light strength
   ROOM_LIGHT_KELVIN: 5100, // the window light's colour: 2500 golden late light … 6500 neutral … 9000 cool north sky
-  ROOM_LIGHT_TINT: 0.8, // how much of that colour shows: 1 = as a camera sees it, lower = as an eye adapted to the room does
+  ROOM_LIGHT_TINT: 0.65, // how much of that colour shows: 1 = as a camera sees it, lower = as an eye adapted to the room does
   ROOM_SUN_PATCH: 0.2, // direct sun throwing the window, bars and all, onto this wall (0 = none)
   ROOM_SUN_ELEVATION_DEG: 4.5, // how steeply the sun comes in: lowers the patch
   ROOM_SUN_AZIMUTH_DEG: -1, // from the side: slides the patch across
   ROOM_SUN_SOFTNESS_CM: 1.2, // the patch's edges
   SUNSET: true, // the sun goes down: one pass from the daylight above to dusk, then held there
   SUNSET_DELAY_S: 3, // daylight held this long first
-  SUNSET_MINUTES: 3, // how long the sun takes to go down
-  SUNSET_KELVIN: 3000, // the window light's colour at dusk
-  SUNSET_KELVIN_CURVE: 1.5, // each curve: 1 even, above 1 holds then goes, below 1 goes early
+  SUNSET_MINUTES: 2, // how long the sun takes to go down
+  SUNSET_KELVIN: 3600, // the window light's colour at dusk
+  SUNSET_KELVIN_CURVE: 1.2, // each curve: 1 even, above 1 holds then goes, below 1 goes early
   SUNSET_ELEVATION_DEG: -2, // the sun's height at dusk (lower: the patch climbs the wall)
   SUNSET_ELEVATION_CURVE: 1,
   SUNSET_AZIMUTH_DEG: -15, // where the sun has swung round to
