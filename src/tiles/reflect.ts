@@ -71,35 +71,63 @@ export function tileTilt(seed: number, maxDeg: number): [number, number] {
 }
 
 // nx×ny RGBA: reflected room colour, alpha = strength boosted at glancing angles (Fresnel).
+// A tile's reflection of the room, nx × ny samples. Cells that straddle an edge in the room (the
+// window's frame, where wall meets ceiling) are re-sampled 3×3 and averaged, so edges come out
+// smooth rather than stepped; flat cells, most of them, cost nothing extra.
+const EDGE = 28; // colour difference (sum over channels) that marks a cell as straddling an edge
 export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec3, nx: number, ny = nx): Uint8ClampedArray {
   const out = new Uint8ClampedArray(nx * ny * 4);
   const [ax, ay] = tileTilt(t.seed, t.tiltDeg);
   const wave = t.waviness * 0.06;
+  // Tilt + low-frequency waviness → the surface normal at (u, v).
+  const normal = (u: number, v: number): Vec3 => {
+    const sx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
+    const sy = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
+    const nl = Math.hypot(sx, sy, 1);
+    return [sx / nl, sy / nl, 1 / nl];
+  };
+  const sample = (u: number, v: number, N = normal(u, v)): [number, number, number, number] => {
+    const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, 0];
+    let dx = p[0] - eye[0], dy = p[1] - eye[1], dz = p[2] - eye[2];
+    const dl = Math.hypot(dx, dy, dz);
+    [dx, dy, dz] = [dx / dl, dy / dl, dz / dl];
+    const dn = dx * N[0] + dy * N[1] + dz * N[2];
+    const R: Vec3 = [dx - 2 * dn * N[0], dy - 2 * dn * N[1], dz - 2 * dn * N[2]];
+    const c = roomColour(r, look, p, R);
+    // Schlick's Fresnel relative to head-on: flat tiles seen near straight-on stay at ~1×,
+    // glancing surfaces (the top of a bull-nose) reflect ten times as much or more.
+    const cos = Math.min(1, Math.abs(dn));
+    const fresnel = (GLAZE_R0 + (1 - GLAZE_R0) * (1 - cos) ** 5) / GLAZE_R0;
+    return [c[0], c[1], c[2], Math.min(255, 255 * t.strength * fresnel)];
+  };
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
-      const u = (i + 0.5) / nx - 0.5, v = (j + 0.5) / ny - 0.5;
-      const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, 0];
-      // Tilt + low-frequency waviness → this sample's surface normal.
-      const sx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
-      const sy = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
-      const nl = Math.hypot(sx, sy, 1);
-      const N: Vec3 = [sx / nl, sy / nl, 1 / nl];
-      let dx = p[0] - eye[0], dy = p[1] - eye[1], dz = p[2] - eye[2];
-      const dl = Math.hypot(dx, dy, dz);
-      [dx, dy, dz] = [dx / dl, dy / dl, dz / dl];
-      const dn = dx * N[0] + dy * N[1] + dz * N[2];
-      const R: Vec3 = [dx - 2 * dn * N[0], dy - 2 * dn * N[1], dz - 2 * dn * N[2]];
-      const c = roomColour(r, look, p, R);
-      // Schlick's Fresnel relative to head-on: flat tiles seen near straight-on stay at ~1×,
-      // glancing surfaces (the top of a bull-nose) reflect ten times as much or more.
-      const cos = Math.min(1, Math.abs(dn));
-      const fresnel = (GLAZE_R0 + (1 - GLAZE_R0) * (1 - cos) ** 5) / GLAZE_R0;
-      const k = (j * nx + i) * 4;
+      const k = (j * nx + i) * 4, c = sample((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5);
       out[k] = c[0];
       out[k + 1] = c[1];
       out[k + 2] = c[2];
-      out[k + 3] = Math.min(255, 255 * t.strength * fresnel);
+      out[k + 3] = c[3];
     }
+  }
+  // Edge cells: compared with their neighbours on the first pass, then supersampled.
+  const diff = (a: number, b: number) => Math.abs(out[a] - out[b]) + Math.abs(out[a + 1] - out[b + 1]) + Math.abs(out[a + 2] - out[b + 2]);
+  const edges: number[] = [];
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const k = (j * nx + i) * 4;
+      if ((i + 1 < nx && diff(k, k + 4) > EDGE) || (i > 0 && diff(k, k - 4) > EDGE) || (j + 1 < ny && diff(k, k + nx * 4) > EDGE) || (j > 0 && diff(k, k - nx * 4) > EDGE)) edges.push(i, j);
+    }
+  }
+  for (let e = 0; e < edges.length; e += 2) {
+    const i = edges[e], j = edges[e + 1], acc = [0, 0, 0, 0];
+    const N = normal((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5); // waviness is slow: one normal per cell
+    for (let sj = 0; sj < 3; sj++)
+      for (let si = 0; si < 3; si++) {
+        const c = sample((i + (si + 0.5) / 3) / nx - 0.5, (j + (sj + 0.5) / 3) / ny - 0.5, N);
+        for (let q = 0; q < 4; q++) acc[q] += c[q] / 9;
+      }
+    const k = (j * nx + i) * 4;
+    for (let q = 0; q < 4; q++) out[k + q] = acc[q];
   }
   return out;
 }
