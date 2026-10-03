@@ -36,12 +36,22 @@ export interface ShadeOptions {
   lights: Light[]; // the room's lights at this surface (screen coords: y down, z towards viewer)
   ambient: number; // 0–1: how dark slopes facing away can get
   sheen: number; // satin paint highlight strength
+  view?: [number, number, number]; // towards the viewer's eye (screen coords), for the sheen
 }
 
 // Lambert shading over the room's lights, normalised so flat areas come out exactly their albedo,
 // plus a soft sheen on slopes turned towards the light.
+const SATIN = 8; // highlight tightness: broad, as on satin paper
+const SHEEN_SCALE = 0.35; // so the control's middle reads as a gentle satin, not glitter
+
 export function shade(height: Float32Array, w: number, h: number, o: ShadeOptions): Uint8ClampedArray {
   const flat = o.lights.reduce((s, l) => s + l.weight * l.dir[2], 0);
+  const view = o.view ?? [0, 0, 1], weightSum = o.lights.reduce((s, l) => s + l.weight, 0) || 1;
+  const halves = o.lights.map(({ dir, weight }) => {
+    const hx = dir[0] + view[0], hy = dir[1] + view[1], hz = dir[2] + view[2], hl = Math.hypot(hx, hy, hz) || 1;
+    const hv: [number, number, number] = [hx / hl, hy / hl, hz / hl];
+    return { h: hv, weight, flat: Math.max(0, hv[2]) ** SATIN };
+  });
   const out = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) {
     const up = ((y - 1 + h) % h) * w, down = ((y + 1) % h) * w;
@@ -55,7 +65,11 @@ export function shade(height: Float32Array, w: number, h: number, o: ShadeOption
       for (const { dir, weight } of o.lights) lambert += weight * Math.max(0, nx * dir[0] + ny * dir[1] + nz * dir[2]);
       lambert /= flat;
       const light = o.ambient + (1 - o.ambient) * lambert;
-      const spec = o.sheen * Math.max(0, lambert - 1) ** 2; // only slopes tilted toward the light
+      // Satin sheen: pebble faces turned toward the highlight direction (between each light and the
+      // eye) glint; counted above what flat paper shows, so the sheet doesn't brighten evenly.
+      let spec = 0;
+      if (o.sheen > 0) for (let k = 0; k < halves.length; k++) spec += halves[k].weight * Math.max(0, Math.max(0, nx * halves[k].h[0] + ny * halves[k].h[1] + nz * halves[k].h[2]) ** SATIN - halves[k].flat);
+      spec *= (SHEEN_SCALE * o.sheen) / weightSum;
       for (let c = 0; c < 3; c++) out[i * 4 + c] = o.albedo[i * 4 + c] * light + 255 * spec;
       out[i * 4 + 3] = 255;
     }
