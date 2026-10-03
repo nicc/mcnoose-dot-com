@@ -65,9 +65,12 @@ export function ledgeLight(lights: Light[]): number {
   return Math.max(0.5, Math.min(1.3, lit / flat));
 }
 
-// look: how the dust shows against what's under it — opacity of the clumps and fibres, haze (the
-// even film under them), tone (dark wood shows pale fluff that a pale-painted ledge hides).
-export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: number, band: number, amount: number, shade: number, lights: Light[], seed = 433, scale = 1, look = { opacity: 1, haze: 1, tone: 1 }) {
+// How dust shows: pale fluff — clumps and fibres strong, the even film under them light, the tone
+// lifted — so it reads as dust rather than murk. (Was the frame's alone; now every ledge's.)
+export const DUST_LOOK = { opacity: 2.6, haze: 0.5, tone: 1.4 };
+
+// look: opacity of the clumps and fibres, haze (the film under them), tone.
+export function drawDust(ctx: CanvasRenderingContext2D, originX: number, width: number, band: number, amount: number, shade: number, lights: Light[], seed = 433, scale = 1, look = DUST_LOOK) {
   if (amount <= 0) return;
   const opacity = look.opacity;
   const g = (20 + 200 * shade) * ledgeLight(lights) * look.tone;
