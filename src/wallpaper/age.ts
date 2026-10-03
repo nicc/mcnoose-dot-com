@@ -34,7 +34,7 @@ const STRIP_CM = 8; // each seam's canvas width
 const HALO_CM = 2.2; // how far the grime spreads from the frame's edge
 const STAIN_CELL_CM = 60;
 const AGED = [224, 204, 158], DIRT = [118, 104, 86], STAIN = [214, 186, 140], TIDE = [176, 146, 104];
-const PLASTER = [190, 181, 164], CORE = [236, 228, 210];
+const PLASTER = [190, 181, 164], CORE = [214, 204, 182]; // core: the paper's body, paler than its printed face but not white
 const SPREAD_SAMPLES = 9;
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
@@ -205,51 +205,78 @@ export function drawSeam(seamX: number, area: AgeArea, amount: number, s: SeamSt
   return canvas;
 }
 
-// Strips torn back to the plaster, starting at the seam, widest where they began and tapering,
-// with a jagged edge of torn fibres and the paper's pale core showing.
+// Strips torn back to the plaster, starting at the seam, widest where they began and tapering. The
+// torn edge is what sells it: a broken, uneven fringe of the paper's pale core (only along the torn
+// side, never the seam), toned near the paper, with a thin shadow only where the edge faces away
+// from the light. The plaster is stained with old paste towards the edge, a few fibres still on it.
 function tears(ctx: CanvasRenderingContext2D, k: number, area: AgeArea, amount: number, s: SeamStyle, scale: number, dpr: number, away: number, rowCm: (j: number) => number) {
   const cx = ctx.canvas.width / 2, py = (yCm: number) => (area.yTop - yCm) * scale;
   void rowCm;
+  const soft = 1 - s.sharpness;
   for (let seg = Math.floor(area.yBottom / SEG_CM); seg * SEG_CM < area.yTop; seg++) {
     if (hash2(k, seg, 341) >= 0.35 * s.tear * amount) continue;
     const side = hash2(k, seg, 342) < 0.5 ? -1 : 1, size = 0.5 + s.tear;
     const wT = (0.6 + 1.6 * hash2(k, seg, 316)) * size * scale, hT = (1.5 + 4.5 * hash2(k, seg, 317)) * size * scale;
     const top = py(seg * SEG_CM + SEG_CM * hash2(k, seg, 343)) - hT;
-    const path = new Path2D();
-    path.moveTo(cx, top);
-    const steps = 36;
+    // The torn edge, top (at the seam) to bottom (back at the seam).
+    const steps = 48, edge: [number, number][] = [[cx, top]];
     for (let i = 1; i < steps; i++) {
       const t = i / steps, width = Math.sin(Math.PI * t) ** 0.7 * (1 - 0.55 * t);
-      const ragged = 1 + 0.45 * fbm(i * 0.35, seg, 318 + k, 3) + 0.18 * s.sharpness * (hash2(i, seg, 322 + k) - 0.5);
-      path.lineTo(cx + side * wT * width * ragged, top + t * hT);
+      const ragged = 1 + 0.4 * fbm(i * 0.3, seg, 318 + k, 3) + (0.12 + 0.1 * s.sharpness) * (hash2(i, seg, 322 + k) - 0.5);
+      edge.push([cx + side * wT * width * ragged, top + t * hT]);
     }
-    path.lineTo(cx, top + hT);
+    edge.push([cx, top + hT]);
+    const path = new Path2D();
+    edge.forEach(([x, y], i) => (i ? path.lineTo(x, y) : path.moveTo(x, y)));
     path.closePath();
+
+    // Plaster, stained with paste towards the torn edge, a few fibres left on it.
     ctx.save();
-    ctx.fillStyle = `rgb(${PLASTER.join(',')})`;
-    ctx.fill(path);
     ctx.clip(path);
-    for (let i = 0; i < 90; i++) {
-      const r = (0.04 + 0.14 * hash2(i, seg, 324)) * scale; // mottling: old grime and paste
-      ctx.fillStyle = `rgba(120,108,88,${(0.04 + 0.08 * hash2(i, seg, 319)).toFixed(2)})`;
+    const tone = 0.94 + 0.08 * hash2(k, seg, 344);
+    ctx.fillStyle = `rgb(${PLASTER.map((c) => Math.round(c * tone)).join(',')})`;
+    ctx.fillRect(cx - wT * 1.5, top, wT * 3, hT);
+    for (let i = 0; i < 70; i++) {
+      const r = (0.04 + 0.12 * hash2(i, seg, 324)) * scale;
+      ctx.fillStyle = `rgba(120,108,88,${(0.03 + 0.06 * hash2(i, seg, 319)).toFixed(2)})`;
       ctx.beginPath();
       ctx.arc(cx + side * wT * hash2(i, seg, 320), top + hT * hash2(i, seg, 321), r, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.restore();
-    // Paper thickness: a shadow on the plaster, then the torn core. Softer edges spread wider, fainter.
-    const soft = 1 - s.sharpness;
-    ctx.save();
-    ctx.translate(away * dpr * 0.8, dpr * 0.6);
-    ctx.strokeStyle = `rgba(40,30,20,${(0.35 - 0.15 * soft).toFixed(2)})`;
-    ctx.lineWidth = dpr * (1 + 1.5 * soft);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(150,120,80,0.16)'; // old paste: a brownish margin inside the edge
+    ctx.lineWidth = (0.25 + 0.2 * soft) * scale;
     ctx.stroke(path);
+    for (let i = 0; i < 14; i++) {
+      const [ex, ey] = edge[1 + Math.floor(hash2(i, seg, 345) * (steps - 2))]; // fibres still stuck near the edge
+      ctx.fillStyle = `rgba(${CORE.join(',')},${(0.25 + 0.3 * hash2(i, seg, 346)).toFixed(2)})`;
+      ctx.fillRect(ex - side * (0.05 + 0.15 * hash2(i, seg, 347)) * scale, ey, 0.6 * dpr, (0.05 + 0.1 * hash2(i, seg, 348)) * scale);
+    }
     ctx.restore();
-    ctx.save();
-    ctx.strokeStyle = `rgba(${CORE.join(',')},${(0.85 - 0.4 * soft).toFixed(2)})`;
-    ctx.lineWidth = dpr * (0.6 + 1.4 * soft);
-    ctx.stroke(path);
-    ctx.restore();
+
+    // The torn edge, a piece at a time: broken, uneven, never along the seam.
+    ctx.lineCap = 'round';
+    for (let i = 1; i < edge.length - 2; i++) {
+      const [x0, y0] = edge[i], [x1, y1] = edge[i + 1];
+      const n = fbm(i * 0.45, seg * 1.3, 349 + k, 2) + 0.5; // 0–1 along the edge
+      const nx = y1 - y0, ny = -(x1 - x0), nl = Math.hypot(nx, ny) || 1; // edge normal
+      const facesAway = (side * nx) / nl * away > 0; // this bit of edge faces away from the light
+      if (facesAway) {
+        ctx.strokeStyle = `rgba(40,30,20,${(0.12 + 0.1 * n).toFixed(2)})`;
+        ctx.lineWidth = dpr * (0.6 + 0.8 * soft);
+        ctx.beginPath();
+        ctx.moveTo(x0 + away * dpr * 0.7, y0 + dpr * 0.4);
+        ctx.lineTo(x1 + away * dpr * 0.7, y1 + dpr * 0.4);
+        ctx.stroke();
+      }
+      if (n < 0.35) continue; // the core shows only in places
+      ctx.strokeStyle = `rgba(${CORE.join(',')},${((0.25 + 0.4 * (n - 0.35)) * (1 - 0.35 * soft)).toFixed(2)})`;
+      ctx.lineWidth = dpr * (0.35 + 1.1 * (n - 0.35)) * (1 + soft);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
   }
 }
 
