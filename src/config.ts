@@ -152,7 +152,7 @@ export const CONFIG = {
 
   // Dado rail: painted wooden trim capping the tiles. Geometry in cm.
   RAIL_COLOR: '#dbd6cb',
-  RAIL_DEPTH_CM: 1.8, // how far it stands off the wall
+  RAIL_DEPTH_CM: 1.8, // how far it stands off the wall; beyond RAIL_ROUND_CM its flat top shows as a ledge above the round
   RAIL_ROUND_CM: 1.45, // rounded top, falling back to the wall
   RAIL_BEAD_CM: 0.6, // routed bead below the round
   RAIL_COVE_CM: 0.1, // cove stepping back to the face

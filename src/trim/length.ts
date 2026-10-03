@@ -20,7 +20,7 @@ export interface TrimStyle {
   wear: number;
   grime: number;
   scuffs?: { amount: number; low: number; faceTopCm: number }; // knocks on the flat face (skirting; see scuffs.ts)
-  ledgeCm?: number; // the top ledge seen from above, foreshortened (skirting): drawn above the profile
+  ledgeCm?: number; // the top ledge seen from above, foreshortened (rail, skirting): drawn above the profile
 }
 
 // Pine under the paint: only its ring relief matters once painted.

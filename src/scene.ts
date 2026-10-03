@@ -135,8 +135,17 @@ function nail(frameH: number, drop: number, room: Room, ppc: number): HTMLElemen
 // the wall. The rail stands proud of the tiles and casts a soft shadow onto the top row.
 const railDims = (c: Config): RailDims => ({ depthCm: c.RAIL_DEPTH_CM, roundCm: c.RAIL_ROUND_CM, beadCm: c.RAIL_BEAD_CM, coveCm: c.RAIL_COVE_CM, flatCm: c.RAIL_FLAT_CM });
 const skirtingDims = (c: Config): SkirtingDims => ({ depthCm: c.SKIRTING_DEPTH_CM, torusCm: c.SKIRTING_TORUS_CM, reliefCm: c.SKIRTING_RELIEF_CM, flatCm: c.SKIRTING_FLAT_CM });
-const railHeight = (c: Config, tile: number) => railProfile(railDims(c)).heightCm * (tile / c.ROOM_TILE_CM);
 const TILE_FACE_CM = 0.9; // tile faces stand this far off the wall
+// From eye height you look down onto a trim's top: the ledge from where its front rounds over back
+// to whatever hides it (`behindCm` off the wall: the tile face, or the wall itself above the rail),
+// foreshortened by the view angle. It's what a deep board's thickness looks like.
+function ledgeCm(c: Config, a: Anchor, topExtra: number, top: number, profile: Profile, behindCm: number): number {
+  const view = viewAt(roomFromConfig(c), wallPoint(wallMap(c, a, topExtra), { x: a.centreX, y: top }));
+  return (Math.max(0, profile.topDepthCm - behindCm) * Math.max(0, -view[1])) / view[2];
+}
+const railTop = (c: Config, a: Anchor, topExtra: number) => topExtra + c.HEADER_HEIGHT * a.tile;
+const railLedgeCm = (c: Config, a: Anchor, topExtra: number) => ledgeCm(c, a, topExtra, railTop(c, a, topExtra), railProfile(railDims(c)), 0);
+const railHeight = (c: Config, a: Anchor, topExtra: number) => (railProfile(railDims(c)).heightCm + railLedgeCm(c, a, topExtra)) * (a.tile / c.ROOM_TILE_CM);
 // The well-fitted joints where the tiles meet the rail and the skirting: a fine caulked line.
 const edgeJoint = (c: Config, tile: number) => c.GROUT_EDGE_CM * (tile / c.ROOM_TILE_CM);
 
@@ -170,9 +179,10 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
 
 function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
-  const top = topExtra + c.HEADER_HEIGHT * a.tile;
+  const top = railTop(c, a, topExtra);
   const profile = railProfile(railDims(c));
-  const style: TrimStyle = { profile, colour: hexToRgb(c.RAIL_COLOR), paint: paintOf(c), wear: c.RAIL_WEAR, grime: c.RAIL_GRIME };
+  // Its ledge runs back to the wall: nothing hides it.
+  const style: TrimStyle = { profile, colour: hexToRgb(c.RAIL_COLOR), paint: paintOf(c), wear: c.RAIL_WEAR, grime: c.RAIL_GRIME, ledgeCm: railLedgeCm(c, a, topExtra) };
   const { strip, h } = paintedStrip('rail', c, vp, a, topExtra, top, style, c.RAIL_DUST);
   const row = el('div', 'rail');
   row.style.height = `${h}px`;
@@ -188,14 +198,11 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
   return row;
 }
 
-// The skirting along the floor, directly below the last row of tiles; the page ends with it.
-// From eye height you look down onto its top: the ledge between the tile face and where the board
-// rounds over, foreshortened by the view angle — what its thickness looks like.
+// The skirting along the floor, directly below the last row of tiles; the page ends with it. Its
+// ledge runs back to the tile face, which hides the rest.
 function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number): HTMLElement {
-  const room = roomFromConfig(c), view = viewAt(room, wallPoint(wallMap(c, a, topExtra), { x: a.centreX, y: top }));
   const profile = skirtingProfile(skirtingDims(c));
-  const ledgeCm = (Math.max(0, profile.topDepthCm - TILE_FACE_CM) * Math.max(0, -view[1])) / view[2];
-  const style: TrimStyle = { profile, colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, ledgeCm,
+  const style: TrimStyle = { profile, colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, ledgeCm: ledgeCm(c, a, topExtra, top, profile, TILE_FACE_CM),
     scuffs: { amount: c.SKIRTING_SCUFFS, low: c.SKIRTING_SCUFF_LOW, faceTopCm: profile.heightCm - c.SKIRTING_FLAT_CM } };
   // Below the fold on load: painted when the browser is idle, or as it nears the screen.
   const below = top > scrollY + vp.height + SKIRTING_EARLY_PX;
@@ -385,7 +392,7 @@ const wallMap = (c: Config, a: Anchor, topExtra: number): WallMap => {
 function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile);
   const map = wallMap(c, a, topExtra);
-  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
+  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a, topExtra) + edgeJoint(c, a.tile);
   const base = hexToRgb(c.TILE_COLOR);
   const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
   return (row, col) => {
@@ -619,7 +626,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
   reflectSceneKey = JSON.stringify([reflectScene, c.TILE_TILT_DEG, c.TILE_WAVINESS, c.TILE_REFLECTION]);
   beginSurfaces(wallMap(c, a, topExtra)); // wipeable canvases register as they're placed
-  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a.tile) + edgeJoint(c, a.tile);
+  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a, topExtra) + edgeJoint(c, a.tile);
   const rows = wallRows(projects.length, a, cols.full.length, c.TRAILING_ROWS);
   const skirtingTop = firstTileTop + rows * a.pitch - c.GROUT_PX + edgeJoint(c, a.tile);
   root.replaceChildren(
