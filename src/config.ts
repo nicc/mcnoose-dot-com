@@ -109,8 +109,8 @@ export const CONFIG = {
   EMBROIDERY_SWING_DAMPING: 0.3, // let go, it swings back: 0 = swings on and on, 1 = settles without swinging
   EMBROIDERY_SWING_STICK_DEG: 2.5, // how far off its rest the hanger's friction can hold it
   EMBROIDERY_BRUSH: true, // the mouse brushing onto the frame nudges it, as if it held it for a moment
-  EMBROIDERY_BRUSH_MS: 20, // how long that moment is: longer, a bigger nudge
-  EMBROIDERY_BRUSH_RATIO: 4, // mouse movement per unit of frame movement while brushing: 1 = follows the pointer, 100 = barely moves
+  EMBROIDERY_BRUSH_MS: 5, // how long that moment is: longer, a bigger nudge
+  EMBROIDERY_BRUSH_RATIO: 100, // mouse movement per unit of frame movement while brushing: 1 = follows the pointer, 100 = barely moves
   EMBROIDERY_FALL: true, // experiment: let go (or swung) past EMBROIDERY_FALL_DEG, it falls off the wall
   EMBROIDERY_FALL_DEG: 40, // the angle past which it slips off its nail
   EMBROIDERY_FALL_GRAVITY: 0.63, // 1 = real gravity at the room's scale; lower = slow motion
@@ -192,8 +192,8 @@ export const CONFIG = {
 
   // Tiles: ageing (crazing, dried water marks)
   TILE_CRAZING: 0.26, // hairline crack network in the old glaze
-  TILE_SPOTS: 0.12, // dried water marks on tiles high up
-  TILE_SPOTS_LOW: 0.6, // … and on the bottom row
+  TILE_SPOTS: 0.62, // dried water marks on tiles high up
+  TILE_SPOTS_LOW: 0.47, // … and on the bottom row
   TILE_LIMESCALE: 0.7, // limescale reached on the bottom row
   TILE_GRIME_ROWS: 5, // how many rows up from the skirting the marks build
 
