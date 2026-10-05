@@ -61,6 +61,7 @@ npm run dev        # with the tweak panel
 npm test
 npm run test:e2e
 npm run shots      # screenshots of the wall and each tile, in shots/
+npm run readme:wall  # the picture at the top of this README
 npm run build
 ```
 

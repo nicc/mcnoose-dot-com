@@ -11,6 +11,7 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "shots": "node scripts/shots.ts",
+    "readme:wall": "node scripts/readme-wall.ts",
     "prepare:wallpaper": "node scripts/prepare-wallpaper.ts"
   },
   "devDependencies": {

@@ -66,7 +66,7 @@ Dots come from the `halftone-print` package (our own: ~/source/play/halftone-pri
 Chrome, Firefox, Safari on desktop and mobile, always. Check support before using new CSS/JS. `npm run test:e2e` covers chromium/firefox/webkit + Pixel/iPhone emulation; Playwright WebKit ≠ real iOS Safari.
 
 ## Commands
-`npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build` · `node scripts/profile.ts [mobile]` (load / idle / scroll / window-drag CPU profile) · `npm run build && node scripts/loadtime.ts` (production load times: desktop, phone on fast/slow 4G)
+`npm run dev` (with tweak panel) · `npm test` · `npm run test:e2e` · `npm run shots` · `npm run build` · `npm run readme:wall` (README picture) · `node scripts/profile.ts [mobile]` (load / idle / scroll / window-drag CPU profile) · `npm run build && node scripts/loadtime.ts` (production load times: desktop, phone on fast/slow 4G)
 
 ## Performance
 First load paints wallpaper and tiles first: on-screen rail lengths and the sampler front are `soon` jobs (later.ts) run just after the first paint (rail shows as plain paint, sampler fades in); `data-printed` waits for them. Later redraws are immediate.
