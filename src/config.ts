@@ -209,7 +209,7 @@ export const CONFIG = {
   PRINT_COLOR: '#26c1ed', // hazy transfer-print blue
   PRINT_HOVER_REVEAL: false, // hover shows the original logo
   PRINT_HOVER_FADE_MS: 350, // how fast it opens out from the logo's centre
-  TILE_LOGO_SIZE: 0.32,
+  TILE_LOGO_SIZE: 0.45,
   TILE_TITLE_SIZE: 0.075,
   TILE_TITLE_GAP: 0.06,
   TILE_TITLE_FONT: 'Georgia, serif',
