@@ -1,6 +1,7 @@
 [
   { "title": "Synesthetica", "url": "https://mcnoose.com/synesthetica/", "logo": "synesthetica.png" },
   { "title": "Hackney Tree Map", "url": "https://mcnoose.com/hackney-tree-map/", "logo": "hackney-tree-map.svg" },
+  { "title": "colourEncode :: String -> [Colour]", "url": "https://mcnoose.com/colour-encode/", "logo": "colour-encode.svg" },
   { "title": "Solid Mark", "url": "#", "logo": "solid-mark.svg" },
   { "title": "Line Weights", "url": "#", "logo": "fine-lines.svg" },
   { "title": "Tone Sphere", "url": "#", "logo": "gradient-sphere.svg" },
