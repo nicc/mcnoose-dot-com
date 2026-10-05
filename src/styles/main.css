@@ -433,14 +433,19 @@ body {
   to { opacity: 0; }
 }
 
-/* Hover (and keyboard focus), when PRINT_HOVER_REVEAL is on: the print and the original logo
-   crossfade evenly over the whole tile, both ways, starting the moment the pointer arrives or leaves.
-   Not on touch screens, where a tap simply opens the link. */
+/* Hover (and keyboard focus), when PRINT_HOVER_REVEAL is on: the original logo fades in evenly over
+   the whole tile, and back out, starting the moment the pointer arrives or leaves. Only the clean
+   layer (on top) fades; the print under it stays opaque, so the two never both go see-through midway
+   (which flashed the tile through, brighter). The print drops out once the logo covers it, and
+   is back before the logo starts to go: its halftone fringe never shows around the clean edges. */
 .tile-ink,
 .tile-clean {
   position: absolute;
   inset: 0;
-  transition: opacity var(--hover-fade) ease-out;
+}
+
+.tile-ink {
+  transition: opacity calc(var(--hover-fade) * 0.05) linear; /* unhover: under the still-opaque logo */
 }
 
 .tile-clean {
@@ -449,6 +454,7 @@ body {
   pointer-events: none;
   display: none;
   opacity: 0;
+  transition: opacity var(--hover-fade) ease-out;
 }
 
 [data-reveal] .tile-clean {
@@ -458,6 +464,7 @@ body {
 @media (hover: hover) {
   [data-reveal] .tile-project:hover .tile-ink {
     opacity: 0;
+    transition: opacity calc(var(--hover-fade) * 0.3) linear calc(var(--hover-fade) * 0.7);
   }
 
   [data-reveal] .tile-project:hover .tile-clean {
@@ -467,6 +474,7 @@ body {
 
 [data-reveal] .tile-project:focus-visible .tile-ink {
   opacity: 0;
+  transition: opacity calc(var(--hover-fade) * 0.3) linear calc(var(--hover-fade) * 0.7);
 }
 
 [data-reveal] .tile-project:focus-visible .tile-clean {
