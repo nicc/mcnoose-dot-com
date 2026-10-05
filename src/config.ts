@@ -243,6 +243,7 @@ export const CONFIG = {
   WIPE_LIMESCALE_STUBBORN: 0.6, // 0 = one pass clears it, towards 1 = rub and rub
 
   // Work-in-progress notice, shown once per browser
+  NOTICE_SHOW: false, // the "still being built" notice, once per browser
   NOTICE_COLOR: '#f7f1e3', // soft cream card
   NOTICE_INK: '#4a4237',
 };

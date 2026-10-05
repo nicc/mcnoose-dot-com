@@ -167,7 +167,7 @@ const watchDensity = () =>
   }, { once: true });
 watchDensity();
 startWiping(() => state);
-showNotice();
+if (state.NOTICE_SHOW) showNotice();
 
 // No event fires when a window moves, so watch its screen position each frame.
 // data-pin tells tests when the smoothed position has caught up.

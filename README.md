@@ -24,7 +24,7 @@ Every value that shapes the scene is a constant in `src/config.ts`, about 200 of
 
 ### Generating the site
 
-`npm run build` produces a single `index.html` with everything inlined, beside `projects.json` and `logos/`. The wallpaper is expensive to render, so it's baked at build time: the scanned pattern is recoloured ink by ink, embossed, and lit with the configured values.
+`npm run build` produces a single `index.html` with everything inlined, beside `projects.json` and `logos/`. The wallpaper is expensive to render, so it's baked at build time. The scanned pattern is recoloured ink by ink, embossed, and lit with the configured values.
 
 ### Keeping the simulation in the page
 
