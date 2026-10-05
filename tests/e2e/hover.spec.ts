@@ -9,7 +9,7 @@ test('project links open in a new tab', async ({ page }) => {
   await expect(link).toHaveAttribute('rel', /noopener/);
 });
 
-test('hovering a project tile opens the original logo out from its centre (when PRINT_HOVER_REVEAL is on)', async ({ page, isMobile }) => {
+test('hovering a project tile crossfades to the original logo and back (when PRINT_HOVER_REVEAL is on)', async ({ page, isMobile }) => {
   test.skip(isMobile, 'no hover on touch');
   await page.goto('/');
   await page.waitForSelector('html[data-printed="true"]');
@@ -22,23 +22,25 @@ test('hovering a project tile opens the original logo out from its centre (when 
     return n;
   });
   expect(inked).toBeGreaterThan(500);
-  const reveal = () => tile.evaluate((t) => parseFloat(getComputedStyle(t).getPropertyValue('--reveal')));
-  expect(await reveal()).toBe(0);
+  const opacity = (part: string) => () => tile.locator(part).evaluate((e) => parseFloat(getComputedStyle(e).opacity));
+  const clean = opacity('.tile-clean'), ink = opacity('.tile-ink');
+  expect(await clean()).toBe(0);
+  expect(await ink()).toBe(1);
   await tile.hover();
   if (!CONFIG.PRINT_HOVER_REVEAL) {
     await page.waitForTimeout(CONFIG.PRINT_HOVER_FADE_MS + 100);
-    expect(await reveal()).toBe(0); // toggled off: the print stays
+    expect(await clean()).toBe(0); // toggled off: the print stays
     return;
   }
-  await expect.poll(reveal).toBe(120); // opened out past the corners
+  await expect.poll(clean).toBe(1);
+  await expect.poll(ink).toBe(0);
   await page.mouse.move(5, 5);
-  await expect.poll(reveal).toBe(0);
-});
-
-test('the reveal opens from the logo, not the tile centre', async ({ page }) => {
-  await page.goto('/');
-  await page.waitForSelector('.skirting');
-  const y = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--logo-y')));
-  expect(y).toBeGreaterThan(30);
-  expect(y).toBeLessThan(50); // the logo sits above the title
+  // The fade back starts at once: a running transition by the next frame, nothing holding it back.
+  const fading = await tile.locator('.tile-clean').evaluate(async (e) => {
+    await new Promise((r) => requestAnimationFrame(r));
+    return e.getAnimations().some((a) => a.playState === 'running' && Number(a.effect?.getTiming().delay) === 0);
+  });
+  expect(fading).toBe(true);
+  await expect.poll(clean).toBe(0);
+  await expect.poll(ink).toBe(1);
 });

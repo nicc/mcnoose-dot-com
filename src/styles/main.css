@@ -433,25 +433,14 @@ body {
   to { opacity: 0; }
 }
 
-/* Hover (and keyboard focus), when PRINT_HOVER_REVEAL is on: the original logo opens out from its
-   own centre (--logo-y) while the print
-   recedes, a soft-edged circle growing to the corners (--reveal: 0% → past the farthest corner).
+/* Hover (and keyboard focus), when PRINT_HOVER_REVEAL is on: the print and the original logo
+   crossfade evenly over the whole tile, both ways, starting the moment the pointer arrives or leaves.
    Not on touch screens, where a tap simply opens the link. */
-@property --reveal {
-  syntax: '<percentage>';
-  inherits: true;
-  initial-value: 0%;
-}
-
-.tile-project {
-  --reveal: 0%;
-  transition: --reveal var(--hover-fade) ease-out;
-}
-
 .tile-ink,
 .tile-clean {
   position: absolute;
   inset: 0;
+  transition: opacity var(--hover-fade) ease-out;
 }
 
 .tile-clean {
@@ -459,29 +448,29 @@ body {
   height: 100%;
   pointer-events: none;
   display: none;
-}
-
-/* Only when the reveal is on: no masks otherwise. Stops never go below 0: iOS Safari collapsed the
-   at-rest gradient (stops at −20% and 0%) to a point, leaving one dot of ink per print. */
-[data-reveal] .tile-ink {
-  -webkit-mask-image: radial-gradient(circle at 50% var(--logo-y), transparent max(0%, calc(var(--reveal) - 20%)), #000 max(0.1%, var(--reveal)));
-  mask-image: radial-gradient(circle at 50% var(--logo-y), transparent max(0%, calc(var(--reveal) - 20%)), #000 max(0.1%, var(--reveal)));
+  opacity: 0;
 }
 
 [data-reveal] .tile-clean {
   display: block;
-  -webkit-mask-image: radial-gradient(circle at 50% var(--logo-y), #000 max(0%, calc(var(--reveal) - 20%)), transparent max(0.1%, var(--reveal)));
-  mask-image: radial-gradient(circle at 50% var(--logo-y), #000 max(0%, calc(var(--reveal) - 20%)), transparent max(0.1%, var(--reveal)));
 }
 
 @media (hover: hover) {
-  [data-reveal] .tile-project:hover {
-    --reveal: 120%;
+  [data-reveal] .tile-project:hover .tile-ink {
+    opacity: 0;
+  }
+
+  [data-reveal] .tile-project:hover .tile-clean {
+    opacity: 1;
   }
 }
 
-[data-reveal] .tile-project:focus-visible {
-  --reveal: 120%;
+[data-reveal] .tile-project:focus-visible .tile-ink {
+  opacity: 0;
+}
+
+[data-reveal] .tile-project:focus-visible .tile-clean {
+  opacity: 1;
 }
 
 .tile-title {
