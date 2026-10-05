@@ -6,18 +6,34 @@
 const jobs = new Map<string, () => void>();
 let queued = false;
 
-const idle: (fn: () => void) => void = 'requestIdleCallback' in window
-  ? (fn) => window.requestIdleCallback(fn, { timeout: 1500 })
-  : (fn) => setTimeout(fn, 400); // Safari has no requestIdleCallback
+// Calls fn with `more`: whether there's idle time left after a job. Safari has no
+// requestIdleCallback: one job per timeout there, the first after a pause, the rest a few frames apart.
+const idle: (fn: (more: () => boolean) => void, again: boolean) => void = 'requestIdleCallback' in window
+  ? (fn) => window.requestIdleCallback((d) => fn(() => d.timeRemaining() > 0), { timeout: 1500 })
+  : (fn, again) => setTimeout(() => fn(() => false), again ? 50 : 400);
 
 export function later(key: string, job: () => void): void {
   jobs.set(key, job);
-  if (queued) return;
+  schedule();
+}
+
+// Run waiting jobs while the browser stays idle (at least one per call), the rest next time, so a
+// pile of them (trim lengths queued during a window drag) never blocks a frame all at once.
+function schedule(again = false): void {
+  if (queued || !jobs.size) return;
   queued = true;
-  idle(() => {
+  idle((more) => {
     queued = false;
-    flush();
-  });
+    try {
+      for (const [k, job] of jobs) {
+        jobs.delete(k);
+        job();
+        if (!more()) break;
+      }
+    } finally {
+      schedule(true);
+    }
+  }, again);
 }
 
 // Run what's waiting: all of it, or only the jobs whose key starts with `prefix`.
