@@ -433,19 +433,27 @@ body {
   to { opacity: 0; }
 }
 
-/* Hover (and keyboard focus), when PRINT_HOVER_REVEAL is on: the original logo fades in evenly over
-   the whole tile, and back out, starting the moment the pointer arrives or leaves. Only the clean
-   layer (on top) fades; the print under it stays opaque, so the two never both go see-through midway
-   (which flashed the tile through, brighter). The print drops out once the logo covers it, and
-   is back before the logo starts to go: its halftone fringe never shows around the clean edges. */
+/* Hover (and keyboard focus), when PRINT_HOVER_REVEAL is on: the print and the original logo
+   crossfade evenly over the whole tile, starting the moment the pointer arrives or leaves.
+   A true crossfade: inside the isolated .tile-art group the clean logo is added (plus-lighter) to the
+   fading print, so where both have ink the sum stays opaque (no midway lift where the tile shows
+   through), and where only the print's soft halftone fringe is, it fades with the print. The group is
+   multiplied onto the glaze, as the print alone was. Not on touch screens, where a tap opens the link. */
+.tile-art,
 .tile-ink,
 .tile-clean {
   position: absolute;
   inset: 0;
 }
 
-.tile-ink {
-  transition: opacity calc(var(--hover-fade) * 0.05) linear; /* unhover: under the still-opaque logo */
+.tile-art {
+  isolation: isolate;
+  mix-blend-mode: multiply;
+}
+
+.tile-ink,
+.tile-clean {
+  transition: opacity var(--hover-fade) ease-out;
 }
 
 .tile-clean {
@@ -454,7 +462,7 @@ body {
   pointer-events: none;
   display: none;
   opacity: 0;
-  transition: opacity var(--hover-fade) ease-out;
+  mix-blend-mode: plus-lighter;
 }
 
 [data-reveal] .tile-clean {
@@ -464,7 +472,6 @@ body {
 @media (hover: hover) {
   [data-reveal] .tile-project:hover .tile-ink {
     opacity: 0;
-    transition: opacity calc(var(--hover-fade) * 0.3) linear calc(var(--hover-fade) * 0.7);
   }
 
   [data-reveal] .tile-project:hover .tile-clean {
@@ -474,7 +481,6 @@ body {
 
 [data-reveal] .tile-project:focus-visible .tile-ink {
   opacity: 0;
-  transition: opacity calc(var(--hover-fade) * 0.3) linear calc(var(--hover-fade) * 0.7);
 }
 
 [data-reveal] .tile-project:focus-visible .tile-clean {

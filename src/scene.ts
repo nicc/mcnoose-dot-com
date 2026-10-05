@@ -393,7 +393,7 @@ function projectTile(c: Config, tile: number, p: Project, slot: string, now: num
   const arrived = arrivals.get(projectId(p));
   if (arrived !== undefined && fading(pr.canvas, arrived, now, c.REFLOW_FADE_MS)) a.classList.add('tile-arrive');
   const title = el('span', 'tile-title sr-only', [document.createTextNode(p.title)]);
-  a.append(el('div', 'tile-ink', [pr.canvas]), pr.clean, title);
+  a.append(el('div', 'tile-art', [el('div', 'tile-ink', [pr.canvas]), pr.clean]), title);
   pending.push(pr.done.then((ok) => ok || title.classList.remove('sr-only'))); // plain-text fallback
   return a;
 }
@@ -570,7 +570,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
 
 // The grid as last built, so a window move can re-flow projects without rebuilding the scene.
 let built: { c: Config; a: Anchor; rows: number; projects: Project[]; tiles: Map<string, HTMLElement> } | undefined;
-const PROJECT_PARTS = ['tile-ink', 'tile-clean', 'tile-title'];
+const PROJECT_PARTS = ['tile-art', 'tile-title'];
 
 // A window move changed which tiles fully show: move the projects (their cached prints) to the tiles
 // that now qualify, crossfading as any re-flow does, keeping every tile's own layers (reflection,
