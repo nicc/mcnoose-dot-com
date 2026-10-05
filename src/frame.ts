@@ -7,7 +7,9 @@
 // physical pendulum, its period from its real size), damped, with the sawtooth's friction able to
 // hold it a little off its resting tilt. While it moves, the glass reflection holds still on screen;
 // the frame's own lighting turns with it once it settles. With EMBROIDERY_FALL on, past
-// EMBROIDERY_FALL_DEG and not held, it slips off its nail (fall.ts).
+// EMBROIDERY_FALL_DEG and not held, it slips off its nail (fall.ts). With EMBROIDERY_BRUSH, the mouse
+// arriving on it nudges it: for EMBROIDERY_BRUSH_MS the pointer turns it as a drag would (geared down by
+// EMBROIDERY_BRUSH_RATIO), then lets go.
 import type { Config } from './config';
 import { drawPending, turnReflection } from './embroidery';
 import { fall } from './fall';
@@ -131,17 +133,47 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
   };
   let press: { id: number; x: number; y: number; from: number; touch: boolean; armed: boolean; turning: boolean; moved: number; timer?: number } | undefined;
   let trail: { t: number; tilt: number }[] = []; // recent tilts, for the speed it's let go at
-  const turnTo = (x: number, y: number) => {
-    const n = nail(), p = press!;
+  const turnTo = (x: number, y: number, p: { x: number; y: number; from: number } = press!, gearing = 1) => {
+    const n = nail();
     const delta = Math.atan2(y - n.y, x - n.x) - Math.atan2(p.y - n.y, p.x - n.x);
-    live = Math.max(-MAX_HELD, Math.min(MAX_HELD, p.from + delta / DEG));
+    live = Math.max(-MAX_HELD, Math.min(MAX_HELD, p.from + delta / DEG / gearing));
     const t = performance.now();
     trail = [...trail.filter((s) => t - s.t < 80), { t, tilt: live }];
     show(live);
   };
 
+  const size = () => {
+    const r = box();
+    return { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm, dropCm: drop() / pxPerCm };
+  };
+  const letGo = () => {
+    const [a, b] = [trail[0], trail[trail.length - 1]];
+    const thrown = a && b && b.t > a.t ? ((b.tilt - a.tilt) / (b.t - a.t)) * 1000 : 0;
+    swing(live ?? frameTilt(c), Math.max(-MAX_THROW, Math.min(MAX_THROW, thrown)), c, size(), pxPerCm);
+  };
+
+  // A brush: the mouse arriving on the frame (no button down, the frame at rest) holds it for a moment.
+  let brush: { x: number; y: number; from: number; timer: number } | undefined;
+  const brushMove = (e: PointerEvent) => brush && e.pointerType === 'mouse' && turnTo(e.clientX, e.clientY, brush, Math.max(1, c.EMBROIDERY_BRUSH_RATIO));
+  const endBrush = () => {
+    if (!brush) return;
+    clearTimeout(brush.timer);
+    brush = undefined;
+    window.removeEventListener('pointermove', brushMove);
+    if (live !== undefined) letGo();
+    else moving(false);
+  };
+  frame.addEventListener('pointerenter', (e) => {
+    if (!c.EMBROIDERY_BRUSH || e.pointerType !== 'mouse' || e.buttons || press || brush || live !== undefined) return;
+    moving(true);
+    trail = [];
+    brush = { x: e.clientX, y: e.clientY, from: frameTilt(c), timer: window.setTimeout(endBrush, c.EMBROIDERY_BRUSH_MS) };
+    window.addEventListener('pointermove', brushMove);
+  });
+
   frame.addEventListener('pointerdown', (e) => {
     if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    endBrush(); // a press takes over from a brush
     const touch = e.pointerType !== 'mouse';
     cancelAnimationFrame(swinging); // catch it mid-swing
     moving(true);
@@ -169,11 +201,7 @@ export function bindFrame(frame: HTMLElement, card: HTMLElement, back: HTMLEleme
     clearTimeout(p.timer);
     frame.classList.remove('held');
     if (p.turning || live !== undefined) {
-      const [a, b] = [trail[0], trail[trail.length - 1]];
-      const thrown = a && b && b.t > a.t ? ((b.tilt - a.tilt) / (b.t - a.t)) * 1000 : 0;
-      const omega = Math.max(-MAX_THROW, Math.min(MAX_THROW, thrown));
-      const r = box();
-      swing(live ?? frameTilt(c), omega, c, { wCm: r.width / pxPerCm, hCm: r.height / pxPerCm, dropCm: drop() / pxPerCm }, pxPerCm);
+      letGo();
       if (!p.turning && !cancelled && p.moved <= SLOP_PX && !(e.target as Element).closest('a')) flip(); // caught mid-swing and tapped
     } else {
       moving(false); // a click or tap: it never moved

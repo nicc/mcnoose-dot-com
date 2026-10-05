@@ -62,3 +62,31 @@ test('let go at a steep angle, it swings back and settles near where it hangs', 
   await page.waitForSelector('html[data-rendered-width="1180"]');
   expect(await tiltOf(page)).toBeCloseTo(left, 3);
 });
+
+test('the mouse brushing onto the frame nudges it, then it settles (EMBROIDERY_BRUSH)', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  await page.goto('/');
+  await page.waitForSelector('.skirting');
+  const rest = await tiltOf(page);
+  const n = await nailOf(page), x = n.x - n.w * 0.45, y = n.y + n.h * 0.9;
+  // The real cursor just beside it: Firefox synthesises moves at the real cursor when the page changes.
+  await page.mouse.move(x - 12, y);
+  await page.waitForTimeout(100);
+  // The pointer arriving on the frame's lower edge and moving on, within the brush's moment. Dispatched
+  // directly: real move timing under test load can miss a window this short.
+  await page.evaluate(({ x, y }) => {
+    const opts = (cx: number) => ({ pointerType: 'mouse', isPrimary: true, clientX: cx, clientY: y, buttons: 0, bubbles: true });
+    document.querySelector('.frame')!.dispatchEvent(new PointerEvent('pointerenter', { ...opts(x), bubbles: false }));
+    for (const dx of [10, 20, 30]) window.dispatchEvent(new PointerEvent('pointermove', opts(x + dx)));
+  }, { x, y });
+  if (!CONFIG.EMBROIDERY_BRUSH) {
+    await page.waitForTimeout(300);
+    expect(await tiltOf(page)).toBe(rest);
+    return;
+  }
+  // Turned by the pointer's sweep about the nail, geared down by the brush ratio (then swinging)
+  await expect.poll(async () => Math.abs((await tiltOf(page)) - rest)).toBeGreaterThan(0.01);
+  await page.waitForSelector('html[data-frame="still"]', { timeout: 15000 });
+  expect(Math.abs((await tiltOf(page)) - rest)).toBeLessThan(CONFIG.EMBROIDERY_SWING_STICK_DEG + 0.5); // a nudge, not a throw
+  await expect(page.locator('.frame-card')).not.toHaveClass(/flipped/);
+});
