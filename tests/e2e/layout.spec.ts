@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 import { CONFIG } from '../../src/config';
+import { fixtureProjects as projects, serveFixtures } from './fixture-projects';
 
-const projects: { title: string }[] = JSON.parse(readFileSync(new URL('../../public/projects.json', import.meta.url), 'utf8'));
+// Layout is tested on a fixed set of projects, enough to fill more than a row, whatever the real list holds.
+test.beforeEach(({ page }) => serveFixtures(page));
 
 const SIZES = [
   { width: 390, height: 844 },
