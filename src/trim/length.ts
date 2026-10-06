@@ -73,7 +73,21 @@ function finish(w: Worker, r: LengthResult): void {
   const q = inflight.get(w);
   inflight.delete(w);
   // Still wanted? The length may have been re-keyed (re-lit, resized) while this one was painting.
-  if (q && q.key === r.key && cache.get(r.id)?.key === r.key) q.canvas.getContext('2d')!.putImageData(new ImageData(r.px as Uint8ClampedArray<ArrayBuffer>, q.job.len, q.job.total), 0, 0);
+  const entry = cache.get(r.id);
+  if (q && entry && q.key === r.key && entry.key === r.key) {
+    // Painted into a fresh canvas and swapped in, never into the one on screen: Firefox puts a
+    // canvas that changes while displayed on its own compositor layer, and the sun patch's blend
+    // then sees the strip's feathered edges over nothing (dark lines along the rail in the patch).
+    const fresh = document.createElement('canvas');
+    fresh.width = q.job.len;
+    fresh.height = q.job.total;
+    fresh.getContext('2d')!.putImageData(new ImageData(r.px as Uint8ClampedArray<ArrayBuffer>, q.job.len, q.job.total), 0, 0);
+    fresh.className = entry.canvas.className;
+    fresh.setAttribute('aria-hidden', 'true');
+    fresh.style.cssText = entry.canvas.style.cssText;
+    if (entry.canvas.isConnected) entry.canvas.replaceWith(fresh);
+    entry.canvas = fresh;
+  }
   lengthCounts[r.cached ? 'cached' : 'painted']++;
   q?.resolve();
   pump();
@@ -97,7 +111,7 @@ export function trimLength(trim: string, index: number, lenPx: number, heightPx:
     return hit;
   }
   const len = Math.max(1, Math.round(lenPx * dpr)), total = Math.max(2, Math.round(heightPx * dpr));
-  const canvas = hit?.canvas ?? document.createElement('canvas');
+  const canvas = document.createElement('canvas'); // blank until its job returns (the strip's plain paint shows); replaced by the painted one
   canvas.className = 'trim-length';
   canvas.setAttribute('aria-hidden', 'true');
   [canvas.width, canvas.height] = [len, total];
