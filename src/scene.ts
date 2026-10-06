@@ -157,7 +157,7 @@ const paintOf = (c: Config) => ({ grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, bu
 // screenshots see them); the rest (overscan, below the fold) fill in behind them.
 function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number, pending: Promise<unknown>[], deferred = false): { strip: HTMLElement; h: number } {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
-  const ledge = (style.ledgeCm ?? 0) * ppc, h = style.profile.heightCm * ppc + ledge, seg = a.tile, dpr = Math.min(2, devicePixelRatio || 1);
+  const ledge = (style.ledgeCm ?? 0) * ppc, h = style.profile.heightCm * ppc + ledge, seg = a.tile, dpr = Math.min(TRIM_MAX_DPR, devicePixelRatio || 1);
   const strip = el('div', 'trim-strip');
   const first = Math.floor(-a.originX / seg), last = Math.ceil((vp.width - a.originX) / seg);
   for (let k = first; k <= last; k++) {
@@ -179,6 +179,8 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
   strip.append(trimDust(c, vp, a, settle.length, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top })), map, top, settle));
   return { strip, h };
 }
+
+const TRIM_MAX_DPR = 1.5; // painted lengths: soft paint and grain need no more; 2 costs ~80% more pixels (the dust on top keeps full density)
 
 function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number, pending: Promise<unknown>[]): HTMLElement {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
