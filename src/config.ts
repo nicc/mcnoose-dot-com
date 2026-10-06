@@ -201,7 +201,7 @@ export const CONFIG = {
   GROUT_COLOR: '#cbcbcb',
   GROUT_RECESS: 0.93, // shadow tiles cast onto the recessed grout
   GROUT_EDGE_CM: 0.1, // the fine caulked joints against the rail and the skirting
-  GROUT_CAULK: 1, // how solidly that caulk covers the grout at those joints: 1 a clean bead, lower lets the joints show through it
+  GROUT_CAULK: 0.8, // how solidly that caulk covers the grout at those joints: 1 a clean bead, lower lets the joints show through it
   GROUT_AGE: 0.35, // uneven yellowing/greying per joint
   GROUT_GRIME: 0.52, // dirt: more in horizontal joints and low down
   GROUT_MOULD: 0.39, // dark spots at crossings, low down
