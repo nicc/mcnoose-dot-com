@@ -17,7 +17,7 @@ import { isFallen, resetFall } from './fall';
 import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
-import { forgetLengths, trimLength, type TrimStyle } from './trim/length';
+import { forgetLengths, promoteLengths, trimLength, type TrimStyle } from './trim/length';
 import { railProfile, skirtingProfile, type Profile, type RailDims, type SkirtingDims } from './trim/profile';
 import { hexToRgb } from './colour';
 import type { Project } from './projects';
@@ -153,7 +153,9 @@ const paintOf = (c: Config) => ({ grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, bu
 
 // A strip of painted lengths across the window at page y `top`, clipped to the window, with dust
 // on its top (the visible ledge, when it has one). Returns the strip and the height it occupies.
-function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number, deferred = false): { strip: HTMLElement; h: number } {
+// The lengths are painted in workers: those on screen now are awaited by `pending` (so tests and
+// screenshots see them); the rest (overscan, below the fold) fill in behind them.
+function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, style: TrimStyle, dust: number, pending: Promise<unknown>[], deferred = false): { strip: HTMLElement; h: number } {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
   const ledge = (style.ledgeCm ?? 0) * ppc, h = style.profile.heightCm * ppc + ledge, seg = a.tile, dpr = Math.min(2, devicePixelRatio || 1);
   const strip = el('div', 'trim-strip');
@@ -166,24 +168,25 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
       const p = wallPoint(map, { x, y: top + h / 2 }), at = { x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000 };
       return { lights: lightsAt(room, at), view: viewAt(room, at) };
     };
-    const offScreen = left + seg < onScreen.x0 || left > onScreen.x1; // in the overscan margin: draw later
-    // On screen at first load: just after the first paint (wallpaper and tiles first); else now.
-    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, deferred || offScreen ? 'idle' : firstPaint ? 'soon' : false);
-    Object.assign(length.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
-    strip.append(length);
+    const offScreen = left + seg < onScreen.x0 || left > onScreen.x1; // in the overscan margin: painted after what's on screen
+    const urgent = !(deferred || offScreen);
+    const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, urgent);
+    if (urgent) pending.push(length.done);
+    Object.assign(length.canvas.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
+    strip.append(length.canvas);
   }
   const settle = settleRows(style.profile, ledge, ppc);
   strip.append(trimDust(c, vp, a, settle.length, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top })), map, top, settle));
   return { strip, h };
 }
 
-function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement {
+function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number, pending: Promise<unknown>[]): HTMLElement {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
   const top = railTop(c, a, topExtra);
   const profile = railProfile(railDims(c));
   // Its ledge runs back to the wall: nothing hides it.
   const style: TrimStyle = { profile, colour: hexToRgb(c.RAIL_COLOR), paint: paintOf(c), wear: c.RAIL_WEAR, grime: c.RAIL_GRIME, ledgeCm: railLedgeCm(c, a, topExtra) };
-  const { strip, h } = paintedStrip('rail', c, vp, a, topExtra, top, style, c.RAIL_DUST);
+  const { strip, h } = paintedStrip('rail', c, vp, a, topExtra, top, style, c.RAIL_DUST, pending);
   const row = el('div', 'rail');
   row.style.height = `${h}px`;
   // Its cast shadow on the tiles: how far the rail's bottom overhangs them, along each light's slant.
@@ -200,16 +203,16 @@ function rail(c: Config, vp: Viewport, a: Anchor, topExtra: number): HTMLElement
 
 // The skirting along the floor, directly below the last row of tiles; the page ends with it. Its
 // ledge runs back to the tile face, which hides the rest.
-function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number): HTMLElement {
+function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: number, pending: Promise<unknown>[]): HTMLElement {
   const profile = skirtingProfile(skirtingDims(c));
   const style: TrimStyle = { profile, colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, ledgeCm: ledgeCm(c, a, topExtra, top, profile, TILE_FACE_CM),
     scuffs: { amount: c.SKIRTING_SCUFFS, low: c.SKIRTING_SCUFF_LOW, faceTopCm: profile.heightCm - c.SKIRTING_FLAT_CM } };
-  // Below the fold on load: painted when the browser is idle, or as it nears the screen.
+  // Below the fold on load: painted after what's on screen, or at once as it nears the screen.
   const below = belowFold(top, vp);
-  const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST, below);
+  const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST, pending, below);
   const footer = el('footer', 'skirting', [strip]);
   footer.style.height = `${h}px`;
-  if (below) whenNear(footer, 'trim:skirting:');
+  if (below) whenNear(footer, () => promoteLengths('skirting:'));
   return footer;
 }
 
@@ -219,24 +222,24 @@ function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: num
 const EARLY_PX = 600;
 const belowFold = (top: number, vp: Viewport) => top > scrollY + vp.height + EARLY_PX;
 let nearWatch: IntersectionObserver | undefined;
-const nearKeys = new Map<Element, string>();
-function whenNear(target: Element, key: string) {
+const nearJobs = new Map<Element, () => void>();
+function whenNear(target: Element, then: () => void) {
   nearWatch ??= new IntersectionObserver((seen) => {
     for (const e of seen) {
       if (!e.isIntersecting) continue;
       nearWatch!.unobserve(e.target);
-      const k = nearKeys.get(e.target);
-      nearKeys.delete(e.target);
-      if (k) flush(k);
+      const job = nearJobs.get(e.target);
+      nearJobs.delete(e.target);
+      job?.();
     }
   }, { rootMargin: `${EARLY_PX}px 0px` });
-  nearKeys.set(target, key);
+  nearJobs.set(target, then);
   nearWatch.observe(target);
 }
 function resetNear() {
   nearWatch?.disconnect();
   nearWatch = undefined;
-  nearKeys.clear();
+  nearJobs.clear();
 }
 
 const DUST_PX_PER_CM = 10; // dust sizes in trim/dust.ts are px at this scene scale (desktop)
@@ -578,7 +581,7 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
       const defer = belowFold(firstTileTop + r * a.pitch, vp), age = aged(r, k, defer);
       t.append(age.fixed, age.marks);
       wipeable(age.marks, 'scale', map, a.originX + k * a.pitch - c.GROUT_PX, firstTileTop + r * a.pitch - c.GROUT_PX, age.dpr, age.fresh);
-      if (defer) whenNear(t, `tile-age:${k}:${r}`);
+      if (defer) whenNear(t, () => flush(`tile-age:${k}:${r}`));
       tiles.set(key, t);
       g.append(t);
     }
@@ -653,7 +656,6 @@ function frameShadow(c: Config, tile: number): Record<string, string> {
 }
 
 let generation = 0;
-let firstPaint = true; // the first render puts wallpaper and tiles up first; slow drawing follows (later.ts)
 let onScreen = { x0: 0, x1: Infinity }; // the window's span in stage x (see renderScene)
 let slid = 0; // how far the stage has slid since it was built (main.ts)
 // The stage slid by dx (window moved within the overscan margin): trace whatever newly came into view.
@@ -723,17 +725,16 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   const skirtingTop = firstTileTop + rows * a.pitch - c.GROUT_PX + edgeJoint(c, a.tile);
   root.replaceChildren(
     top,
-    rail(c, vp, a, topExtra),
+    rail(c, vp, a, topExtra, pending),
     grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra), vp),
-    skirting(c, vp, a, topExtra, skirtingTop),
+    skirting(c, vp, a, topExtra, skirtingTop, pending),
   );
   const patch = sunPatch(c, wallMap(c, a, topExtra));
   if (patch) root.append(patch);
   applyTint(c);
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
-  pending.push(soonSettled()); // the painted rail, the sampler and the paper's age, just after the first paint
-  firstPaint = false;
+  pending.push(soonSettled()); // the sampler and the paper's age, just after the first paint
   printed = Promise.all(pending);
   printed.then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
   return frameFor(a.tile, shown, visible);

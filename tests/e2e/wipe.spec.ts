@@ -57,8 +57,9 @@ test('limescale on the tiles takes more than one pass, and a wipe is not a click
   const box = (await page.locator(`.grid > .tile:nth-child(${n})`).boundingBox())!;
   const marks = `.grid > .tile:nth-child(${n}) .tile-age:last-of-type`;
   const span = { x0: box.x + 10, x1: box.x + box.width - 10 };
+  // Rows below the fold at load are aged when the browser is idle or as they near the screen (scene.ts).
+  await expect.poll(() => alphaIn(page, marks, span)).toBeGreaterThan(0);
   const start = await alphaIn(page, marks, span);
-  expect(start).toBeGreaterThan(0);
   await drag(page, box.y + box.height * 0.85, span.x0 - 10, span.x1 + 10);
   const once = await alphaIn(page, marks, span);
   expect(once).toBeLessThan(start);

@@ -3,16 +3,17 @@
 // at both its ends, blended across, so neighbouring lengths meet without a step.
 // Grain, brush strokes, wear and scuffs are generated in wall coordinates, so lengths join
 // seamlessly; each is cached by its trim and its place on the wall.
-import type { Light, Vec3 } from '../room';
-import { AMBIENT } from '../room';
-import { diffuseReach, shadeBoard } from '../wood/board';
-import { grainMaps } from '../wood/grain';
+// The pixels are painted in workers (worker.ts, paint.ts): a length's canvas is handed back at once,
+// blank (the strip's plain paint shows through), and filled when its job comes back. Lengths on
+// screen go first; the rest (overscan, the skirting below the fold) wait behind them.
 import type { RGB } from '../colour';
-import { PAINT_BARE, paintMaps, softenProfile } from '../wood/paint';
-import { weather } from '../wood/wear';
+import { sampleProfile } from '../wood/paint';
 import type { Profile } from './profile';
-import { scuff } from './scuffs';
-import { later, soon } from '../later';
+import type { LengthJob, TrimLight } from './paint';
+import type { LengthRequest, LengthResult } from './worker';
+import LengthWorker from './worker?worker&inline';
+
+export type { TrimLight } from './paint';
 
 export interface TrimStyle {
   profile: Profile;
@@ -24,89 +25,92 @@ export interface TrimStyle {
   ledgeCm?: number; // the top ledge seen from above, foreshortened (rail, skirting): drawn above the profile
 }
 
-// Pine under the paint: only its ring relief matters once painted.
-const PINE = { early: [215, 185, 140] as RGB, late: [165, 120, 75] as RGB, figure: 0.5, pores: 0, drift: 0, seed: 23 };
-const RING_CM = 0.35;
-const RELIEF_CM = 0.06; // paint ridges and telegraphed grain: half a millimetre
-const SHADOW_SOFTNESS = 0.2; // penumbra widening per unit distance: a window-sized light, not a point
-
-// The room's light at one end of a length.
-export interface TrimLight {
-  lights: Light[];
-  view: Vec3;
+export interface Length {
+  canvas: HTMLCanvasElement;
+  done: Promise<void>; // painted (or superseded)
 }
 
-// An upward-facing ledge lit by the room, relative to the vertical face (which shows its albedo).
-// The tile wall rising behind it fills half its view of the room (same model as the board).
-export function ledgeShade(lights: Light[]): number {
-  let lit = 0, flat = 0;
-  for (const { dir, weight } of lights) {
-    lit += weight * Math.max(0, -dir[1]);
-    flat += weight * dir[2];
-  }
-  return AMBIENT * diffuseReach(0.5) + (1 - AMBIENT) * (lit / flat);
-}
-
-const board = (lights: Light[]) => lights.map(({ dir, weight }) => ({ dir, weight }));
-
-const cache = new Map<string, { key: string; canvas: HTMLCanvasElement }>();
+const cache = new Map<string, Length & { key: string }>();
 export const forgetLengths = () => cache.clear(); // their pixels were lost (see main.ts)
 
+interface Queued extends Length {
+  id: string;
+  key: string;
+  job: LengthJob;
+  urgent: boolean; // on screen: before anything that isn't
+  resolve: () => void;
+}
+const queue = new Map<string, Queued>(); // by id, in the order queued
+const inflight = new Map<Worker, Queued>();
+let workers: Worker[] | undefined;
+const WORKERS = 2; // at most: a length takes tens of ms, and there are a few dozen at a time
+
+function pool(): Worker[] {
+  return (workers ??= Array.from({ length: Math.max(1, Math.min(WORKERS, navigator.hardwareConcurrency || 1)) }, () => {
+    const w = new LengthWorker();
+    w.onmessage = (e: MessageEvent<LengthResult>) => finish(w, e.data);
+    return w;
+  }));
+}
+
+function pump(): void {
+  for (const w of pool()) {
+    if (inflight.has(w)) continue;
+    let next: Queued | undefined;
+    for (const q of queue.values()) {
+      if (q.urgent || !next) next = q;
+      if (q.urgent) break;
+    }
+    if (!next) return;
+    queue.delete(next.id);
+    inflight.set(w, next);
+    w.postMessage({ id: next.id, key: next.key, job: next.job } satisfies LengthRequest);
+  }
+}
+
+function finish(w: Worker, r: LengthResult): void {
+  const q = inflight.get(w);
+  inflight.delete(w);
+  // Still wanted? The length may have been re-keyed (re-lit, resized) while this one was painting.
+  if (q && q.key === r.key && cache.get(r.id)?.key === r.key) q.canvas.getContext('2d')!.putImageData(new ImageData(r.px as Uint8ClampedArray<ArrayBuffer>, q.job.len, q.job.total), 0, 0);
+  q?.resolve();
+  pump();
+}
+
+// Lengths whose id starts with `prefix` (a trim's name) go to the front: they're about to be seen.
+export function promoteLengths(prefix: string): void {
+  for (const q of queue.values()) if (q.id.startsWith(prefix)) q.urgent = true;
+}
+
 // trim: which piece ('rail', 'skirting'); index: which length along the wall; lenPx/heightPx in
-// CSS px; pxPerCm: scene scale; start/end: the room's light at its left and right ends.
-// deferred: hand back the (sized) canvas now and paint it later (later.ts), keyed `trim:<trim>:<index>`:
-// 'idle' when the browser is idle (off screen), 'soon' just after the first paint (on screen).
-export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle, deferred: false | 'soon' | 'idle' = false): HTMLCanvasElement {
+// CSS px; pxPerCm: scene scale; start/end: the room's light at its left and right ends; urgent: on
+// screen now (painted before lengths that aren't).
+export function trimLength(trim: string, index: number, lenPx: number, heightPx: number, pxPerCm: number, dpr: number, start: TrimLight, end: TrimLight, s: TrimStyle, urgent: boolean): Length {
   const key = JSON.stringify([lenPx, heightPx, pxPerCm, dpr, start, end, s, s.profile.heightCm, s.profile.depthCm]);
   const id = `${trim}:${index}`;
   const hit = cache.get(id);
-  if (hit && hit.key === key) return hit.canvas;
+  if (hit && hit.key === key) {
+    const q = queue.get(id);
+    if (q && urgent) q.urgent = true;
+    return hit;
+  }
   const len = Math.max(1, Math.round(lenPx * dpr)), total = Math.max(2, Math.round(heightPx * dpr));
   const canvas = hit?.canvas ?? document.createElement('canvas');
   canvas.className = 'trim-length';
   canvas.setAttribute('aria-hidden', 'true');
   [canvas.width, canvas.height] = [len, total];
-  cache.set(id, { key, canvas });
-  const draw = () => paintLength(canvas, trim, index, len, total, dpr, pxPerCm, start, end, s);
-  if (deferred === 'idle') later(`trim:${id}`, draw);
-  else if (deferred === 'soon') void soon(`trim:${id}`, draw);
-  else draw();
-  return canvas;
-}
-
-function paintLength(canvas: HTMLCanvasElement, trim: string, index: number, len: number, total: number, dpr: number, pxPerCm: number, start: TrimLight, end: TrimLight, s: TrimStyle) {
-  const scale = pxPerCm * dpr, u0 = index * len;
-  const ledge = Math.min(total - 2, Math.round((s.ledgeCm ?? 0) * scale)), wid = total - ledge;
-  const profile = softenProfile(s.profile.at, s.paint.buildup, s.profile.heightCm);
-  const wood = grainMaps(len, wid, { ...PINE, ringPx: RING_CM * scale }, 0, u0);
-  const paint = paintMaps(wood, len, wid, profile, { colour: s.colour, grain: s.paint.grain, brush: s.paint.brush, yellowing: s.paint.yellowing, buildup: s.paint.buildup, pxPerCm: scale, seed: 31 }, u0);
-  weather(paint, len, wid, profile, { wear: s.wear, grime: s.grime, patches: 0.7, mitres: false, seed: 61, bare: PAINT_BARE }, 0, u0);
-  if (s.scuffs) scuff(paint, len, wid, { amount: s.scuffs.amount, low: s.scuffs.low, faceTop: Math.round(wid * (s.scuffs.faceTopCm / s.profile.heightCm)) }, u0, scale, trim === 'skirting' ? 71 : 73);
-  // Trim coordinates: u along the wall (screen x), v down the rail (screen y), z out of the wall.
-  const rgba = shadeBoard(paint, len, wid, {
-    profile,
-    profileDepth: s.profile.depthCm * scale,
-    grainDepth: RELIEF_CM * scale,
-    sheen: s.paint.sheen,
-    gloss: s.paint.gloss,
-    ambient: AMBIENT,
-    shadowSoftness: SHADOW_SOFTNESS,
-  }, board(start.lights), start.view, { lights: board(end.lights), view: end.view });
-
-  // The ledge: the face's paint, turned up to the light, lit start → end like the board.
-  const out = new Uint8ClampedArray(len * total * 4);
-  out.set(rgba, len * ledge * 4);
-  if (ledge > 0) {
-    const a = ledgeShade(start.lights), b = ledgeShade(end.lights), from = Math.floor(wid * 0.4);
-    for (let v = 0; v < ledge; v++) {
-      for (let u = 0; u < len; u++) {
-        // Darker at the back, where it meets the tiles above (they hide part of the room from it).
-        const shade = (a + (b - a) * (len > 1 ? u / (len - 1) : 0)) * (0.78 + 0.22 * ((v + 0.5) / ledge)), src = ((from + v) * len + u) * 3, i = (v * len + u) * 4;
-        for (let c = 0; c < 3; c++) out[i + c] = paint.albedo[src + c] * shade;
-        out[i + 3] = 255;
-      }
-    }
-  }
-
-  canvas.getContext('2d')!.putImageData(new ImageData(out as Uint8ClampedArray<ArrayBuffer>, len, total), 0, 0);
+  const job: LengthJob = {
+    trim, len, total, dpr, pxPerCm, start, end,
+    colour: s.colour, paint: s.paint, wear: s.wear, grime: s.grime, scuffs: s.scuffs, ledgeCm: s.ledgeCm ?? 0,
+    profile: { samples: sampleProfile(s.profile.at, s.profile.heightCm), heightCm: s.profile.heightCm, depthCm: s.profile.depthCm },
+    u0: index * len,
+  };
+  let resolve!: () => void;
+  const done = new Promise<void>((r) => (resolve = r));
+  const entry = { canvas, done, key };
+  cache.set(id, entry);
+  queue.get(id)?.resolve(); // superseded before it was painted
+  queue.set(id, { ...entry, id, job, urgent, resolve });
+  pump();
+  return entry;
 }

@@ -29,9 +29,13 @@ export const PAINT_BARE: RGB = [0.72, 0.62, 0.5]; // chips show wood and old pri
 // and interpolated so the slope has no steps for the lighting to pick out as stripes.
 const SOFTEN_CM = 0.16; // blur radius at full build-up
 const SAMPLE_CM = 0.02;
-export function softenProfile(profile: (t: number) => number, amount: number, heightCm: number): (t: number) => number {
+// The profile as softenProfile wants it: plain numbers, so a cross-section can be sent to a worker.
+export function sampleProfile(profile: (t: number) => number, heightCm: number): Float32Array {
   const samples = Math.max(256, Math.ceil(heightCm / SAMPLE_CM));
-  const raw = Float32Array.from({ length: samples }, (_, i) => profile((i + 0.5) / samples));
+  return Float32Array.from({ length: samples }, (_, i) => profile((i + 0.5) / samples));
+}
+export function softenProfile(raw: Float32Array, amount: number, heightCm: number): (t: number) => number {
+  const samples = raw.length;
   const r = Math.round((amount * SOFTEN_CM) / (heightCm / samples));
   const soft = r <= 0 ? raw : raw.map((_, i) => {
     let s = 0, n = 0;
