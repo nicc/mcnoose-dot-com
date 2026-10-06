@@ -10,7 +10,7 @@ My portfolio site — a bathroom wall. I wanted the scene to feel alive. Most of
 
 ### Simulating the room
 
-The room is fully simulated (`src/room.ts`). There's a window on the wall behind you, a ceiling light, and light bouncing up off the floor. Every surface works out its own shading from its position on the wall, so the wallpaper, the frame, each tile, and each length of rail and skirting are lit slightly differently. Nothing has highlights or shadows painted on.
+The scene is dynamically lit as a coherent room (`src/room.ts`). There's a window on the wall behind you, a ceiling light, and light bouncing up off the floor. Every surface works out its own shading from its position on the wall, so the wallpaper, the frame, each tile, and each length of rail and skirting are lit slightly differently. Nothing has highlights or shadows painted on.
 
 The light moves. Clouds pass the window at random, which you mostly see in the reflections. The sun throws a soft patch of light onto the wall. The patch moves and warms for a few minutes as the sun sets. The room settles at dusk.
 
@@ -28,7 +28,7 @@ Every value that shapes the scene is a constant in `src/config.ts`, about 200 of
 
 ### Keeping the simulation in the page
 
-Only the wallpaper is baked. The room itself still runs in the browser, so lighting, clouds, the sunset and reflections are computed live on canvas.
+Only the wallpaper is baked. The room itself still runs in the browser. Lighting, clouds, the sunset and reflections are computed live on canvas. Heavy, per-pixel work (wood, paint, wear, scuffs) runs in worker threads to avoid blocking the main thread, so the wallpaper and tiles paint first and the trim fills in a moment behind them.
 
 The wall isn't responsive. It stays in place, as if you're looking at it through a portal. Resizing or moving the window affects what you can see, but the wall keeps a fixed position and isn't rearranged. This is only evident on desktop.
 
@@ -52,11 +52,12 @@ TypeScript and Canvas 2D, with no framework, built by Vite. Tests are Vitest for
 
 ```sh
 npm install
-npm run dev        # with the tweak panel
+npm run dev                  # with the tweak panel
 npm test
 npm run test:e2e
-npm run shots      # screenshots of the wall and each tile, in shots/
-npm run readme:wall  # regenerate the picture at the top of this README
+npm run identity [-- <ref>]  # byte-compares surfaces from the working tree and a git ref
+npm run shots                # screenshots of the wall and each tile, in shots/
+npm run readme:wall          # regenerate the picture at the top of this README
 npm run build
 ```
 
