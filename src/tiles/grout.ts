@@ -2,9 +2,8 @@
 // crossings and a limescale crust along the lower horizontals, and erosion (worn edges, crumbled
 // crossings, soft pitting) with the odd hairline crack. Planned as soft marks per joint, seeded by
 // wall position, then drawn clipped to the joint so nothing spills onto the tile faces.
+import type { RGB } from '../colour';
 import { hash2 } from '../wood/noise';
-
-export type RGB = [number, number, number];
 
 export interface GroutAge {
   age: number; // 0–1 yellowing/greying

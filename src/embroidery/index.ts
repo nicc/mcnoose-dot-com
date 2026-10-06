@@ -4,7 +4,7 @@
 import type { Config } from '../config';
 import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig, viewAt } from '../room';
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
-import { hexToRgb } from '../wallpaper/relief';
+import { hexToRgb } from '../colour';
 import { layoutSampler, type Chart } from './chart';
 import { frameTilt, showingBack } from '../frame';
 import { flush, later, soon } from '../later';

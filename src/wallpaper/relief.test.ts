@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { blurWrap, hexToRgb, pebbles, shade } from './relief';
+import { blurWrap, pebbles, shade } from './relief';
+import { hexToRgb } from '../colour';
 
 const flatAlbedo = (n: number) => Uint8ClampedArray.from({ length: n * 4 }, (_, i) => [240, 230, 210, 255][i % 4]);
 const fromUpperLeft = { dir: [-0.54, -0.54, 0.64] as [number, number, number], weight: 1 };

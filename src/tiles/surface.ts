@@ -2,6 +2,7 @@
 // its cushion edge (softly rounded rim) lit by the room's lights. The rim facing a light catches a
 // crisp highlight and the far rim falls into soft shade; that edge sparkle is most of what reads
 // as gloss on a real tiled wall. Expressed as CSS shadows: crisp at any resolution, nearly free.
+import type { RGB } from '../colour';
 import type { Light } from '../room';
 import { hash2 } from '../wood/noise';
 
@@ -17,7 +18,7 @@ export function wallPoint(m: WallMap, page: { x: number; y: number }): { x: numb
 }
 
 // Batch-to-batch glaze variation: brightness and a touch of warmth, seeded by wall position.
-export function tileTone(base: [number, number, number], amount: number, col: number, row: number): string {
+export function tileTone(base: RGB, amount: number, col: number, row: number): string {
   const b = 1 + amount * (hash2(col, row, 71) - 0.5) * 2;
   const warm = amount * (hash2(col, row, 73) - 0.5) * 2;
   const c = [base[0] * b * (1 + warm * 0.4), base[1] * b, base[2] * b * (1 - warm * 0.6)];

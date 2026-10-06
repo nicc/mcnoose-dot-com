@@ -77,42 +77,51 @@ const unit = (x: number, y: number, z: number): [number, number, number] => {
 export function shadeBoard(maps: GrainMaps, len: number, wid: number, f: Finish, lights: BoardLight[], view: [number, number, number] = [0, 0, 1], end?: { lights: BoardLight[]; view: [number, number, number] }): Uint8ClampedArray {
   const exponent = 6 + 120 * f.gloss * f.gloss;
   const rows = Float64Array.from({ length: wid }, (_, v) => f.profile((v + 0.5) / wid) * f.profileDepth); // the profile, once per row
-  const height = (u: number, v: number) => {
-    const uu = Math.min(len - 1, Math.max(0, u)), vv = Math.min(wid - 1, Math.max(0, v));
-    return rows[vv] + maps.relief[vv * len + uu] * f.grainDepth;
-  };
   const profileHeight = (v: number) => rows[v];
   const shadows = (ls: BoardLight[]) => ls.map((l) => (f.shadowSoftness ? profileShadow(profileHeight, wid, l.dir, f.shadowSoftness) : null));
   const startShadow = shadows(lights), endShadow = end ? shadows(end.lights) : startShadow;
   const occlusion = f.shadowSoftness ? profileOcclusion(profileHeight, wid) : null;
+  const shaded = f.shadowSoftness ? startShadow.every(Boolean) && endShadow.every(Boolean) : false;
+  const sheen = f.sheen > 0; // no finish highlight at all: the specular term is skipped (it's multiplied to nothing anyway)
+  const { relief, albedo, gloss } = maps, gd = f.grainDepth, ambient = f.ambient, nLights = lights.length;
+  const [t0, t1, t2] = SHEEN_TINT;
+  // This column's lights and half-vectors, flat for the inner loop: dir xyz, weight, half xyz.
+  const L = new Float64Array(nLights * 7);
   const out = new Uint8ClampedArray(len * wid * 4);
   for (let u = 0; u < len; u++) {
     // Lighting at this column, blended from start to end.
     const t = end && len > 1 ? u / (len - 1) : 0;
-    const col = lights.map((l, k) => {
-      const e = end?.lights[k] ?? l;
-      return { dir: unit(lerp(l.dir[0], e.dir[0], t), lerp(l.dir[1], e.dir[1], t), lerp(l.dir[2], e.dir[2], t)), weight: lerp(l.weight, e.weight, t) };
-    });
     const vw = end ? unit(lerp(view[0], end.view[0], t), lerp(view[1], end.view[1], t), lerp(view[2], end.view[2], t)) : view;
-    const flat = col.reduce((s, l) => s + l.weight * l.dir[2], 0);
-    const halves = col.map(({ dir: [lx, ly, lz] }) => unit(lx + vw[0], ly + vw[1], lz + vw[2]));
+    let flat = 0;
+    for (let k = 0; k < nLights; k++) {
+      const l = lights[k], e = end?.lights[k] ?? l;
+      const dir = unit(lerp(l.dir[0], e.dir[0], t), lerp(l.dir[1], e.dir[1], t), lerp(l.dir[2], e.dir[2], t)), weight = lerp(l.weight, e.weight, t);
+      const h = unit(dir[0] + vw[0], dir[1] + vw[1], dir[2] + vw[2]);
+      flat += weight * dir[2];
+      L[k * 7] = dir[0], L[k * 7 + 1] = dir[1], L[k * 7 + 2] = dir[2], L[k * 7 + 3] = weight, L[k * 7 + 4] = h[0], L[k * 7 + 5] = h[1], L[k * 7 + 6] = h[2];
+    }
+    const uL = u > 0 ? u - 1 : 0, uR = u < len - 1 ? u + 1 : len - 1;
     for (let v = 0; v < wid; v++) {
-      const i = v * len + u;
-      const du = (height(u + 1, v) - height(u - 1, v)) * 0.5;
-      const dv = (height(u, v + 1) - height(u, v - 1)) * 0.5;
+      const i = v * len + u, vU = v > 0 ? v - 1 : 0, vD = v < wid - 1 ? v + 1 : wid - 1;
+      // Height = profile row + grain relief; central differences for the slope (clamped at the edges).
+      const rv = rows[v];
+      const du = (rv + relief[v * len + uR] * gd - (rv + relief[v * len + uL] * gd)) * 0.5;
+      const dv = (rows[vD] + relief[vD * len + u] * gd - (rows[vU] + relief[vU * len + u] * gd)) * 0.5;
       const nl = Math.sqrt(du * du + dv * dv + 1), sl = Math.sqrt((du * ALONG_GRAIN) ** 2 + dv * dv + 1); // not Math.hypot: far slower, per pixel
       let lambert = 0, spec = 0;
-      for (let k = 0; k < col.length; k++) {
-        const { dir, weight } = col[k], a = startShadow[k], b = endShadow[k];
-        const lit = a && b ? lerp(a[v], b[v], t) : 1;
-        lambert += lit * weight * Math.max(0, (-du * dir[0] - dv * dir[1] + dir[2]) / nl);
-        const h = halves[k];
-        spec += lit * weight * Math.max(0, (-du * ALONG_GRAIN * h[0] - dv * h[1] + h[2]) / sl) ** exponent;
+      for (let k = 0; k < nLights; k++) {
+        const o = k * 7, weight = L[o + 3];
+        const lit = shaded ? lerp(startShadow[k]![v], endShadow[k]![v], t) : 1;
+        lambert += lit * weight * Math.max(0, (-du * L[o] - dv * L[o + 1] + L[o + 2]) / nl);
+        if (sheen) spec += lit * weight * Math.max(0, (-du * ALONG_GRAIN * L[o + 4] - dv * L[o + 5] + L[o + 6]) / sl) ** exponent;
       }
-      const light = f.ambient * (occlusion ? occlusion[v] : 1) + (1 - f.ambient) * (lambert / flat);
-      spec *= f.sheen * maps.gloss[i];
-      for (let c = 0; c < 3; c++) out[i * 4 + c] = maps.albedo[i * 3 + c] * light + 255 * spec * SHEEN_TINT[c];
-      out[i * 4 + 3] = 255;
+      const light = ambient * (occlusion ? occlusion[v] : 1) + (1 - ambient) * (lambert / flat);
+      spec *= f.sheen * gloss[i];
+      const k = i * 4, a = i * 3;
+      out[k] = albedo[a] * light + 255 * spec * t0;
+      out[k + 1] = albedo[a + 1] * light + 255 * spec * t1;
+      out[k + 2] = albedo[a + 2] * light + 255 * spec * t2;
+      out[k + 3] = 255;
     }
   }
   return out;

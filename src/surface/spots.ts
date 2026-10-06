@@ -50,12 +50,15 @@ export function spotLayout(w: number, h: number, o: SpotOptions): Spot[] {
 
 type Ctx = CanvasRenderingContext2D;
 
+const STEPS = 18;
+const wobble = new Float64Array(STEPS); // one spot's irregular rim, shared by its deposit and refraction edge
+
 function rim(ctx: Ctx, s: Spot, grow: number) {
   ctx.beginPath();
-  const steps = 18;
+  const steps = STEPS;
   for (let k = 0; k <= steps; k++) {
     const a = (k / steps) * Math.PI * 2;
-    const rr = (s.r + grow) * (0.85 + 0.3 * hash2(s.wobble, k % steps, 3));
+    const rr = (s.r + grow) * wobble[k % steps];
     const px = s.x + Math.cos(a) * rr, py = s.y + Math.sin(a) * rr;
     k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
   }
@@ -67,6 +70,7 @@ function rim(ctx: Ctx, s: Spot, grow: number) {
 export function drawSpots(ctx: Ctx, spots: Spot[], o: SpotOptions) {
   const L = o.limescale;
   for (const s of spots) {
+    for (let k = 0; k < STEPS; k++) wobble[k] = 0.85 + 0.3 * hash2(s.wobble, k, 3);
     if (s.drip > 0) {
       const g = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.drip);
       g.addColorStop(0, `rgba(245,247,245,${0.12 + 0.3 * L})`);

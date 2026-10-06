@@ -9,6 +9,7 @@
 // across by the sun's elevation and azimuth. It brightens whatever it falls on (color-dodge with a
 // grey is an exact multiply-up), soft-edged by ROOM_SUN_SOFTNESS_CM, and comes and goes with the
 // clouds (--sunlit, set by clouds.ts): direct sun is the first thing a cloud takes away.
+import type { RGB } from './colour';
 import type { Config } from './config';
 import { roomFromConfig, type Room } from './room';
 import type { Sky } from './sunset';
@@ -24,7 +25,7 @@ const NEUTRAL_K = 6500;
 const BAR_CM = 5; // sash frame and glazing bars, as in the glass's reflection
 
 // Approximate sRGB of a black body at kelvin k (Tanner Helland's fit), 0–255.
-export function kelvinRgb(k: number): [number, number, number] {
+export function kelvinRgb(k: number): RGB {
   const t = k / 100, c = (v: number) => Math.max(0, Math.min(255, v));
   const r = t <= 66 ? 255 : 329.698727446 * (t - 60) ** -0.1332047592;
   const g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * (t - 60) ** -0.0755148492;
@@ -35,9 +36,9 @@ export function kelvinRgb(k: number): [number, number, number] {
 // The window light's colour relative to neutral daylight, as the eye sees it (`seen`: the share of a
 // camera's colour shift that's left once the eye has adapted, ROOM_LIGHT_TINT), brightest channel 1
 // (a multiply tint).
-export function lightTint(k: number, seen = 0.6): [number, number, number] {
+export function lightTint(k: number, seen = 0.6): RGB {
   const a = kelvinRgb(k), n = kelvinRgb(NEUTRAL_K), rel = a.map((v, i) => v / n[i]), m = Math.max(...rel);
-  return rel.map((v) => 1 - seen * (1 - v / m)) as [number, number, number];
+  return rel.map((v) => 1 - seen * (1 - v / m)) as RGB;
 }
 
 const windowShare = (r: Room) => (r.sun * (1 + r.bounce)) / (r.sun * (1 + r.bounce) + r.fill || 1);

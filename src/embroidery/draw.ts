@@ -4,9 +4,10 @@ import { AMBIENT, blendedLight, type Light, type Vec3 } from '../room';
 import { drawDust } from '../trim/dust';
 import { drawSpots, spotLayout } from '../surface/spots';
 import { frameProfile, shadeBoard } from '../wood/board';
-import { grainMaps, type RGB } from '../wood/grain';
+import { grainMaps } from '../wood/grain';
+import type { RGB } from '../colour';
 import { weather } from '../wood/wear';
-import { hash2 } from '../wood/noise';
+import { hash2, rng } from '../wood/noise';
 import type { Chart, Ink } from './chart';
 
 export interface WoodStyle {
@@ -52,16 +53,6 @@ export interface EmbroideryStyle {
 
 type Ctx = CanvasRenderingContext2D;
 type V = [number, number];
-
-function rng(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), a | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 const tint = (v: number) => (v >= 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`);
 

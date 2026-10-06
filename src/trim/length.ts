@@ -6,7 +6,8 @@
 import type { Light, Vec3 } from '../room';
 import { AMBIENT } from '../room';
 import { diffuseReach, shadeBoard } from '../wood/board';
-import { grainMaps, type RGB } from '../wood/grain';
+import { grainMaps } from '../wood/grain';
+import type { RGB } from '../colour';
 import { PAINT_BARE, paintMaps, softenProfile } from '../wood/paint';
 import { weather } from '../wood/wear';
 import type { Profile } from './profile';

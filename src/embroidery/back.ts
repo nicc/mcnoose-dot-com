@@ -4,8 +4,8 @@
 // handled, mottled, cockled, with water tide-marks and foxing. Lit by the room through the frame's
 // tilt, like the front.
 import { AMBIENT, type Light, type Vec3 } from '../room';
-import type { RGB } from '../wood/grain';
-import { fbm, hash2 } from '../wood/noise';
+import type { RGB } from '../colour';
+import { clamp01, fbm, hash2 } from '../wood/noise';
 import { frame, toLocal, type EmbroideryStyle } from './draw';
 
 export interface BackStyle {
@@ -22,8 +22,6 @@ const PAPER_INSET = 0.3; // of the frame width: bare wood showing round the pape
 const RAW_OAK: [RGB, RGB] = [[196, 168, 128], [160, 128, 92]]; // unfinished, oxidised a little
 const STAIN: RGB = [0.86, 0.76, 0.6]; // multiplied in: tea-brown
 const FOX: RGB = [0.78, 0.6, 0.45];
-
-const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 // Where the paper sits on the back (css px): known before (and without) drawing it.
 export const paperRect = (W: number, H: number, f: number) => ({ x: f * PAPER_INSET, y: f * PAPER_INSET, w: W - 2 * f * PAPER_INSET, h: H - 2 * f * PAPER_INSET });
@@ -55,6 +53,11 @@ export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: num
     k: 0.4 + 0.6 * hash2(i, 4, 91),
   }));
   const foxCell = 6 * dpr;
+  // The cockle's height field, one column and row beyond the paper so every pixel has neighbours
+  // to take its slope from (each height is used by four pixels: sampled once, not four times).
+  const hw = pw + 2, heights = new Float64Array(hw * (ph + 2));
+  for (let y = -1; y <= ph; y++) for (let x = -1; x <= pw; x++) heights[(y + 1) * hw + x + 1] = fbm(x / cockle, y / cockle, 107, 3);
+  const reach = rings.map((s) => 1.15 * s.r * 1.06); // beyond this a tide-mark can't reach, however its edge wavers (|fbm| < 0.375 → < ±6%)
 
   for (let y = 0; y < ph; y++) {
     for (let x = 0; x < pw; x++) {
@@ -78,8 +81,10 @@ export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: num
       g *= tone * (1 - dark * 0.2);
       bl *= tone * (1 - dark * 0.35);
       // Water stains: darker tide line, slightly tinted inside.
-      for (const s of rings) {
-        const q = Math.hypot(x - s.x, y - s.y) / (s.r * (1 + 0.15 * fbm(x / (s.r * 0.6), y / (s.r * 0.6), 99, 2)));
+      for (let k = 0; k < rings.length; k++) {
+        const s = rings[k], dist = Math.hypot(x - s.x, y - s.y);
+        if (dist > reach[k]) continue;
+        const q = dist / (s.r * (1 + 0.15 * fbm(x / (s.r * 0.6), y / (s.r * 0.6), 99, 2)));
         if (q > 1.15) continue;
         const inside = q < 1 ? 0.35 : 0, line = Math.exp(-(((q - 1) / 0.035) ** 2));
         const a = b.stains * s.k * (inside + line);
@@ -97,8 +102,9 @@ export function drawBack(canvas: HTMLCanvasElement, W: number, H: number, f: num
         bl *= 1 + (FOX[2] - 1) * a;
       }
       // Cockle, lit by the room (normalised so flat paper shows its colour).
-      const hx = (fbm((x + 1) / cockle, y / cockle, 107, 3) - fbm((x - 1) / cockle, y / cockle, 107, 3)) * relief * cockle * 0.5;
-      const hy = (fbm(x / cockle, (y + 1) / cockle, 107, 3) - fbm(x / cockle, (y - 1) / cockle, 107, 3)) * relief * cockle * 0.5;
+      const hi = (y + 1) * hw + x + 1;
+      const hx = (heights[hi + 1] - heights[hi - 1]) * relief * cockle * 0.5;
+      const hy = (heights[hi + hw] - heights[hi - hw]) * relief * cockle * 0.5;
       const nl = Math.hypot(hx, hy, 1);
       let lit = 0;
       for (const { dir, weight } of lights) lit += weight * Math.max(0, (-hx * dir[0] - hy * dir[1] + dir[2]) / nl);

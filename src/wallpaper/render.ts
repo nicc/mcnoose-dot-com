@@ -3,8 +3,9 @@
 import type { Config } from '../config';
 import { lightsAt, roomFromConfig, viewAt } from '../room';
 import palette from './palette.json';
-import { recolour, type RGB } from './recolour';
-import { blurWrap, hexToRgb, pebbles, shade } from './relief';
+import { hexToRgb, type RGB } from '../colour';
+import { recolour } from './recolour';
+import { blurWrap, pebbles, shade } from './relief';
 
 export const ASPECT = 1660 / 1200; // repeat height / width of scan.webp
 

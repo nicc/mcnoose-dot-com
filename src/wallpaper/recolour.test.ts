@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { recolour, type RGB } from './recolour';
+import { recolour } from './recolour';
+import type { RGB } from '../colour';
 
 const scan = () => Uint8ClampedArray.from([100, 100, 100, 255, 102, 98, 101, 255, 200, 50, 50, 255, 198, 52, 49, 255]);
 const index = Uint8Array.from([0, 0, 1, 1]);

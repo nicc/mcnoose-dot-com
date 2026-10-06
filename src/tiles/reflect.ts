@@ -2,10 +2,10 @@
 // plus gentle glaze waviness) and is traced into the room model: floor, the window wall behind
 // the viewer, side walls, ceiling. Low resolution on purpose: old glaze blurs reflections.
 // Wall coordinates in cm: x from the left wall, y up, z out from the tiled wall.
+// Traced for every tile near the window on every scroll frame: the inner loops allocate nothing.
 import type { Room, Vec3 } from '../room';
+import type { RGB } from '../colour';
 import { fbm, hash2 } from '../wood/noise';
-
-export type RGB = [number, number, number];
 
 export interface RoomLook {
   wall: RGB; // walls facing the tiles and to the sides
@@ -27,28 +27,48 @@ function inWindow(r: Room, x: number, y: number): 'pane' | 'sash' | null {
   return edge < SASH_CM || mx < SASH_CM / 2 || my < SASH_CM / 2 ? 'sash' : 'pane';
 }
 
-const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-
 // Colour seen along a ray from point p (on a tile face) in direction d.
 export function roomColour(r: Room, look: RoomLook, p: Vec3, d: Vec3): RGB {
-  let best = Infinity, hit: 'back' | 'floor' | 'ceiling' | 'side' | null = null;
+  const out: RGB = [0, 0, 0];
+  roomColourInto(r, look, p[0], p[1], p[2], d[0], d[1], d[2], out);
+  return out;
+}
+
+// The same, without allocating: writes the colour into `out`.
+function roomColourInto(r: Room, look: RoomLook, px: number, py: number, pz: number, dx: number, dy: number, dz: number, out: RGB): void {
+  let best = Infinity, hit = 0; // 1 back, 2 floor, 3 ceiling, 4 side
   // The nearest plane the ray reaches (inline: this runs for every sample of every tile).
   let t: number;
-  if (Math.abs(d[2]) >= 1e-9 && (t = (r.depthCm - p[2]) / d[2]) > 1e-6 && t < best) (best = t), (hit = 'back');
-  if (Math.abs(d[1]) >= 1e-9 && (t = (0 - p[1]) / d[1]) > 1e-6 && t < best) (best = t), (hit = 'floor');
-  if (Math.abs(d[1]) >= 1e-9 && (t = (r.ceilingCm - p[1]) / d[1]) > 1e-6 && t < best) (best = t), (hit = 'ceiling');
-  if (Math.abs(d[0]) >= 1e-9 && (t = (0 - p[0]) / d[0]) > 1e-6 && t < best) (best = t), (hit = 'side');
-  if (Math.abs(d[0]) >= 1e-9 && (t = (r.widthCm - p[0]) / d[0]) > 1e-6 && t < best) (best = t), (hit = 'side');
-  if (!hit) return look.wall;
-  if (hit === 'floor') return look.floor;
-  if (hit === 'ceiling') return look.ceiling;
-  const x = p[0] + d[0] * best, y = p[1] + d[1] * best;
-  if (hit === 'back') {
-    const w = inWindow(r, x, y);
-    if (w === 'pane') return mix(look.sky[1], look.sky[0], (y - r.window.bottom) / r.window.height);
-    if (w === 'sash') return look.sash;
+  if (Math.abs(dz) >= 1e-9 && (t = (r.depthCm - pz) / dz) > 1e-6 && t < best) (best = t), (hit = 1);
+  if (Math.abs(dy) >= 1e-9 && (t = (0 - py) / dy) > 1e-6 && t < best) (best = t), (hit = 2);
+  if (Math.abs(dy) >= 1e-9 && (t = (r.ceilingCm - py) / dy) > 1e-6 && t < best) (best = t), (hit = 3);
+  if (Math.abs(dx) >= 1e-9 && (t = (0 - px) / dx) > 1e-6 && t < best) (best = t), (hit = 4);
+  if (Math.abs(dx) >= 1e-9 && (t = (r.widthCm - px) / dx) > 1e-6 && t < best) (best = t), (hit = 4);
+  let c: RGB;
+  if (!hit) c = look.wall;
+  else if (hit === 2) c = look.floor;
+  else if (hit === 3) c = look.ceiling;
+  else {
+    const x = px + dx * best, y = py + dy * best;
+    const w = hit === 1 ? inWindow(r, x, y) : null;
+    if (w === 'pane') {
+      const k = (y - r.window.bottom) / r.window.height, a = look.sky[1], b = look.sky[0];
+      out[0] = a[0] + (b[0] - a[0]) * k;
+      out[1] = a[1] + (b[1] - a[1]) * k;
+      out[2] = a[2] + (b[2] - a[2]) * k;
+      return;
+    }
+    if (w === 'sash') c = look.sash;
+    else {
+      // Walls dim towards the floor.
+      const k = Math.max(0, 1 - y / r.ceilingCm) * 0.6, a = look.wall;
+      out[0] = a[0] + (a[0] + (0 - a[0]) * 0.25 - a[0]) * k;
+      out[1] = a[1] + (a[1] + (0 - a[1]) * 0.25 - a[1]) * k;
+      out[2] = a[2] + (a[2] + (0 - a[2]) * 0.25 - a[2]) * k;
+      return;
+    }
   }
-  return mix(look.wall, mix(look.wall, [0, 0, 0], 0.25), Math.max(0, 1 - y / r.ceilingCm) * 0.6); // walls dim towards the floor
+  out[0] = c[0], out[1] = c[1], out[2] = c[2];
 }
 
 export interface TileReflection {
@@ -73,47 +93,53 @@ export function tileTilt(seed: number, maxDeg: number): [number, number] {
 // smooth rather than stepped; flat cells, most of them, cost nothing extra.
 const EDGE = 28; // colour difference (sum over channels) that marks a cell as straddling an edge
 // A tile's normals at its cell centres don't depend on the eye: kept per tile across re-traces.
-const normalCache = new Map<string, Vec3[]>();
+const normalCache = new Map<string, Float64Array>();
+const colour: RGB = [0, 0, 0]; // scratch for the sample being traced
+const sampled = [0, 0, 0, 0]; // … and its RGBA result
 export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec3, nx: number, ny = nx): Uint8ClampedArray {
   const out = new Uint8ClampedArray(nx * ny * 4);
   const [ax, ay] = tileTilt(t.seed, t.tiltDeg);
   const wave = t.waviness * 0.06;
-  // Tilt + low-frequency waviness → the surface normal at (u, v).
-  const normal = (u: number, v: number): Vec3 => {
-    const sx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
-    const sy = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
-    const nl = Math.hypot(sx, sy, 1);
-    return [sx / nl, sy / nl, 1 / nl];
-  };
   const nKey = `${t.seed}|${t.tiltDeg}|${t.waviness}|${nx}|${ny}`;
   let normals = normalCache.get(nKey);
   if (!normals) {
-    normals = [];
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) normals.push(normal((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5));
+    // Tilt + low-frequency waviness → the surface normal at each cell centre (u, v).
+    normals = new Float64Array(nx * ny * 3);
+    for (let j = 0; j < ny; j++)
+      for (let i = 0; i < nx; i++) {
+        const u = (i + 0.5) / nx - 0.5, v = (j + 0.5) / ny - 0.5;
+        const sx = Math.tan(ax) + wave * fbm(u * 2 + t.seed * 0.37, v * 2, t.seed, 2);
+        const sy = Math.tan(ay) + wave * fbm(u * 2, v * 2 + t.seed * 0.53, t.seed + 9, 2);
+        const nl = Math.hypot(sx, sy, 1), k = (j * nx + i) * 3;
+        normals[k] = sx / nl, normals[k + 1] = sy / nl, normals[k + 2] = 1 / nl;
+      }
     if (normalCache.size > 4000) normalCache.clear(); // bounded: a few hundred tiles at a time
     normalCache.set(nKey, normals);
   }
-  const sample = (u: number, v: number, N = normal(u, v)): [number, number, number, number] => {
-    const p: Vec3 = [t.centre.x + u * t.wCm, t.centre.y - v * t.hCm, 0];
-    let dx = p[0] - eye[0], dy = p[1] - eye[1], dz = p[2] - eye[2];
+  const [ex, ey, ez] = eye, cx = t.centre.x, cy = t.centre.y;
+  // Traces one sample at (u, v) on the tile with the normal at `n` (an index into normals), into `sampled`.
+  const sample = (u: number, v: number, n: number) => {
+    const N0 = normals![n], N1 = normals![n + 1], N2 = normals![n + 2];
+    const px = cx + u * t.wCm, py = cy - v * t.hCm, pz = 0;
+    let dx = px - ex, dy = py - ey, dz = pz - ez;
     const dl = Math.sqrt(dx * dx + dy * dy + dz * dz); // not Math.hypot: far slower, per sample
-    [dx, dy, dz] = [dx / dl, dy / dl, dz / dl];
-    const dn = dx * N[0] + dy * N[1] + dz * N[2];
-    const R: Vec3 = [dx - 2 * dn * N[0], dy - 2 * dn * N[1], dz - 2 * dn * N[2]];
-    const c = roomColour(r, look, p, R);
+    dx = dx / dl, dy = dy / dl, dz = dz / dl;
+    const dn = dx * N0 + dy * N1 + dz * N2;
+    roomColourInto(r, look, px, py, pz, dx - 2 * dn * N0, dy - 2 * dn * N1, dz - 2 * dn * N2, colour);
     // Schlick's Fresnel relative to head-on: flat tiles seen near straight-on stay at ~1×,
     // glancing surfaces (the top of a bull-nose) reflect ten times as much or more.
     const cos = Math.min(1, Math.abs(dn));
     const fresnel = (GLAZE_R0 + (1 - GLAZE_R0) * (1 - cos) ** 5) / GLAZE_R0;
-    return [c[0], c[1], c[2], Math.min(255, 255 * t.strength * fresnel)];
+    sampled[0] = colour[0], sampled[1] = colour[1], sampled[2] = colour[2], sampled[3] = Math.min(255, 255 * t.strength * fresnel);
   };
   for (let j = 0; j < ny; j++) {
     for (let i = 0; i < nx; i++) {
-      const k = (j * nx + i) * 4, c = sample((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5, normals[j * nx + i]);
-      out[k] = c[0];
-      out[k + 1] = c[1];
-      out[k + 2] = c[2];
-      out[k + 3] = c[3];
+      const k = (j * nx + i) * 4;
+      sample((i + 0.5) / nx - 0.5, (j + 0.5) / ny - 0.5, (j * nx + i) * 3);
+      out[k] = sampled[0];
+      out[k + 1] = sampled[1];
+      out[k + 2] = sampled[2];
+      out[k + 3] = sampled[3];
     }
   }
   // Edge cells: compared with their neighbours on the first pass, then supersampled.
@@ -125,13 +151,15 @@ export function reflectTile(r: Room, look: RoomLook, t: TileReflection, eye: Vec
       if ((i + 1 < nx && diff(k, k + 4) > EDGE) || (i > 0 && diff(k, k - 4) > EDGE) || (j + 1 < ny && diff(k, k + nx * 4) > EDGE) || (j > 0 && diff(k, k - nx * 4) > EDGE)) edges.push(i, j);
     }
   }
+  const acc = [0, 0, 0, 0];
   for (let e = 0; e < edges.length; e += 2) {
-    const i = edges[e], j = edges[e + 1], acc = [0, 0, 0, 0];
-    const N = normals[j * nx + i]; // waviness is slow: one normal per cell
+    const i = edges[e], j = edges[e + 1];
+    acc[0] = acc[1] = acc[2] = acc[3] = 0;
+    const n = (j * nx + i) * 3; // waviness is slow: one normal per cell
     for (let sj = 0; sj < 3; sj++)
       for (let si = 0; si < 3; si++) {
-        const c = sample((i + (si + 0.5) / 3) / nx - 0.5, (j + (sj + 0.5) / 3) / ny - 0.5, N);
-        for (let q = 0; q < 4; q++) acc[q] += c[q] / 9;
+        sample((i + (si + 0.5) / 3) / nx - 0.5, (j + (sj + 0.5) / 3) / ny - 0.5, n);
+        for (let q = 0; q < 4; q++) acc[q] += sampled[q] / 9;
       }
     const k = (j * nx + i) * 4;
     for (let q = 0; q < 4; q++) out[k + q] = acc[q];

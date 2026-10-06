@@ -8,7 +8,7 @@
 // tears back to the plaster. Lit edges take the room's light direction.
 import type { Vec3 } from '../room';
 import { wallPoint, type WallMap } from '../tiles/surface';
-import { fbm, hash2 } from '../wood/noise';
+import { clamp01, fbm, hash2 } from '../wood/noise';
 
 export interface AgeStyle {
   yellowing: number;
@@ -37,8 +37,6 @@ const AGED = [224, 204, 158], DIRT = [118, 104, 86], STAIN = [214, 186, 140], TI
 const PLASTER = [190, 181, 164], CORE = [214, 204, 182]; // core: the paper's body, paler than its printed face but not white
 const SPREAD_SAMPLES = 9;
 
-const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
-const mul = (base: number[], amount: number) => base.map((c) => 1 - clamp01(amount) * (1 - c / 255));
 
 export interface Frame {
   wCm: number;
@@ -48,8 +46,16 @@ export interface Frame {
 
 // Clean (0–1) and halo (0–1) at a wall point, averaged over the frame's wandering angle.
 export function frameMark(x: number, y: number, f: Frame, spreadDeg: number): { clean: number; halo: number } {
+  markAt(x, y, f, spreadDeg);
+  return { clean: mark.clean, halo: mark.halo };
+}
+
+// The same, into `mark` (called for every cell of the tint: no object per cell).
+const mark = { clean: 0, halo: 0 };
+function markAt(x: number, y: number, f: Frame, spreadDeg: number): void {
+  mark.clean = mark.halo = 0;
   // Beyond the frame's reach from its nail (at any angle) plus the halo's spread, there's nothing.
-  if (Math.hypot(x - f.nail.x, y - f.nail.y) > Math.hypot(f.wCm / 2, f.hCm) + 6 * HALO_CM) return { clean: 0, halo: 0 };
+  if (Math.hypot(x - f.nail.x, y - f.nail.y) > Math.hypot(f.wCm / 2, f.hCm) + 6 * HALO_CM) return;
   let clean = 0, halo = 0;
   for (let k = 0; k < SPREAD_SAMPLES; k++) {
     const a = ((k / (SPREAD_SAMPLES - 1) - 0.5) * 2 * spreadDeg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
@@ -59,7 +65,8 @@ export function frameMark(x: number, y: number, f: Frame, spreadDeg: number): { 
     if (d === 0) clean++;
     else halo += Math.exp(-d / HALO_CM) * (qy > -f.hCm / 2 ? 1.6 : 0.7); // heavier above its middle
   }
-  return { clean: clean / SPREAD_SAMPLES, halo: halo / SPREAD_SAMPLES };
+  mark.clean = clean / SPREAD_SAMPLES;
+  mark.halo = halo / SPREAD_SAMPLES;
 }
 
 function stainAt(x: number, y: number, amount: number): { inside: number; tide: number } {
@@ -87,30 +94,40 @@ export interface AgeArea {
 }
 
 // The tint layer for an area of wall: a canvas of RES cells per cm, to be shown multiplied.
+// Each tint is a multiply colour: 1 − amount · (1 − colour/255) per channel, so a colour's
+// per-channel "darkness" (1 − c/255) is fixed up front and the per-cell maths is plain arithmetic.
+const dark = (c: number[]) => c.map((v) => 1 - v / 255);
+const [AGED_D, DIRT_D, STAIN_D, TIDE_D] = [AGED, DIRT, STAIN, TIDE].map(dark);
 export function drawTint(area: AgeArea, s: AgeStyle, f: Frame): HTMLCanvasElement {
   const w = Math.max(1, Math.ceil((area.x1 - area.x0) * RES)), h = Math.max(1, Math.ceil((area.yTop - area.yBottom) * RES));
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext('2d')!, img = ctx.createImageData(w, h);
+  const ctx = canvas.getContext('2d')!, img = ctx.createImageData(w, h), px = img.data;
+  const marked = s.halo > 0 || s.yellowing > 0;
   for (let j = 0; j < h; j++) {
     const y = area.yTop - (j + 0.5) / RES, up = clamp01((y - area.yBottom) / 40);
     for (let i = 0; i < w; i++) {
       const x = area.x0 + (i + 0.5) / RES, k = (j * w + i) * 4;
-      const { clean, halo } = s.halo > 0 || s.yellowing > 0 ? frameMark(x, y, f, s.haloSpreadDeg) : { clean: 0, halo: 0 };
+      let clean = 0, halo = 0;
+      if (marked) (markAt(x, y, f, s.haloSpreadDeg), (clean = mark.clean), (halo = mark.halo));
       const n = fbm(x / 70, y / 70, 307, 3) + 0.5;
-      let col = mul(AGED, s.yellowing * (0.25 + 0.55 * n + 0.3 * up) * (1 - 0.85 * clean));
-      const dirt = mul(DIRT, s.halo * Math.min(1, halo) * 0.9 * (1 - clean));
-      col = col.map((c, ch) => c * dirt[ch]);
+      const age = clamp01(s.yellowing * (0.25 + 0.55 * n + 0.3 * up) * (1 - 0.85 * clean));
+      const dirt = clamp01(s.halo * Math.min(1, halo) * 0.9 * (1 - clean));
+      let r = (1 - age * AGED_D[0]) * (1 - dirt * DIRT_D[0]);
+      let g = (1 - age * AGED_D[1]) * (1 - dirt * DIRT_D[1]);
+      let b = (1 - age * AGED_D[2]) * (1 - dirt * DIRT_D[2]);
       if (s.stains > 0) {
         const st = stainAt(x, y, s.stains), keep = 1 - 0.5 * clean;
-        const a = mul(STAIN, st.inside * 0.45 * keep), b = mul(TIDE, st.tide * 0.6 * keep);
-        col = col.map((c, ch) => c * a[ch] * b[ch]);
+        const a = clamp01(st.inside * 0.45 * keep), t = clamp01(st.tide * 0.6 * keep);
+        r = r * (1 - a * STAIN_D[0]) * (1 - t * TIDE_D[0]);
+        g = g * (1 - a * STAIN_D[1]) * (1 - t * TIDE_D[1]);
+        b = b * (1 - a * STAIN_D[2]) * (1 - t * TIDE_D[2]);
       }
-      img.data[k] = col[0] * 255;
-      img.data[k + 1] = col[1] * 255;
-      img.data[k + 2] = col[2] * 255;
-      img.data[k + 3] = 255;
+      px[k] = r * 255;
+      px[k + 1] = g * 255;
+      px[k + 2] = b * 255;
+      px[k + 3] = 255;
     }
   }
   ctx.putImageData(img, 0, 0);
@@ -191,7 +208,10 @@ export function drawSeam(k: number, area: AgeArea, amount: number, s: SeamStyle,
     px[i + 3] = 255 * a + px[i + 3] * keep;
   };
   const ramp = (v: number) => Math.max(0, Math.min(1, 0.5 + v / (2 * blur)));
-  const line = (d: number, w: number) => Math.exp(-((d / w) ** 2));
+  const line = (d: number, w: number) => {
+    const q = (d / w) ** 2;
+    return q > 24 ? 0 : Math.exp(-q); // beyond ~5σ it's under over()'s threshold whatever scales it: skip the exp
+  };
   const reach = Math.min(cx, gapPx / 2 + DIRT_CM * scale * 2 + LIFT_CM * scale * 3 + 4 * blur);
   for (let j = 0; j < H; j++) {
     const y = rowCm(j);

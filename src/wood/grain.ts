@@ -1,9 +1,8 @@
 // Procedural oak: a flat-sawn board is a plane cut through a log's growth rings. Rings appear as
 // bands along the board that arch where the cut drifts towards the pith (cathedral figure).
 // Produces per-pixel albedo, gloss and fine relief; lighting lives in board.ts.
+import type { RGB } from '../colour';
 import { fbm, hash2 } from './noise';
-
-export type RGB = [number, number, number];
 
 export interface GrainStyle {
   early: RGB; // lighter, porous wood laid down in spring
@@ -34,10 +33,21 @@ export function grainMaps(len: number, wid: number, s: GrainStyle, periodLen = 0
   // Pore cells along the length; when periodic, sized to divide the period exactly.
   const poreCols = Math.max(1, Math.round(len / Math.max(2, ring * 1.6)));
   const poreLen = periodLen > 0 ? len / poreCols : Math.max(2, ring * 1.6);
+  const poreRow = Math.max(1, ring * 0.25), poreRows = Math.floor((wid - 1) / poreRow) + 1;
+  const poreAt = new Float64Array(poreRows); // this column's pore cells, by row cell
+  let poreCol = NaN;
+  const [er, eg, eb] = s.early, dr = s.late[0] - er, dg = s.late[1] - eg, db = s.late[2] - eb;
   for (let u = 0; u < len; u++) {
     const x = u + uOffset; // position along the whole board
     const depth = ring * (3 + 9 * s.figure * (0.5 + fbm(x * archScale, 0.5, s.seed, 2, archCells)));
     const drift = 1 + s.drift * 0.35 * fbm(x * archScale, 3.7, s.seed + 7, 2, archCells);
+    // Oak pores: short dark flecks along the grain, concentrated in earlywood. Seeded per cell, so
+    // the lookups are done once per cell column rather than per pixel.
+    const pu = Math.floor(x / poreLen) % (periodLen > 0 ? poreCols : Infinity);
+    if (pu !== poreCol) {
+      poreCol = pu;
+      for (let pv = 0; pv < poreRows; pv++) poreAt[pv] = hash2(pu, pv, s.seed + 29) > 0.82 ? 0.5 + 0.5 * hash2(pu, pv, s.seed + 31) : 0;
+    }
     for (let v = 0; v < wid; v++) {
       const i = v * len + u;
       const warp = fbm(x * archScale * 3, v / (ring * 6), s.seed + 13, 3, archCells * 3) * ring * 1.5;
@@ -46,11 +56,11 @@ export function grainMaps(len: number, wid: number, s: GrainStyle, periodLen = 0
       // Earlywood eases into latewood, then breaks sharply to the next year's earlywood.
       const late = phase < 0.55 ? 0 : phase < 0.9 ? (phase - 0.55) / 0.35 : (1 - phase) / 0.1;
       const lateBand = late * late;
-      // Oak pores: short dark flecks along the grain, concentrated in earlywood.
-      const pu = Math.floor(x / poreLen) % (periodLen > 0 ? poreCols : Infinity), pv = Math.floor(v / Math.max(1, ring * 0.25));
-      const pore = s.pores * (1 - lateBand) * (hash2(pu, pv, s.seed + 29) > 0.82 ? 0.5 + 0.5 * hash2(pu, pv, s.seed + 31) : 0);
+      const pore = s.pores * (1 - lateBand) * poreAt[Math.floor(v / poreRow)];
       const tone = drift * (1 - 0.45 * pore);
-      for (let c = 0; c < 3; c++) albedo[i * 3 + c] = (s.early[c] + (s.late[c] - s.early[c]) * lateBand) * tone;
+      albedo[i * 3] = (er + dr * lateBand) * tone;
+      albedo[i * 3 + 1] = (eg + dg * lateBand) * tone;
+      albedo[i * 3 + 2] = (eb + db * lateBand) * tone;
       gloss[i] = (0.55 + 0.45 * lateBand) * (1 - 0.8 * pore);
       relief[i] = 0.15 * lateBand - 0.6 * pore;
     }

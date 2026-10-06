@@ -19,7 +19,7 @@ import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
 import { forgetLengths, trimLength, type TrimStyle } from './trim/length';
 import { railProfile, skirtingProfile, type Profile, type RailDims, type SkirtingDims } from './trim/profile';
-import { hexToRgb } from './wallpaper/relief';
+import { hexToRgb } from './colour';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -354,8 +354,10 @@ const fading = (el: HTMLElement, at: number, now: number, ms: number) => {
   return true;
 };
 
-function printFor(c: Config, tile: number, p: Project): Print {
-  const key = JSON.stringify([tile, devicePixelRatio, Object.entries(c).filter(([k]) => /^(TILE_|HALFTONE_|PRINT_)/.test(k) && k !== 'PRINT_HOVER_FADE_MS')]);
+// What the prints depend on: a change to any of it reprints every tile.
+const printsKeyFor = (c: Config, tile: number) => JSON.stringify([tile, devicePixelRatio, Object.entries(c).filter(([k]) => /^(TILE_|HALFTONE_|PRINT_)/.test(k) && k !== 'PRINT_HOVER_FADE_MS')]);
+
+function printFor(c: Config, tile: number, p: Project, key = printsKeyFor(c, tile)): Print {
   if (key !== printsKey) {
     prints.clear();
     placements.clear(); // new prints: nothing to crossfade from
@@ -382,13 +384,13 @@ function printFor(c: Config, tile: number, p: Project): Print {
 // Title stays in the DOM for screen readers; the canvas carries the visible print. On hover the
 // print fades to the original logo (its wrapper fades, so the re-flow crossfade on the print itself
 // is untouched). Links open in a new tab.
-function projectTile(c: Config, tile: number, p: Project, slot: string, now: number, pending: Promise<unknown>[]): HTMLElement {
+function projectTile(c: Config, tile: number, p: Project, slot: string, now: number, pending: Promise<unknown>[], key: string): HTMLElement {
   const a = el('a', 'tile tile-project');
   holds.set(a, projectId(p));
   a.href = p.url;
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
-  const pr = printFor(c, tile, p);
+  const pr = printFor(c, tile, p, key);
   place(p, slot, pr.canvas, now);
   const arrived = arrivals.get(projectId(p));
   if (arrived !== undefined && fading(pr.canvas, arrived, now, c.REFLOW_FADE_MS)) a.classList.add('tile-arrive');
@@ -534,14 +536,14 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
   const n = Math.max(1, cols.full.length);
   const rows = wallRows(projects.length, a, n, c.TRAILING_ROWS);
   const aged = tileAgeing(c, a, rows);
-  const now = performance.now();
+  const now = performance.now(), printsKey = printsKeyFor(c, a.tile);
   const tiles = new Map<string, HTMLElement>();
   for (let r = 0; r < rows; r++) {
     for (let k = cols.first; k < cols.first + cols.count; k++) {
       const i = slot.get(k);
       const p = i === undefined ? undefined : projects[r * n + i];
       const key = `${r}:${k}`;
-      const t = p ? projectTile(c, a.tile, p, key, now, pending) : el('div', 'tile');
+      const t = p ? projectTile(c, a.tile, p, key, now, pending, printsKey) : el('div', 'tile');
       const { at, ...style } = surface(r, k);
       Object.assign(t.style, style);
       t.append(
@@ -582,12 +584,12 @@ export function reflowProjects(visible: { anchor: Anchor; width: number }): Fram
   const n = Math.max(1, shown.full.length);
   if (wallRows(projects.length, a, n, c.TRAILING_ROWS) !== built.rows) return;
   const slot = new Map(shown.full.map((k, i) => [k, i]));
-  const now = performance.now(), pending: Promise<unknown>[] = [];
+  const now = performance.now(), pending: Promise<unknown>[] = [], printsKey = printsKeyFor(c, a.tile);
   for (const [key, t] of tiles) {
     const [r, k] = key.split(':').map(Number), i = slot.get(k);
     const p = i === undefined ? undefined : projects[r * n + i];
     if ((p && projectId(p)) === holds.get(t)) continue;
-    const next = p ? projectTile(c, a.tile, p, key, now, pending) : el('div', 'tile');
+    const next = p ? projectTile(c, a.tile, p, key, now, pending, printsKey) : el('div', 'tile');
     next.style.cssText = t.style.cssText; // its glaze tone and edge lighting
     next.append(...[...t.children].filter((e) => !PROJECT_PARTS.some((cls) => e.classList.contains(cls))));
     t.replaceWith(next);

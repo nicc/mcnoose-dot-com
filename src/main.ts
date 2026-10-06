@@ -178,7 +178,8 @@ if (pinToScreen) {
       shown = pos;
       render();
     }
-    document.documentElement.dataset.pin = settled ? 'settled' : 'moving';
+    const pinState = settled ? 'settled' : 'moving';
+    if (document.documentElement.dataset.pin !== pinState) document.documentElement.dataset.pin = pinState; // a write each frame would dirty style
     requestAnimationFrame(watch);
   };
   requestAnimationFrame(watch);

@@ -7,7 +7,7 @@
 // 1 = holds, then goes).
 import type { Config } from './config';
 import { SKY_LOW, SKY_TOP } from './surface/reflection';
-import { hexToRgb } from './wallpaper/relief';
+import { hexToRgb } from './colour';
 
 export interface Sky {
   kelvin: number;

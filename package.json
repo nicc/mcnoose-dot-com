@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "shots": "node scripts/shots.ts",
     "readme:wall": "node scripts/readme-wall.ts",
+    "identity": "node scripts/identity.ts",
     "prepare:wallpaper": "node scripts/prepare-wallpaper.ts"
   },
   "devDependencies": {

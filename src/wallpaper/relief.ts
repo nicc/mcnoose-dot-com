@@ -1,4 +1,5 @@
-import type { Light } from '../room';
+import type { Light, Vec3 } from '../room';
+import { rng } from '../wood/noise';
 // Pure relief maths for embossed wallpaper: a tileable height map → lit RGBA.
 // Everything wraps at the edges so the result repeats seamlessly.
 
@@ -36,7 +37,7 @@ export interface ShadeOptions {
   lights: Light[]; // the room's lights at this surface (screen coords: y down, z towards viewer)
   ambient: number; // 0–1: how dark slopes facing away can get
   sheen: number; // satin paint highlight strength
-  view?: [number, number, number]; // towards the viewer's eye (screen coords), for the sheen
+  view?: Vec3; // towards the viewer's eye (screen coords), for the sheen
 }
 
 // Lambert shading over the room's lights, normalised so flat areas come out exactly their albedo,
@@ -49,7 +50,7 @@ export function shade(height: Float32Array, w: number, h: number, o: ShadeOption
   const view = o.view ?? [0, 0, 1], weightSum = o.lights.reduce((s, l) => s + l.weight, 0) || 1;
   const halves = o.lights.map(({ dir, weight }) => {
     const hx = dir[0] + view[0], hy = dir[1] + view[1], hz = dir[2] + view[2], hl = Math.hypot(hx, hy, hz) || 1;
-    const hv: [number, number, number] = [hx / hl, hy / hl, hz / hl];
+    const hv: Vec3 = [hx / hl, hy / hl, hz / hl];
     return { h: hv, weight, flat: Math.max(0, hv[2]) ** SATIN };
   });
   const out = new Uint8ClampedArray(w * h * 4);
@@ -77,20 +78,9 @@ export function shade(height: Float32Array, w: number, h: number, o: ShadeOption
   return out;
 }
 
-export function hexToRgb(hex: string): [number, number, number] {
-  const v = parseInt(hex.replace('#', '').slice(0, 6), 16);
-  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-}
-
 // Seeded pebble emboss: a jittered dome per cell, tileable because cells wrap at the edges.
 export function pebbles(w: number, h: number, cell: number, seed = 7): Float32Array {
-  let a = seed >>> 0;
-  const rand = () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), a | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  const rand = rng(seed);
   const cols = Math.max(1, Math.round(w / cell)), rows = Math.max(1, Math.round(h / cell));
   const cw = w / cols, ch = h / rows;
   const px = new Float32Array(cols * rows), py = new Float32Array(cols * rows), pr = new Float32Array(cols * rows);

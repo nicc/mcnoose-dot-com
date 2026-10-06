@@ -1,9 +1,8 @@
 // Recolours a scan through its ink map: each pixel moves by its ink's (target − original) shift,
 // so print irregularities and paper grain survive any palette change. The shift field is
 // softened across ink edges so boundaries stay anti-aliased.
+import type { RGB } from '../colour';
 import { blurWrap } from './relief';
-
-export type RGB = [number, number, number];
 
 export function recolour(
   scan: Uint8ClampedArray, // RGBA, modified in place

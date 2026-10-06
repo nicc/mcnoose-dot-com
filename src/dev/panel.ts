@@ -224,5 +224,5 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame, co
   gui.add(actions, 'save');
   gui.onChange((e) => e.property !== 'save' && gui.title('config — unsaved'));
   addEventListener('resize', () => update(false));
-  update();
+  update(false); // the scene is built already: just the readout
 }

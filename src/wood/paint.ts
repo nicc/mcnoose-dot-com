@@ -2,7 +2,8 @@
 // latewood ridges still telegraph through as faint relief (pores are filled), long brush strokes
 // leave ridged streaks along the board, layers of old paint soften the routing, and oil paint
 // yellows, most in the recesses away from the light. Produces maps for shadeBoard + weather.
-import type { GrainMaps, RGB } from './grain';
+import type { RGB } from '../colour';
+import type { GrainMaps } from './grain';
 import { fbm, hash2 } from './noise';
 
 export interface PaintStyle {
@@ -21,7 +22,7 @@ const STROKE_WID_CM = 0.27;
 const GRAIN_FILL = 0.6; // how much of the grain's relief full build-up fills
 
 const YELLOWED = [1, 0.955, 0.84]; // what ageing does to a cream/white oil paint
-export const PAINT_BARE: [number, number, number] = [0.72, 0.62, 0.5]; // chips show wood and old primer
+export const PAINT_BARE: RGB = [0.72, 0.62, 0.5]; // chips show wood and old primer
 
 // Layers of paint round off sharp routing: the profile, box-blurred across the board. The blur
 // radius is physical (cm of paint build-up), so tall and short boards soften alike; sampled finely
@@ -58,19 +59,29 @@ export function paintMaps(grain: GrainMaps, len: number, wid: number, profile: (
   const recess = h.map((_, v) => Math.max(0, (h[Math.max(0, v - 2)] + h[Math.min(wid - 1, v + 2)] - 2 * h[v]) * wid * 0.3));
   const strokeLen = STROKE_LEN_CM * s.pxPerCm, strokeWid = Math.max(1, STROKE_WID_CM * s.pxPerCm);
   const grainShows = s.grain * 3 * (1 - GRAIN_FILL * s.buildup);
+  // A stroke now and then ends with a slight lap. Laps taper at both ends and edges like a stroke
+  // thinning out, so they never form a hard edge: the taper along the board (per column) and up it
+  // (per row) are worked out once each.
+  const lapCol = new Float64Array(len), lapColCell = new Float64Array(len);
+  for (let u = 0; u < len; u++) {
+    const lx = (u + uOffset) / strokeLen;
+    lapColCell[u] = Math.floor(lx);
+    lapCol[u] = 0.15 * Math.sqrt(Math.sin(Math.PI * (lx - Math.floor(lx))));
+  }
   for (let v = 0; v < wid; v++) {
     const yel = Math.min(1, s.yellowing * (0.6 + 1.4 * recess[v]));
-    const base = s.colour.map((c, k) => c * (1 + (YELLOWED[k] - 1) * yel));
+    const [b0, b1, b2] = s.colour.map((c, k) => c * (1 + (YELLOWED[k] - 1) * yel));
+    const lv = v / (strokeWid * 3), lvCell = Math.floor(lv), lapRow = Math.sin(Math.PI * (lv - lvCell));
     for (let u = 0; u < len; u++) {
       const i = v * len + u, x = u + uOffset;
-      // Ridged streaks along the board; a stroke now and then ends with a slight lap.
+      // Ridged streaks along the board.
       const streak = fbm(x / strokeLen, v / strokeWid, s.seed, 3);
-      // Laps taper at both ends and edges like a stroke thinning out, so they never form a hard edge.
-      const lx = x / strokeLen, lv = v / (strokeWid * 3);
-      const lap = hash2(Math.floor(lx), Math.floor(lv), s.seed + 3) > 0.9 ? 0.15 * Math.sqrt(Math.sin(Math.PI * (lx - Math.floor(lx)))) * Math.sin(Math.PI * (lv - Math.floor(lv))) : 0;
+      const lap = hash2(lapColCell[u], lvCell, s.seed + 3) > 0.9 ? lapCol[u] * lapRow : 0;
       relief[i] = Math.max(0, grain.relief[i]) * grainShows + (streak + lap) * s.brush * 0.8;
       const tone = 1 + 0.025 * s.brush * streak;
-      for (let c = 0; c < 3; c++) albedo[i * 3 + c] = base[c] * tone;
+      albedo[i * 3] = b0 * tone;
+      albedo[i * 3 + 1] = b1 * tone;
+      albedo[i * 3 + 2] = b2 * tone;
       gloss[i] = Math.max(0, 0.85 + 0.25 * streak * s.brush - 0.5 * recess[v]);
     }
   }
