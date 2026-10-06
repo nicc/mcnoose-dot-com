@@ -10,7 +10,7 @@ My portfolio site — a bathroom wall. I wanted the scene to feel alive. Most of
 
 ### Simulating the room
 
-The room is defined in centimetres (`src/room.ts`) with a window on the wall behind you, a ceiling light, and light bouncing up off the floor. Every surface works out its own shading from its own position on the wall, so the wallpaper, the frame, each tile, and each length of rail and skirting are lit slightly differently from their neighbours. Nothing has highlights or shadows painted on.
+The room is fully simulated (`src/room.ts`). There's a window on the wall behind you, a ceiling light, and light bouncing up off the floor. Every surface works out its own shading from its position on the wall, so the wallpaper, the frame, each tile, and each length of rail and skirting are lit slightly differently. Nothing has highlights or shadows painted on.
 
 The light moves. Clouds pass the window at random, which you mostly see in the reflections. The sun throws a soft patch of light onto the wall. The patch moves and warms for a few minutes as the sun sets. The room settles at dusk.
 
