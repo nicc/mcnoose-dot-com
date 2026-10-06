@@ -232,7 +232,7 @@ export const CONFIG = {
   SKIRTING_DEPTH_CM: 2.25, // board thickness at the round; beyond ~1.9 its top shows as a ledge above the round
   SKIRTING_TORUS_CM: 2.5, // diameter of the round along the top
   SKIRTING_RELIEF_CM: 0.3, // how far the round stands proud of the face: small = a lip, half the torus = a full half-round
-  SKIRTING_FLAT_CM: 10.7, // face height down to the floor
+  SKIRTING_FLAT_CM: 9, // face height down to the floor
   SKIRTING_WEAR: 0.11, // chipped paint on the torus
   SKIRTING_GRIME: 0.1, // dirt in the groove
   SKIRTING_SCUFFS: 0.2, // rub line, shoe scuffs and chips on the face
