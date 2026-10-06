@@ -341,7 +341,8 @@ body {
 }
 
 /* Those joints are caulked, not grouted: a pale bead (mostly tile colour) that fades over the tiles'
-   first pixels rather than ruling a grey line. */
+   first pixels rather than ruling a grey line. --caulk-a (GROUT_CAULK): how solidly it covers the
+   grout and the ends of the vertical joints beneath it. */
 .wall::before,
 .wall::after {
   content: '';
@@ -351,6 +352,7 @@ body {
   z-index: 1;
   height: calc(var(--grout-edge) + 2px);
   pointer-events: none;
+  opacity: var(--caulk-a, 1);
   --caulk: color-mix(in srgb, var(--tile-color) 70%, var(--grout-color));
 }
 

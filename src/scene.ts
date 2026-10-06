@@ -679,6 +679,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--tile': `${a.tile}px`,
     '--grout': `${c.GROUT_PX}px`,
     '--grout-edge': `${edgeJoint(c, a.tile).toFixed(2)}px`,
+    '--caulk-a': String(c.GROUT_CAULK),
     '--cols-total': String(cols.count),
     '--grid-w': `${cols.count * a.pitch - c.GROUT_PX}px`,
     '--grid-left': `${gridLeft}px`,

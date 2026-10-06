@@ -9,6 +9,7 @@ import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
 import { forgetCanvases, reflowProjects, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
+import { lengthCounts } from './trim/length';
 
 // The wall renders into a stage a margin wider than the window each side (overscan); #app clips
 // it. Window moves within the margin just slide the stage (a GPU transform, no redraw); past it,
@@ -186,5 +187,5 @@ if (pinToScreen) {
 }
 
 if (import.meta.env.DEV) {
-  import('./dev/panel').then(({ mountPanel }) => mountPanel(state, render, renderCounts));
+  import('./dev/panel').then(({ mountPanel }) => mountPanel(state, render, renderCounts, lengthCounts));
 }

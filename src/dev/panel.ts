@@ -159,6 +159,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   EMBROIDERY_DUST_TOP: [0, 2, 0.01],
   EMBROIDERY_DUST_INNER: [0, 2, 0.01],
   GROUT_EDGE_CM: [0, 0.5, 0.01],
+  GROUT_CAULK: [0, 1, 0.01],
   RAIL_SHADOW: [0, 1.5, 0.01],
   PAINT_GRAIN: [0, 1, 0.01],
   PAINT_BRUSH: [0, 1.5, 0.01],
@@ -180,7 +181,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   HALFTONE_OPACITY: [0, 1, 0.01],
 };
 
-export function mountPanel(state: Config, render: (force?: boolean) => Frame, counts?: { rebuilds: number; slides: number }) {
+export function mountPanel(state: Config, render: (force?: boolean) => Frame, counts?: { rebuilds: number; slides: number }, lengths?: { painted: number; cached: number }) {
   const gui = new GUI({ title: 'config', closeFolders: true });
   gui.close(); // starts collapsed; click the title to open
   const values = state as Record<string, number | string | boolean>;
@@ -214,6 +215,7 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame, co
   const out = gui.addFolder('layout (read-only)');
   for (const k of Object.keys(readout)) out.add(readout, k as keyof typeof readout).disable().listen();
   if (counts) for (const k of ['rebuilds', 'slides'] as const) out.add(counts, k).disable().listen(); // scene rebuilds / stage slides since load
+  if (lengths) for (const k of ['painted', 'cached'] as const) out.add(lengths, k, undefined, undefined, undefined).name(`lengths ${k}`).disable().listen(); // trim lengths painted / read from the OPFS store
 
   const actions = {
     save: async () => {

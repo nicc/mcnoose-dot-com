@@ -31,6 +31,7 @@ export interface Length {
 }
 
 const cache = new Map<string, Length & { key: string }>();
+export const lengthCounts = { painted: 0, cached: 0 }; // dev panel readout: how many came back from the OPFS store (worker.ts)
 export const forgetLengths = () => cache.clear(); // their pixels were lost (see main.ts)
 
 interface Queued extends Length {
@@ -73,6 +74,7 @@ function finish(w: Worker, r: LengthResult): void {
   inflight.delete(w);
   // Still wanted? The length may have been re-keyed (re-lit, resized) while this one was painting.
   if (q && q.key === r.key && cache.get(r.id)?.key === r.key) q.canvas.getContext('2d')!.putImageData(new ImageData(r.px as Uint8ClampedArray<ArrayBuffer>, q.job.len, q.job.total), 0, 0);
+  lengthCounts[r.cached ? 'cached' : 'painted']++;
   q?.resolve();
   pump();
 }
