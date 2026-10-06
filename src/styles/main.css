@@ -290,10 +290,15 @@ body {
 }
 
 /* Painted trim (rail, skirting): tile-wide lengths, each lit at its own place on the wall. The
-   rail sits above the tiles in stacking order so its cast shadow falls onto them. */
+   rail sits above the tiles in stacking order so its cast shadow falls onto them. Its box is
+   opaque, in its paint: the strip's feathered edges must fade into something, not into nothing —
+   Firefox composites the stage as its own surface after window moves, and the sun patch's
+   color-dodge over transparent rows showed as dark lines along the rail (the skirting, opaque
+   already, never did). */
 .rail {
   position: relative;
   z-index: 1;
+  background: var(--rail-color);
 }
 
 .trim-strip {
