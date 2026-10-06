@@ -8,8 +8,8 @@ import { blendedLight, lightsAt, pxPerCm, roomFromConfig, viewAt, type Light, ty
 import { drawAgeing, grimeLevel, type Ageing, type GroutAround } from './tiles/glaze';
 import { reflectTile, type RoomLook, type TileReflection } from './tiles/reflect';
 import { edgeShadows, tileTone, wallPoint, type WallMap } from './tiles/surface';
-import { beginSurfaces, wipeable } from './wipe';
-import { flush, soonSettled } from './later';
+import { beginSurfaces, replayWipes, wipeable } from './wipe';
+import { flush, later, soon, soonSettled } from './later';
 import { ageLayers, forgetAge, rollShift, rollsIn } from './wallpaper/age';
 import { applyTint, sunPatch } from './sunlight';
 import { noteElement } from './about';
@@ -92,7 +92,7 @@ function paperAge(c: Config, a: Anchor, topExtra: number, vp: Viewport): HTMLEle
   const seam = { gapMm: c.PAPER_AGE_SEAM_GAP_MM, lift: c.PAPER_AGE_SEAM_LIFT, tear: c.PAPER_AGE_SEAM_TEAR, sharpness: c.PAPER_AGE_SEAM_SHARPNESS, dirt: c.PAPER_AGE_SEAM_DIRT };
   const style = { yellowing: c.PAPER_AGE_YELLOWING, stains: c.PAPER_AGE_STAINS, seams: c.PAPER_AGE_SEAMS, seam, seamOrigin: seamOrigin(c), halo: c.PAPER_AGE_HALO, haloSpreadDeg: c.PAPER_AGE_HALO_SPREAD_DEG };
   const light = blendedLight(lightsAt(room, room.embroidery));
-  return ageLayers(wallMap(c, a, topExtra), vp.width, topExtra + c.HEADER_HEIGHT * a.tile, style, frame, light, Math.min(2, devicePixelRatio || 1));
+  return ageLayers(wallMap(c, a, topExtra), vp.width, topExtra + c.HEADER_HEIGHT * a.tile, style, frame, light, Math.min(2, devicePixelRatio || 1), (key, job) => void soon(key, job));
 }
 
 // Click the frame to turn it over: on the back, the about note (about.ts).
@@ -205,26 +205,39 @@ function skirting(c: Config, vp: Viewport, a: Anchor, topExtra: number, top: num
   const style: TrimStyle = { profile, colour: hexToRgb(c.SKIRTING_COLOR), paint: paintOf(c), wear: c.SKIRTING_WEAR, grime: c.SKIRTING_GRIME, ledgeCm: ledgeCm(c, a, topExtra, top, profile, TILE_FACE_CM),
     scuffs: { amount: c.SKIRTING_SCUFFS, low: c.SKIRTING_SCUFF_LOW, faceTopCm: profile.heightCm - c.SKIRTING_FLAT_CM } };
   // Below the fold on load: painted when the browser is idle, or as it nears the screen.
-  const below = top > scrollY + vp.height + SKIRTING_EARLY_PX;
+  const below = belowFold(top, vp);
   const { strip, h } = paintedStrip('skirting', c, vp, a, topExtra, top, style, c.SKIRTING_DUST, below);
   const footer = el('footer', 'skirting', [strip]);
   footer.style.height = `${h}px`;
-  skirtingWatch?.disconnect(); // one at a time: re-renders replace the footer
-  skirtingWatch = undefined;
-  if (below) {
-    const near = (skirtingWatch = new IntersectionObserver((seen) => {
-      if (!seen.some((e) => e.isIntersecting)) return;
-      near.disconnect();
-      flush('trim:skirting:');
-    }, { rootMargin: `${SKIRTING_EARLY_PX}px 0px` }));
-    near.observe(footer);
-  }
+  if (below) whenNear(footer, 'trim:skirting:');
   return footer;
 }
 
-let skirtingWatch: IntersectionObserver | undefined;
-
-const SKIRTING_EARLY_PX = 600; // how far off screen the skirting starts painting as you scroll towards it
+// Drawing held back until the browser is idle, for what's below the fold at load (the skirting, the
+// lower tiles' ageing): drawn sooner if it comes within EARLY_PX of the screen. One observer per
+// render (re-renders replace every element).
+const EARLY_PX = 600;
+const belowFold = (top: number, vp: Viewport) => top > scrollY + vp.height + EARLY_PX;
+let nearWatch: IntersectionObserver | undefined;
+const nearKeys = new Map<Element, string>();
+function whenNear(target: Element, key: string) {
+  nearWatch ??= new IntersectionObserver((seen) => {
+    for (const e of seen) {
+      if (!e.isIntersecting) continue;
+      nearWatch!.unobserve(e.target);
+      const k = nearKeys.get(e.target);
+      nearKeys.delete(e.target);
+      if (k) flush(k);
+    }
+  }, { rootMargin: `${EARLY_PX}px 0px` });
+  nearKeys.set(target, key);
+  nearWatch.observe(target);
+}
+function resetNear() {
+  nearWatch?.disconnect();
+  nearWatch = undefined;
+  nearKeys.clear();
+}
 
 const DUST_PX_PER_CM = 10; // dust sizes in trim/dust.ts are px at this scene scale (desktop)
 
@@ -488,15 +501,20 @@ export function forgetCanvases() {
   ageing.clear();
 }
 
-// fresh: just drawn (so wipes are replayed onto its marks).
-function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, grout?: GroutAround): { fixed: HTMLCanvasElement; marks: HTMLCanvasElement; dpr: number; fresh: boolean } {
+// fresh: just drawn (so wipes are replayed onto its marks). defer: below the fold at load, so drawn
+// when the browser is idle (keyed `tile-age:<id>`; the wipes so far are replayed then).
+function ageLayer(id: string, w: number, h: number, age: Ageing, seed: number, grout: GroutAround | undefined, defer: boolean): { fixed: HTMLCanvasElement; marks: HTMLCanvasElement; dpr: number; fresh: boolean } {
   const dpr = Math.min(1.5, devicePixelRatio || 1); // soft detail: no need for full density
   const key = JSON.stringify([w, h, dpr, age, grout]);
   let hit = ageing.get(id);
-  const fresh = !hit || hit.key !== key;
+  let fresh = !hit || hit.key !== key;
   if (!hit || fresh) {
     const fixed = el('canvas', 'tile-age'), marks = el('canvas', 'tile-age');
-    drawAgeing(fixed, marks, w, h, dpr, age, seed, grout);
+    const draw = () => drawAgeing(fixed, marks, w, h, dpr, age, seed, grout);
+    if (defer) {
+      later(`tile-age:${id}`, () => (draw(), replayWipes(marks)));
+      fresh = false; // nothing to replay onto yet
+    } else draw();
     // Extends over the joints the tile owns: left and above (and below on the bottom row).
     const g = grout?.g ?? 0;
     for (const canvas of [fixed, marks]) {
@@ -517,7 +535,7 @@ const ageAt = (c: Config, tile: number, grime: number): Ageing => ({
 });
 
 function tileAgeing(c: Config, a: Anchor, rows: number) {
-  return (row: number, col: number) => {
+  return (row: number, col: number, defer: boolean) => {
     const level = grimeLevel(rows - 1 - row, c.TILE_GRIME_ROWS);
     const grout: GroutAround = {
       g: c.GROUT_PX,
@@ -526,11 +544,11 @@ function tileAgeing(c: Config, a: Anchor, rows: number) {
       lastRow: row === rows - 1,
       age: { age: c.GROUT_AGE, grime: c.GROUT_GRIME, mould: c.GROUT_MOULD, limescale: c.GROUT_LIMESCALE, erosion: c.GROUT_EROSION, cracks: c.GROUT_CRACKS, level },
     };
-    return ageLayer(`${col}:${row}`, a.tile, a.tile, ageAt(c, a.tile, level), tileSeed(col, row), grout);
+    return ageLayer(`${col}:${row}`, a.tile, a.tile, ageAt(c, a.tile, level), tileSeed(col, row), grout, defer);
   };
 }
 
-function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface, firstTileTop: number, map: WallMap): HTMLElement {
+function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending: Promise<unknown>[], surface: TileSurface, firstTileTop: number, map: WallMap, vp: Viewport): HTMLElement {
   const g = el('div', 'grid');
   const slot = new Map(cols.full.map((k, i) => [k, i]));
   const n = Math.max(1, cols.full.length);
@@ -557,9 +575,10 @@ function grid(c: Config, a: Anchor, cols: Columns, projects: Project[], pending:
           seed: tileSeed(k, r),
         }),
       );
-      const age = aged(r, k);
+      const defer = belowFold(firstTileTop + r * a.pitch, vp), age = aged(r, k, defer);
       t.append(age.fixed, age.marks);
       wipeable(age.marks, 'scale', map, a.originX + k * a.pitch - c.GROUT_PX, firstTileTop + r * a.pitch - c.GROUT_PX, age.dpr, age.fresh);
+      if (defer) whenNear(t, `tile-age:${k}:${r}`);
       tiles.set(key, t);
       g.append(t);
     }
@@ -688,6 +707,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
 
   const pending: Promise<unknown>[] = [];
   const gen = ++generation;
+  resetNear(); // re-renders replace every element the last render was watching
   document.documentElement.dataset.printed = 'false';
   document.documentElement.dataset.renderedWidth = String(visible.width); // lets tests wait for a resize render
   const top = header(c, a.tile);
@@ -704,7 +724,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   root.replaceChildren(
     top,
     rail(c, vp, a, topExtra),
-    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra)),
+    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra), vp),
     skirting(c, vp, a, topExtra, skirtingTop),
   );
   const patch = sunPatch(c, wallMap(c, a, topExtra));
@@ -712,7 +732,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   applyTint(c);
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
-  pending.push(soonSettled()); // the painted rail and the sampler, just after the first paint
+  pending.push(soonSettled()); // the painted rail, the sampler and the paper's age, just after the first paint
   firstPaint = false;
   printed = Promise.all(pending);
   printed.then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));

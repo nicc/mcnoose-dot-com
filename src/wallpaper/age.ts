@@ -98,9 +98,8 @@ export interface AgeArea {
 // per-channel "darkness" (1 − c/255) is fixed up front and the per-cell maths is plain arithmetic.
 const dark = (c: number[]) => c.map((v) => 1 - v / 255);
 const [AGED_D, DIRT_D, STAIN_D, TIDE_D] = [AGED, DIRT, STAIN, TIDE].map(dark);
-export function drawTint(area: AgeArea, s: AgeStyle, f: Frame): HTMLCanvasElement {
+export function drawTint(area: AgeArea, s: AgeStyle, f: Frame, canvas = document.createElement('canvas')): HTMLCanvasElement {
   const w = Math.max(1, Math.ceil((area.x1 - area.x0) * RES)), h = Math.max(1, Math.ceil((area.yTop - area.yBottom) * RES));
-  const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d')!, img = ctx.createImageData(w, h), px = img.data;
@@ -177,9 +176,8 @@ interface Lift {
 // catch light along the lip and shadow the paper beyond. Grime gathers, patchily, along the joint.
 // Tears are strips torn back to the plaster. The master amount scales how visible the joint is and
 // how often lifts and tears happen (each is drawn in full); at 0 it's empty.
-export function drawSeam(k: number, area: AgeArea, amount: number, s: SeamStyle, ppc: number, dpr: number, light: Vec3): HTMLCanvasElement {
+export function drawSeam(k: number, area: AgeArea, amount: number, s: SeamStyle, ppc: number, dpr: number, light: Vec3, canvas = document.createElement('canvas')): HTMLCanvasElement {
   const scale = ppc * dpr; // canvas px per cm
-  const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(STRIP_CM * scale);
   canvas.height = Math.ceil((area.yTop - area.yBottom) * scale);
   if (amount <= 0) return canvas;
@@ -338,18 +336,25 @@ export function areaFor(map: WallMap, vpWidth: number, headerH: number): AgeArea
 let cached: { key: string; area: AgeArea; tint: HTMLCanvasElement; seams: { x: number; canvas: HTMLCanvasElement }[] } | undefined;
 
 // The age layers for the header, placed in page px. Redrawn only when settings change or the view
-// leaves the area already drawn.
+// leaves the area already drawn. The canvases are placed at once and painted by `draw` (the scene
+// runs it just after the first paint, so the paper shows before its age does); until then they're
+// blank, which under multiply is clean paper.
 export const forgetAge = () => void (cached = undefined); // their pixels were lost (see main.ts)
 
-export function ageLayers(map: WallMap, vpWidth: number, headerH: number, s: AgeStyle, f: Frame, light: Vec3, dpr: number): HTMLElement[] {
+export function ageLayers(map: WallMap, vpWidth: number, headerH: number, s: AgeStyle, f: Frame, light: Vec3, dpr: number, draw: (key: string, job: () => void) => void): HTMLElement[] {
   const ppc = map.pxPerCm, key = JSON.stringify([s, f, ppc, dpr, light]);
   const want = areaFor(map, vpWidth, headerH), have = cached?.area;
   const covered = have && cached!.key === key && want.x0 + (want.x1 - want.x0) / 3 >= have.x0 && want.x1 - (want.x1 - want.x0) / 3 <= have.x1 && want.yTop - 20 <= have.yTop;
   if (!covered) {
     const seams = s.seams > 0 ? seamsIn(want.x0 - STRIP_CM, want.x1 + STRIP_CM, s.seamOrigin) : []; // none at all at 0
-    cached = { key, area: want, tint: drawTint(want, s, f), seams: seams.map((x) => ({ x, canvas: drawSeam(seamIndex(x, s.seamOrigin), want, s.seams, s.seam, ppc, dpr, light) })) };
-    cached.tint.className = 'paper-age';
-    for (const seam of cached.seams) seam.canvas.className = 'paper-seam';
+    const layers = (cached = { key, area: want, tint: document.createElement('canvas'), seams: seams.map((x) => ({ x, canvas: document.createElement('canvas') })) });
+    layers.tint.className = 'paper-age';
+    for (const seam of layers.seams) seam.canvas.className = 'paper-seam';
+    draw('paper-age', () => {
+      if (cached !== layers) return; // superseded before it was drawn
+      drawTint(want, s, f, layers.tint);
+      for (const seam of layers.seams) drawSeam(seamIndex(seam.x, s.seamOrigin), want, s.seams, s.seam, ppc, dpr, light, seam.canvas);
+    });
   }
   const { area, tint, seams } = cached!;
   const page = (x: number, y: number) => ({ x: map.embroideryPage.x + (x - map.embroidery.x) * ppc, y: map.embroideryPage.y - (y - map.embroidery.y) * ppc });

@@ -41,6 +41,12 @@ export function wipeable(canvas: HTMLCanvasElement, kind: WipeKind, m: WallMap, 
   if (fresh) for (const d of dabs) if (d.kind === kind) apply(s, d);
 }
 
+// The canvas was drawn (or redrawn) after it was registered: give it the wipes made so far.
+export function replayWipes(canvas: HTMLCanvasElement): void {
+  const s = surfaces.find((s) => s.canvas === canvas);
+  if (s) for (const d of dabs) if (d.kind === s.kind) apply(s, d);
+}
+
 function apply(s: Surface, d: Dab): void {
   const ppc = s.map.pxPerCm;
   const px = (s.map.embroideryPage.x + (d.x - s.map.embroidery.x) * ppc - s.x) * s.dpr;
