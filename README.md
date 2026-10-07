@@ -1,6 +1,6 @@
 # mcnoose.com
 
-My portfolio site — a bathroom wall. I wanted the scene to feel alive. Most of the work went into lighting and ageing it, and introducing subtle interactions.
+My portfolio site — a bathroom wall. As LLMs have made it easier to build software at a technical level, I feel it has become increasingly important and difficult to achieve a human feel, especially at the scale and scope now afforded to us. So I wanted the scene to feel alive. Most of the work went into lighting and ageing it, and introducing subtle interactions.
 
 <a href="https://mcnoose.com" target="_blank" rel="noopener noreferrer">It's here.</a> Desktop is best, but it works on phones too.
 
