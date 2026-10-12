@@ -70,7 +70,10 @@ test('the mouse brushing onto the frame nudges it, then it settles (EMBROIDERY_B
   const rest = await tiltOf(page);
   const n = await nailOf(page), x = n.x - n.w * 0.45, y = n.y + n.h * 0.9;
   // The real cursor just beside it: Firefox synthesises moves at the real cursor when the page changes.
-  await page.mouse.move(x - 12, y);
+  // Clear of the turned frame (its tilt swings this corner out past the unturned box), or the real
+  // cursor brushes it first, and each settle re-renders the frame under it to brush again.
+  const left = await page.evaluate(() => document.querySelector('.frame')!.getBoundingClientRect().left);
+  await page.mouse.move(Math.min(x - 12, left - 8), y);
   await page.waitForTimeout(100);
   // The pointer arriving on the frame's lower edge and moving on, within the brush's moment. Dispatched
   // directly: real move timing under test load can miss a window this short.
