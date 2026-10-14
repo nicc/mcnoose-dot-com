@@ -62,7 +62,7 @@ export const CONFIG = {
   ROOM_CLOUD_PASSES: 3, // the most changes of light one passing cloud brings (each brings 1 to this many)
   ROOM_CLOUD_DRIFT: 0.3, // in clear spells the light still wanders, by this share of the cloud depth
   ROOM_CLOUD_DRIFT_S: 8, // … gliding to a new level about this often
-  ROOM_CLOUD_STEP: 0.004, // the light is updated only once it has moved this much (each update redraws the screen)
+  ROOM_CLOUD_STEP: 0.002, // the light is updated only once it has moved this much (each update redraws the screen)
   ROOM_CLOUD_BALANCE: 0.98, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
   ROOM_SUN_HIDE: 0.25, // how much a cloud must dim the window light to hide the sun patch completely
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun
