@@ -411,7 +411,8 @@ body {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  filter: blur(var(--reflect-blur));
+  /* No CSS blur: the 20×20 trace upscaled is already as soft as the glaze, and a filter here made the
+     compositor re-blur every tile on each cloud tick. */
   opacity: var(--glint, 1); /* the sky's brightness, as clouds pass (clouds.ts) */
 }
 

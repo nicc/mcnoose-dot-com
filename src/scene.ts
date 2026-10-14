@@ -695,7 +695,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
     '--seam-shadow-a': String(0.22 * c.SEAM_SHADOW),
-    '--reflect-blur': `${(a.tile * 0.01 * (0.5 + c.TILE_WAVINESS)).toFixed(2)}px`, // wavy glaze blurs reflections
     '--halftone-blur': `${c.HALFTONE_BLUR_PX}px`,
     '--halftone-opacity': String(c.HALFTONE_OPACITY),
     '--tile-color': c.TILE_COLOR,
