@@ -88,6 +88,7 @@ export const CONFIG = {
   WALLPAPER_INK_RELIEF: 0.25, // how proud printed inks sit above the ground
   WALLPAPER_AMBIENT: 0.88, // how dark shadowed slopes get (1 = no shadow)
   WALLPAPER_SHEEN: 0.5, // satin highlight
+  PAPER_FADE_MS: 900, // the pattern arrives after the page (its own file) and fades up over the plain paper colour
   SEAM_SHADOW: 0.28, // contact shadow on the paper where it meets the tiles
   SEAM_SHADOW_CM: 0.27, // … and how far up the paper it reaches
   SEAM_LINE: 1.14, // the joint line between paper and tile

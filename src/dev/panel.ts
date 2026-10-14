@@ -61,6 +61,7 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   ROOM_CLOUD_RATE_HZ: [0.005, 1, 0.005],
   ROOM_CLOUD_SMOOTH: [0, 1, 0.01],
   ROOM_CLOUD_GAP_S: [0, 120, 1],
+  PAPER_FADE_MS: [0, 3000, 50],
   ROOM_CLOUD_PASSES: [1, 8, 1],
   ROOM_CLOUD_DRIFT: [0, 1, 0.01],
   ROOM_CLOUD_DRIFT_S: [1, 60, 0.5],

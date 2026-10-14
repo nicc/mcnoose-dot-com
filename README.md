@@ -79,7 +79,7 @@ The note on the back of the embroidery frame is real handwriting, cut from a pho
 
 ## Deployment
 
-Build, then upload the contents of `dist/` (`index.html`, `projects.json`, `logos/`) to any static host. It has to be served over http(s). Opening `index.html` from disk won't load the projects.
+Build, then upload the contents of `dist/` (`index.html`, `projects.json`, `logos/`, `wallpaper-*.avif` and `wallpaper-*.webp`) to any static host. It has to be served over http(s). Opening `index.html` from disk won't load the projects.
 
 ## Acknowledgements / built with
 

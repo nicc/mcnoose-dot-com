@@ -41,34 +41,55 @@ const live = import.meta.env.DEV ? import('./wallpaper') : undefined;
 // A reference seam's wall x: PAPER_AGE_SEAM_OFFSET_CM from the embroidery's centre.
 const seamOrigin = (c: Config) => roomFromConfig(c).embroidery.x + c.PAPER_AGE_SEAM_OFFSET_CM;
 
-// The wallpaper, anchored to the wall. With the seams' pattern mismatch on, it's hung as one strip
-// per roll (CSS backgrounds of the same baked image, no canvas work), each nudged up or down a
-// millimetre or two off the pattern's match, so the pattern steps at each seam.
+// The baked wallpaper (production): its own file, loaded once, the best format this browser decodes.
+let paperUrl: string | undefined;
+let paperLoad: Promise<string> | undefined;
+const loadPaper = (urls: string[]) =>
+  (paperLoad ??= urls
+    .reduce<Promise<string>>((p, url) => p.catch(() => Object.assign(new Image(), { src: url }).decode().then(() => url)), Promise.reject(new Error('no wallpaper')))
+    .then((url) => (paperUrl = url)));
+
+// The wallpaper, anchored to the wall, hung as one strip per roll (CSS backgrounds of the same baked
+// image, no canvas work). With the seams' pattern mismatch on, each is nudged up or down a millimetre
+// or two off the pattern's match, so the pattern steps at each seam. On first load the pattern
+// arrives after the page and fades up over the plain paper colour beneath (--wallpaper-color).
 function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, pending: Promise<unknown>[], vp: Viewport) {
   const ppc = pxPerCm(roomFromConfig(c), a.tile), map = wallMap(c, a, topExtra);
   const shift = c.PAPER_AGE ? (c.PAPER_AGE_SEAM_SHIFT_MM / 10) * Math.min(1, c.PAPER_AGE_SEAMS) * ppc : 0;
   const pageX = (xCm: number) => map.embroideryPage.x + (xCm - map.embroidery.x) * ppc;
-  const strips =
-    shift > 0
-      ? rollsIn(wallPoint(map, { x: 0, y: 0 }).x, wallPoint(map, { x: vp.width, y: 0 }).x, seamOrigin(c)).map((r) => {
-          const strip = document.createElement('div');
-          strip.className = 'paper-roll';
-          strip.setAttribute('aria-hidden', 'true');
-          const left = pageX(r.x0);
-          Object.assign(strip.style, { left: `${left}px`, width: `${pageX(r.x1) - left}px` });
-          return { strip, left, dy: rollShift(r.k) * shift };
-        })
-      : [];
-  if (strips.length) el.firstElementChild!.after(...strips.map((s) => s.strip)); // under the age layers and the frame
+  const strips = rollsIn(wallPoint(map, { x: 0, y: 0 }).x, wallPoint(map, { x: vp.width, y: 0 }).x, seamOrigin(c)).map((r) => {
+    const strip = document.createElement('div');
+    strip.className = 'paper-roll';
+    strip.setAttribute('aria-hidden', 'true');
+    const left = pageX(r.x0);
+    Object.assign(strip.style, { left: `${left}px`, width: `${pageX(r.x1) - left}px` });
+    return { strip, left, dy: shift > 0 ? rollShift(r.k) * shift : 0 };
+  });
+  el.firstElementChild!.after(...strips.map((s) => s.strip)); // under the age layers and the frame
   const apply = (url: string, width: number, height: number) => {
-    for (const [target, x, y] of strips.length ? strips.map((s) => [s.strip, a.originX - s.left, topExtra + s.dy] as const) : [[el, a.originX, topExtra] as const]) {
-      target.style.backgroundImage = `url("${url}")`;
-      target.style.backgroundSize = `${width}px ${height}px`;
-      target.style.backgroundPosition = `${x}px ${y}px`;
+    for (const s of strips) {
+      s.strip.style.backgroundImage = `url("${url}")`;
+      s.strip.style.backgroundSize = `${width}px ${height}px`;
+      s.strip.style.backgroundPosition = `${a.originX - s.left}px ${topExtra + s.dy}px`;
     }
   };
   const width = c.WALLPAPER_ZOOM * a.tile;
-  if (baked) return apply(baked.url, width, width * baked.aspect);
+  if (baked) {
+    const height = width * baked.aspect;
+    if (paperUrl) return apply(paperUrl, width, height);
+    for (const s of strips) s.strip.classList.add('paper-arriving');
+    pending.push(
+      loadPaper(baked.urls)
+        .then((url) => {
+          if (!el.isConnected) return;
+          apply(url, width, height);
+          requestAnimationFrame(() => strips.forEach((s) => s.strip.classList.remove('paper-arriving')));
+          return new Promise((done) => setTimeout(done, c.PAPER_FADE_MS)); // settled once faded up
+        })
+        .catch((e) => console.warn(e)), // the plain paper colour stays
+    );
+    return;
+  }
   if (!live) return;
   pending.push(
     live
@@ -691,6 +712,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--frame-tilt': `${frameTilt(c)}deg`,
     '--flip-ms': `${c.ABOUT_FLIP_MS}ms`,
     '--hover-fade': `${c.PRINT_HOVER_FADE_MS}ms`,
+    '--paper-fade': `${c.PAPER_FADE_MS}ms`,
     ...frameShadow(c, a.tile),
     '--reflow-fade': `${c.REFLOW_FADE_MS}ms`,
     '--seam-shadow-h': `${(c.SEAM_SHADOW_CM * a.tile) / c.ROOM_TILE_CM}px`, // the concave corner above the tiles
@@ -700,7 +722,7 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--tile-color': c.TILE_COLOR,
     '--grout-color': c.GROUT_COLOR,
     '--print-color': c.PRINT_COLOR,
-    '--wallpaper-color': c.WALLPAPER_GROUND, // shown until the pattern is ready
+    '--wallpaper-color': baked?.colour ?? c.WALLPAPER_GROUND, // shown until the pattern is ready: the baked pattern's average
     '--skirting-color': c.SKIRTING_COLOR,
     '--rail-color': c.RAIL_COLOR, // the rail shows as plain paint until its lengths are drawn
     '--notice-color': c.NOTICE_COLOR,

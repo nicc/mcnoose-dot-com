@@ -5,9 +5,10 @@ import { ASPECT } from '../src/wallpaper/render';
 import { bakeWallpaper } from './wallpaper-bake';
 
 describe('bakeWallpaper', () => {
-  it('renders a webp repeat at the requested width, recoloured by config', async () => {
+  it('renders an avif repeat (webp on request) at the requested width, recoloured by config', async () => {
     const meta = await sharp(await bakeWallpaper(CONFIG, 200)).metadata();
-    expect([meta.format, meta.width, meta.height]).toEqual(['webp', 200, Math.round(200 * ASPECT)]);
+    expect([meta.format, meta.width, meta.height]).toEqual(['heif', 200, Math.round(200 * ASPECT)]);
+    expect((await sharp(await bakeWallpaper(CONFIG, 200, 'webp')).metadata()).format).toBe('webp');
 
     const mean = async (c: typeof CONFIG) => (await sharp(await bakeWallpaper(c, 200)).stats()).channels.map((ch) => ch.mean);
     const red = await mean({ ...CONFIG, WALLPAPER_GROUND: '#ff0000' });

@@ -285,12 +285,15 @@ test('no tile is left showing two prints once a re-flow fade ends', async ({ pag
   expect(doubled).toBe(0);
 });
 
-test('wallpaper is the build-time baked tile, applied with no runtime render', async ({ page }) => {
+test('wallpaper is the build-time baked tile, its own file beside the page, faded up once loaded', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('.skirting'); // drawn once projects.json has loaded
-  // On the header, or on per-roll strips when the seams' pattern mismatch is on.
-  const bg = await page.evaluate(() => [...document.querySelectorAll('.wallpaper, .paper-roll')].map((e) => getComputedStyle(e).backgroundImage).find((b) => b !== 'none'));
-  expect(bg).toMatch(/^url\("data:image\/webp;base64,/);
+  await page.waitForSelector('html[data-printed="true"]'); // waits for the paper to load and fade up
+  const rolls = await page.$$eval('.paper-roll', (els) => els.map((e) => ({ bg: getComputedStyle(e).backgroundImage, opacity: getComputedStyle(e).opacity })));
+  expect(rolls.length).toBeGreaterThan(0);
+  for (const r of rolls) {
+    expect(r.bg).toMatch(/\/wallpaper-[0-9a-f]{8}\.(avif|webp)"\)$/); // AVIF where the browser has it
+    expect(r.opacity).toBe('1');
+  }
 });
 
 test('the embroidery is drawn and the site title is an accessible h1', async ({ page }) => {
