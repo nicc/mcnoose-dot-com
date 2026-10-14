@@ -54,9 +54,15 @@ export const CONFIG = {
   SUNSET_SKY_TOP: '#8d9cc6', // the sky in the glass's reflected window at dusk: deeper blue up high…
   SUNSET_SKY_LOW: '#f3b58a', // … and warm low down, towards the horizon
   SUNSET_SKY_CURVE: 1.5,
+  SUNSET_HZ: 1, // how often the sunset moves on: each step redraws the screen, and a step a second is too small to see
   ROOM_CLOUD_DEPTH: 0.1, // how far passing clouds dim the window light (0 = clear sky)
   ROOM_CLOUD_RATE_HZ: 0.3, // how often the cloud cover changes
   ROOM_CLOUD_SMOOTH: 0.63, // 0 = sudden changes, 1 = slow glides between them
+  ROOM_CLOUD_GAP_S: 25, // the clear spells between passing clouds, about this long on average (some long, some back to back)
+  ROOM_CLOUD_PASSES: 3, // the most changes of light one passing cloud brings (each brings 1 to this many)
+  ROOM_CLOUD_DRIFT: 0.3, // in clear spells the light still wanders, by this share of the cloud depth
+  ROOM_CLOUD_DRIFT_S: 8, // … gliding to a new level about this often
+  ROOM_CLOUD_STEP: 0.004, // the light is updated only once it has moved this much (each update redraws the screen)
   ROOM_CLOUD_BALANCE: 0.98, // where clouds show: 0 = the room dims, 0.5 = room and reflections, 1 = reflections only
   ROOM_SUN_HIDE: 0.25, // how much a cloud must dim the window light to hide the sun patch completely
   ROOM_FILL: 0.35, // ceiling light strength relative to full sun

@@ -4,7 +4,7 @@ import { loadProjects } from './projects';
 import { anchorFits, compensateTop, initialAnchor, shiftAnchor, projectMargin, visibleColumns, type Anchor } from './layout';
 import { PinFilter, zoomScale, type Point } from './pin';
 import { embroideryLost, resetReflection, skyInGlass, updateReflection } from './embroidery';
-import { startClouds } from './clouds';
+import { reapplyClouds, startClouds } from './clouds';
 import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
@@ -109,6 +109,7 @@ function render(force = false): Frame {
     rendered = wall;
     renderedDensity = devicePixelRatio;
     renderCounts.rebuilds++;
+    reapplyClouds(); // the new wall takes the reflections' current strength
   } else {
     stage.style.transform = dx ? `translate3d(${dx}px, 0, 0)` : ''; // composited only while it slides
     slideStage(dx);
