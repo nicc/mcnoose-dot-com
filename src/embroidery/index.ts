@@ -5,13 +5,13 @@ import type { Config } from '../config';
 import { lightsAt, parallaxFactor, pxPerCm, reflectedWindow, roomFromConfig, viewAt } from '../room';
 import { drawWindowReflection, parallaxOffset } from '../surface/reflection';
 import { hexToRgb } from '../colour';
-import { layoutSampler, type Chart } from './chart';
+import { layoutSampler, SAMPLER_LINES, type Chart } from './chart';
 import { frameTilt, showingBack } from '../frame';
 import { flush, later, soon } from '../later';
 import { drawBack, nailDrop, paperRect } from './back';
 import { drawEdges, drawEmbroidery, embroiderySize, type EmbroideryStyle } from './draw';
 
-export const SAMPLER_LINES = ['Snickers', 'McNoose'];
+export { SAMPLER_LINES };
 
 let chartKey = '';
 let chart: Chart;

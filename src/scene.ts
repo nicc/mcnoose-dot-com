@@ -18,8 +18,9 @@ import { bindFrame, frameTilt } from './frame';
 import { fbm } from './wood/noise';
 import { drawDust } from './trim/dust';
 import { forgetLengths, promoteLengths, trimLength, type TrimStyle } from './trim/length';
-import { railProfile, skirtingProfile, type Profile, type RailDims, type SkirtingDims } from './trim/profile';
+import { railProfile, skirtingProfile, type Profile } from './trim/profile';
 import { hexToRgb } from './colour';
+import { edgeJoint, firstTileTop, ledgeCm, railDims, railLedgeCm, railTop, skirtingDims, skirtingTop, TILE_FACE_CM, wallMap } from './plan';
 import type { Project } from './projects';
 
 export interface Viewport {
@@ -83,8 +84,13 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
         .then((url) => {
           if (!el.isConnected) return;
           apply(url, width, height);
-          requestAnimationFrame(() => strips.forEach((s) => s.strip.classList.remove('paper-arriving')));
-          return new Promise((done) => setTimeout(done, c.PAPER_FADE_MS)); // settled once faded up
+          // Settled once faded up: when the fades themselves finish (a timer started alongside can run out a frame early).
+          return new Promise((done) =>
+            requestAnimationFrame(() => {
+              strips.forEach((s) => s.strip.classList.remove('paper-arriving'));
+              Promise.all(strips.flatMap((s) => s.strip.getAnimations()).map((a) => a.finished.catch(() => {}))).then(done);
+            }),
+          );
         })
         .catch((e) => console.warn(e)), // the plain paper colour stays
     );
@@ -154,22 +160,6 @@ function nail(frameH: number, drop: number, room: Room, ppc: number): HTMLElemen
 
 // Painted trim (dado rail, skirting) in tile-wide lengths, each lit by the room at its own place on
 // the wall. The rail stands proud of the tiles and casts a soft shadow onto the top row.
-const railDims = (c: Config): RailDims => ({ depthCm: c.RAIL_DEPTH_CM, roundCm: c.RAIL_ROUND_CM, beadCm: c.RAIL_BEAD_CM, coveCm: c.RAIL_COVE_CM, flatCm: c.RAIL_FLAT_CM });
-const skirtingDims = (c: Config): SkirtingDims => ({ depthCm: c.SKIRTING_DEPTH_CM, torusCm: c.SKIRTING_TORUS_CM, reliefCm: c.SKIRTING_RELIEF_CM, flatCm: c.SKIRTING_FLAT_CM });
-const TILE_FACE_CM = 0.9; // tile faces stand this far off the wall
-// From eye height you look down onto a trim's top: the ledge from where its front rounds over back
-// to whatever hides it (`behindCm` off the wall: the tile face, or the wall itself above the rail),
-// foreshortened by the view angle. It's what a deep board's thickness looks like.
-function ledgeCm(c: Config, a: Anchor, topExtra: number, top: number, profile: Profile, behindCm: number): number {
-  const view = viewAt(roomFromConfig(c), wallPoint(wallMap(c, a, topExtra), { x: a.centreX, y: top }));
-  return (Math.max(0, profile.topDepthCm - behindCm) * Math.max(0, -view[1])) / view[2];
-}
-const railTop = (c: Config, a: Anchor, topExtra: number) => topExtra + c.HEADER_HEIGHT * a.tile;
-const railLedgeCm = (c: Config, a: Anchor, topExtra: number) => ledgeCm(c, a, topExtra, railTop(c, a, topExtra), railProfile(railDims(c)), 0);
-const railHeight = (c: Config, a: Anchor, topExtra: number) => (railProfile(railDims(c)).heightCm + railLedgeCm(c, a, topExtra)) * (a.tile / c.ROOM_TILE_CM);
-// The well-fitted joints where the tiles meet the rail and the skirting: a fine caulked line.
-const edgeJoint = (c: Config, tile: number) => c.GROUT_EDGE_CM * (tile / c.ROOM_TILE_CM);
-
 const paintOf = (c: Config) => ({ grain: c.PAINT_GRAIN, brush: c.PAINT_BRUSH, buildup: c.PAINT_BUILDUP, yellowing: c.PAINT_YELLOWING, sheen: c.PAINT_SHEEN, gloss: c.PAINT_GLOSS });
 
 // A strip of painted lengths across the window at page y `top`, clipped to the window, with dust
@@ -443,19 +433,14 @@ function projectTile(c: Config, tile: number, p: Project, slot: string, now: num
 // Each tile's glaze tone and cushion-edge lighting, from where it sits in the room.
 type TileSurface = (row: number, col: number) => { background: string; boxShadow: string; at: { x: number; y: number } };
 
-const wallMap = (c: Config, a: Anchor, topExtra: number): WallMap => {
-  const room = roomFromConfig(c);
-  return { pxPerCm: pxPerCm(room, a.tile), embroidery: room.embroidery, embroideryPage: { x: a.centreX, y: topExtra + (c.HEADER_HEIGHT * a.tile) / 2 } };
-};
-
 function tileSurfaces(c: Config, a: Anchor, topExtra: number): TileSurface {
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile);
   const map = wallMap(c, a, topExtra);
-  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a, topExtra) + edgeJoint(c, a.tile);
+  const tilesTop = firstTileTop(c, a, topExtra);
   const base = hexToRgb(c.TILE_COLOR);
   const edge = { edgePx: c.TILE_EDGE_CM * ppc, sheen: c.TILE_EDGE_SHEEN, recessPx: GROUT_RECESS_CM * ppc, recess: c.GROUT_RECESS };
   return (row, col) => {
-    const at = wallPoint(map, { x: a.originX + col * a.pitch + a.tile / 2, y: firstTileTop + row * a.pitch + a.tile / 2 });
+    const at = wallPoint(map, { x: a.originX + col * a.pitch + a.tile / 2, y: tilesTop + row * a.pitch + a.tile / 2 });
     return { background: tileTone(base, c.TILE_TONE, col, row), boxShadow: edgeShadows(lightsAt(room, at), edge), at };
   };
 }
@@ -744,14 +729,13 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   reflectScene = { room, look: roomLook(c), ppc: pxPerCm(room, a.tile), follow: c.ROOM_EYE_FOLLOW, size: a.tile };
   reflectSceneKey = JSON.stringify([reflectScene, c.TILE_TILT_DEG, c.TILE_WAVINESS, c.TILE_REFLECTION]);
   beginSurfaces(wallMap(c, a, topExtra)); // wipeable canvases register as they're placed
-  const firstTileTop = topExtra + c.HEADER_HEIGHT * a.tile + railHeight(c, a, topExtra) + edgeJoint(c, a.tile);
+  const tilesTop = firstTileTop(c, a, topExtra);
   const rows = wallRows(projects.length, a, cols.full.length, c.TRAILING_ROWS);
-  const skirtingTop = firstTileTop + rows * a.pitch - c.GROUT_PX + edgeJoint(c, a.tile);
   root.replaceChildren(
     top,
     rail(c, vp, a, topExtra, pending),
-    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), firstTileTop, wallMap(c, a, topExtra), vp),
-    skirting(c, vp, a, topExtra, skirtingTop, pending),
+    grid(c, a, cols, projects, pending, tileSurfaces(c, a, topExtra), tilesTop, wallMap(c, a, topExtra), vp),
+    skirting(c, vp, a, topExtra, skirtingTop(c, a, topExtra, rows), pending),
   );
   const patch = sunPatch(c, wallMap(c, a, topExtra));
   if (patch) root.append(patch);

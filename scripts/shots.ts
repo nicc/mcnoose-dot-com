@@ -26,6 +26,7 @@ for (const [label, viewport] of Object.entries(VIEWPORTS)) {
   await page.addInitScript(() => localStorage.setItem('mcnoose-wip-seen', '1')); // no notice in shots
   await page.goto(url);
   await page.waitForSelector('html[data-printed="true"]');
+  await page.waitForSelector('html[data-pencil="done"]'); // the loading drawing has crossfaded away
   await page.addStyleTag({ content: '.lil-gui { display: none !important }' });
   await page.screenshot({ path: `${dir}/${label}.png` });
   await page.screenshot({ path: `${dir}/${label}-full.png`, fullPage: true });

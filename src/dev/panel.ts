@@ -62,6 +62,14 @@ const RANGES: Partial<Record<keyof Config, Range>> = {
   ROOM_CLOUD_SMOOTH: [0, 1, 0.01],
   ROOM_CLOUD_GAP_S: [0, 120, 1],
   PAPER_FADE_MS: [0, 3000, 50],
+  PENCIL_WEIGHT_PX: [0.3, 2, 0.05],
+  PENCIL_PACE_MS: [20, 400, 5],
+  PENCIL_LIFT_MS: [0, 400, 5],
+  PENCIL_PAUSE_MS: [0, 1000, 10],
+  PENCIL_OVERSHOOT: [0, 0.15, 0.005],
+  PENCIL_HELD: [0, 0.6, 0.01],
+  PENCIL_FINISH_MS: [0, 2000, 50],
+  PENCIL_FADE_MS: [0, 2000, 50],
   ROOM_CLOUD_PASSES: [1, 8, 1],
   ROOM_CLOUD_DRIFT: [0, 1, 0.01],
   ROOM_CLOUD_DRIFT_S: [1, 60, 0.5],
@@ -217,6 +225,11 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame, co
         : folder.add(values, key, ...(RANGES[key as keyof Config] ?? [0, Math.max(1, v * 4), 0.01]));
     c.onChange(() => update());
   }
+  // The loading drawing runs once, at load: draw it again, as if the page took this long to load.
+  const pencilFolder = folders.get(groupOf('PENCIL_PAPER'));
+  const replay = { 'loads in (ms)': 2500, replay: () => window.__pencil?.replay?.(state, replay['loads in (ms)']) };
+  pencilFolder?.add(replay, 'loads in (ms)', 0, 10000, 100);
+  pencilFolder?.add(replay, 'replay');
   for (const f of folders.values()) if (!f.controllers.length) f.destroy();
 
   const out = gui.addFolder('layout (read-only)');
@@ -231,7 +244,7 @@ export function mountPanel(state: Config, render: (force?: boolean) => Frame, co
     },
   };
   gui.add(actions, 'save');
-  gui.onChange((e) => e.property !== 'save' && gui.title('config — unsaved'));
+  gui.onChange((e) => e.property in state && gui.title('config — unsaved'));
   addEventListener('resize', () => update(false));
   update(false); // the scene is built already: just the readout
 }

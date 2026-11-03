@@ -6,6 +6,7 @@ export interface Profile {
   depthCm: number;
   faceDepthCm: number; // depth of the bottom edge: what overhangs whatever is below
   topDepthCm: number; // depth at the top edge: the board's top runs back from here to the wall
+  edgesCm: number[]; // down from the top: where one part of the moulding gives way to the next (what an elevation drawing shows)
   at: (t: number) => number;
 }
 
@@ -47,7 +48,7 @@ export function railProfile(d: RailDims): Profile {
     const b = RAIL_BOTTOM_CM;
     return F - b + Math.sqrt(Math.max(0, b * b - y * y)); // rounded bottom edge
   };
-  return { heightCm: H, depthCm: D, faceDepthCm: F - RAIL_BOTTOM_CM, topDepthCm: z(0), at: (t) => z(t * H) / D };
+  return { heightCm: H, depthCm: D, faceDepthCm: F - RAIL_BOTTOM_CM, topDepthCm: z(0), edgesCm: [R, R + B, R + B + C, R + B + C + d.flatCm], at: (t) => z(t * H) / D };
 }
 
 export interface SkirtingDims {
@@ -73,5 +74,5 @@ export function skirtingProfile(d: SkirtingDims): Profile {
     if (y < meet + QUIRK_CM) return F - QUIRK_DEPTH_CM * Math.sin((Math.PI * (y - meet)) / QUIRK_CM); // quirk, rising back to a lip at the face
     return F;
   };
-  return { heightCm: H, depthCm: D, faceDepthCm: F, topDepthCm: c, at: (t) => z(t * H) / D };
+  return { heightCm: H, depthCm: D, faceDepthCm: F, topDepthCm: c, edgesCm: [meet, meet + QUIRK_CM], at: (t) => z(t * H) / D };
 }

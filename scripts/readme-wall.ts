@@ -12,6 +12,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, dev
 await page.addInitScript(() => localStorage.setItem('mcnoose-wip-seen', '1')); // no notice
 await page.goto(server.resolvedUrls!.local[0]);
 await page.waitForSelector('html[data-printed="true"]');
+await page.waitForSelector('html[data-pencil="done"]'); // the loading drawing has crossfaded away
 await page.addStyleTag({ content: '.lil-gui { display: none !important }' });
 const png = await page.screenshot();
 await sharp(png).resize({ width: 1600 }).jpeg({ quality: 84, mozjpeg: true }).toFile(OUT);

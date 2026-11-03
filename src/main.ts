@@ -10,6 +10,7 @@ import { showNotice } from './notice';
 import { startWiping } from './wipe';
 import { forgetCanvases, reflowProjects, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
 import { lengthCounts } from './trim/length';
+import { pencil } from './pencil';
 
 // The wall renders into a stage a margin wider than the window each side (overscan); #app clips
 // it. Window moves within the margin just slide the stage (a GPU transform, no redraw); past it,
@@ -22,10 +23,14 @@ const overscan = (tile: number) => Math.round(1.5 * tile);
 const DENSITY_SETTLE_MS = 300; // a run of zoom steps redraws once
 const probe = document.getElementById('svh-probe')!;
 // ?fixtures swaps in the dev test logos; the branch is dropped from production builds.
+pencil()?.reach('bundle'); // the loading drawing (pencil/) may go on to the rail and tiles
 const projects =
   import.meta.env.DEV && new URLSearchParams(location.search).has('fixtures')
     ? (await import('./dev/fixtures')).fixtureProjects()
-    : await loadProjects(); // the wall's height depends on how many, so wait before drawing it
+    : await (pencil()?.projects ?? loadProjects()); // the wall's height depends on how many, so wait before drawing it
+// Let the drawing's newly started strokes reach the compositor before the first build blocks the
+// main thread, so they go on drawing through it.
+if (pencil()) await new Promise((done) => requestAnimationFrame(() => setTimeout(done, 0)));
 const state: Config = { ...CONFIG };
 
 // Small viewport height (svh) stays put while mobile URL bars show/hide, so tiles don't jitter.

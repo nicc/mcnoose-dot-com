@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { configWriter } from './tools/config-writer';
 import { wallpaperBake } from './tools/wallpaper-bake';
+import { pencilInline } from './tools/pencil-inline';
 
 // Everything a painted trim length is drawn from, hashed: the OPFS cache of painted lengths
 // (src/trim/worker.ts) is keyed by it, so a change to any of this code invalidates them.
@@ -17,6 +18,7 @@ function trimCode(): string {
 
 export default defineConfig({
   define: { __TRIM_CODE__: JSON.stringify(trimCode()) },
-  plugins: [viteSingleFile(), configWriter(), wallpaperBake()],
+  // CSS is inlined; the main script is its own file, so the pencil drawing (inlined) shows while it downloads.
+  plugins: [viteSingleFile({ inlinePattern: ['**/*.css'] }), configWriter(), wallpaperBake(), pencilInline()],
   test: { include: ['src/**/*.test.ts', 'tools/**/*.test.ts'] },
 });

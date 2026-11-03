@@ -30,17 +30,19 @@ for (const r of runs) {
     await page.goto(url);
     await page.waitForSelector('html[data-printed="true"]', { timeout: 120000 });
     const printed = Date.now() - t0;
+    await page.waitForSelector('html[data-pencil="done"]', { timeout: 120000 });
+    const shown = Date.now() - t0; // the loading drawing has given way to the scene
     await page.waitForTimeout(1500); // deferred work (back of frame, skirting) runs in here
     const m = await page.evaluate(() => {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-      const fcp = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? NaN;
-      return { download: nav.responseEnd, fcp, blocking: (window as any).__long };
+      const fp = performance.getEntriesByName('first-paint')[0]?.startTime ?? NaN; // the drafting paper
+      return { download: nav.responseEnd, fp, blocking: (window as any).__long };
     });
-    times.push({ ...m, printed });
+    times.push({ ...m, printed, shown });
     await context.close();
   }
   const med = (k: string) => times.map((t) => t[k]).sort((a, b) => a - b)[1];
-  console.log(`${r.name.padEnd(26)} html downloaded ${med('download').toFixed(0).padStart(5)} ms · first paint ${med('fcp').toFixed(0).padStart(5)} ms · all prints in ${med('printed').toFixed(0).padStart(5)} ms · long-task blocking ${med('blocking').toFixed(0).padStart(5)} ms`);
+  console.log(`${r.name.padEnd(26)} html downloaded ${med('download').toFixed(0).padStart(5)} ms · first paint ${med('fp').toFixed(0).padStart(5)} ms · all prints in ${med('printed').toFixed(0).padStart(5)} ms · scene shown ${med('shown').toFixed(0).padStart(5)} ms · long-task blocking ${med('blocking').toFixed(0).padStart(5)} ms`);
 }
 await browser.close();
 server.kill();

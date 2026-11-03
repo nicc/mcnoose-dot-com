@@ -8,7 +8,8 @@ import { grainMaps } from '../wood/grain';
 import type { RGB } from '../colour';
 import { weather } from '../wood/wear';
 import { hash2, rng } from '../wood/noise';
-import type { Chart, Ink } from './chart';
+import { embroiderySize, type Chart, type Ink } from './chart';
+export { embroiderySize };
 
 export interface WoodStyle {
   early: RGB; // oak base colour
@@ -203,10 +204,6 @@ function innerShadow(ctx: Ctx, W: number, H: number, f: number, { S }: Detail) {
     ctx.fillStyle = g;
     ctx.fillRect(f, f, W - 2 * f, H - 2 * f);
   }
-}
-
-export function embroiderySize(chart: Chart, o: Pick<EmbroideryStyle, 'stitch' | 'frame'>): { width: number; height: number } {
-  return { width: chart.w * o.stitch + 2 * o.frame, height: chart.h * o.stitch + 2 * o.frame };
 }
 
 const MAX_SUPERSAMPLE = 2.5; // beyond this, shrinking a detailed render shows no further gain

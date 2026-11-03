@@ -250,6 +250,18 @@ export const CONFIG = {
   WIPE_WIDTH_CM: 2, // brush width: about a fingertip
   WIPE_LIMESCALE_STUBBORN: 0.6, // 0 = one pass clears it, towards 1 = rub and rub
 
+  // Loading: the wall drawn in pencil, as an elevation, while the page loads (pencil/)
+  PENCIL_PAPER: '#f1eee6', // drafting paper
+  PENCIL_GRAPHITE: '#3a3b3f',
+  PENCIL_WEIGHT_PX: 0.9, // a firm line; guide lines are lighter and finer
+  PENCIL_PACE_MS: 50, // drawing a line one tile long; longer lines take longer by the square root of their length
+  PENCIL_LIFT_MS: 40, // pen up between strokes (varies; shortens as a run of strokes finds its rhythm)
+  PENCIL_PAUSE_MS: 200, // between parts: frame, rail, tiles, skirting
+  PENCIL_OVERSHOOT: 0.03, // firm lines run past their corners by up to this; guides by several times it
+  PENCIL_HELD: 0.2, // share of the drawing (by time) held back until the page has loaded
+  PENCIL_FINISH_MS: 400, // loaded early: what's left of the drawing speeds up to finish within this
+  PENCIL_FADE_MS: 600, // the finished scene crossfades in over the drawing
+
   // Work-in-progress notice, shown once per browser
   NOTICE_SHOW: false, // the "still being built" notice, once per browser
   NOTICE_COLOR: '#f7f1e3', // soft cream card

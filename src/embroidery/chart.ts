@@ -3,6 +3,8 @@
 
 export type Ink = 'T' | 'P' | 'L';
 
+export const SAMPLER_LINES = ['Snickers', 'McNoose'];
+
 export interface Chart {
   w: number; // cloth width in stitches
   h: number;
@@ -102,4 +104,9 @@ export function layoutSampler(lines: string[], cloth: { w: number; h: number } =
     stamp(chart, rotate180(floral), ...br);
     return chart;
   }
+}
+
+// The framed piece's size in CSS px: the cloth (`stitch` px a stitch) inside a moulding `frame` px wide.
+export function embroiderySize(chart: Chart, o: { stitch: number; frame: number }): { width: number; height: number } {
+  return { width: chart.w * o.stitch + 2 * o.frame, height: chart.h * o.stitch + 2 * o.frame };
 }

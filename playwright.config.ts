@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Tests the built single-file page. Firefox has no mobile emulation, so it gets a narrow desktop viewport.
+// Tests the built page. Firefox has no mobile emulation, so it gets a narrow desktop viewport.
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
