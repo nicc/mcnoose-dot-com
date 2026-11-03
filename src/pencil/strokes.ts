@@ -1,7 +1,7 @@
 // The wall as an architect's pencil elevation, drawn by hand: a list of strokes in the order a person
 // would make them, each a ruled gesture with its own pace. Structure only, never light: the frame
 // (guides, its outer and sight edges, the mitres), the rail's and skirting's edges, the tile joints
-// spreading out from under the frame. Pure: boot.ts puts them on the page and times them.
+// spreading out from under the frame. Pure: boot.ts puts them on the page and times them to loading.
 import type { Config } from '../config';
 import type { WallPlan } from '../plan';
 
@@ -138,15 +138,11 @@ export function sketch(c: Config, plan: WallPlan, view: { width: number; height:
 // How long the drawing takes, unhurried, start to finish.
 export const drawingMs = (strokes: Stroke[]) => strokes.reduce((t, s) => t + s.gap + s.ms, 0);
 
-// The first stroke of the tail (the last `share` of the drawing's time, never the frame) that waits
-// for the page to finish loading.
-export function heldFrom(strokes: Stroke[], share: number): number {
-  const total = drawingMs(strokes);
-  let t = 0, i = strokes.length;
-  for (; i > 0; i--) {
-    const s = strokes[i - 1];
-    if (s.part === 'frame' || t + s.gap + s.ms > share * total) break;
-    t += s.gap + s.ms;
-  }
-  return i;
+// How far loading must have got (boot.ts's load level) before each stroke may be drawn: the frame at
+// once (-1), the rail when the main script runs (0), and the joints and skirting spread over the
+// scene's work (0–1, its share settled), so they advance as it does; the last waits for all of it.
+export function releaseAt(strokes: Stroke[]): number[] {
+  const later = strokes.filter((s) => s.part !== 'frame' && s.part !== 'rail').length;
+  let k = 0;
+  return strokes.map((s) => (s.part === 'frame' ? -1 : s.part === 'rail' ? 0 : ++k / later));
 }

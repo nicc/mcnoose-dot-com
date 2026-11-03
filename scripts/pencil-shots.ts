@@ -1,9 +1,11 @@
 // The loading drawing, frame by frame, as a production load on a throttled connection sees it.
 // usage: npm run build && node scripts/pencil-shots.ts [desktop|phone] [slow|fast|none]
 // Writes shots/pencil/<device>-<network>-<ms>.png every STEP_MS until the drawing has faded away.
+// Recorded from the compositor (CDP screencast), so it keeps going while the main thread is busy
+// building the scene, as the drawing does; screenshots would stall there.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 
 const STEP_MS = 250;
 const [device = 'desktop', network = 'slow'] = process.argv.slice(2);
@@ -24,14 +26,19 @@ if (phone) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 const net = NETWORKS[network];
 if (net) await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: net.latency, downloadThroughput: net.down / 8, uploadThroughput: 750_000 / 8 });
 const t0 = Date.now();
-page.goto('http://localhost:4176/').catch(() => {});
-await page.waitForSelector('#pencil', { timeout: 30000 });
-for (let done = false; !done; ) {
+let next = 0;
+cdp.on('Page.screencastFrame', (f) => {
   const ms = Date.now() - t0;
-  await page.screenshot({ path: `${dir}/${device}-${network}-${String(ms).padStart(5, '0')}.png` }).catch(() => {});
-  done = (await page.evaluate(() => document.documentElement.dataset.pencil).catch(() => '')) === 'done' || ms > 30000;
-  await new Promise((r) => setTimeout(r, STEP_MS));
-}
-console.log(dir);
+  if (ms >= next) {
+    writeFileSync(`${dir}/${device}-${network}-${String(ms).padStart(5, '0')}.png`, Buffer.from(f.data, 'base64'));
+    next = ms + STEP_MS;
+  }
+  cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {});
+});
+await cdp.send('Page.startScreencast', { format: 'png' });
+await page.goto('http://localhost:4176/');
+await page.waitForSelector('html[data-pencil="done"]', { timeout: 30000 });
+const marks = await page.evaluate(() => (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).map((r) => `${r.name.split('/').pop()} ${Math.round(r.responseEnd)}ms`));
+console.log(dir, '\n' + marks.join('\n'));
 await browser.close();
 server.kill();

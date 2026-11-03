@@ -8,7 +8,7 @@ import { reapplyClouds, startClouds } from './clouds';
 import { onFrameTurned } from './frame';
 import { showNotice } from './notice';
 import { startWiping } from './wipe';
-import { forgetCanvases, reflowProjects, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
+import { forgetCanvases, onLoadProgress, reflowProjects, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
 import { lengthCounts } from './trim/length';
 import { pencil } from './pencil';
 
@@ -23,7 +23,7 @@ const overscan = (tile: number) => Math.round(1.5 * tile);
 const DENSITY_SETTLE_MS = 300; // a run of zoom steps redraws once
 const probe = document.getElementById('svh-probe')!;
 // ?fixtures swaps in the dev test logos; the branch is dropped from production builds.
-pencil()?.reach('bundle'); // the loading drawing (pencil/) may go on to the rail and tiles
+pencil()?.started(); // the loading drawing (pencil/) may go on to the rail
 const projects =
   import.meta.env.DEV && new URLSearchParams(location.search).has('fixtures')
     ? (await import('./dev/fixtures')).fixtureProjects()
@@ -147,6 +147,7 @@ addEventListener(
   { passive: true },
 );
 
+onLoadProgress((share) => pencil()?.progress(share)); // the drawing's joints advance with the scene's work
 render();
 addEventListener('resize', () => render());
 onFrameTurned(() => render(true)); // re-light the frame at its new angle

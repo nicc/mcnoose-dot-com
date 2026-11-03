@@ -78,12 +78,15 @@ function hangWallpaper(el: HTMLElement, c: Config, a: Anchor, topExtra: number, 
   if (baked) {
     const height = width * baked.aspect;
     if (paperUrl) return apply(paperUrl, width, height);
-    for (const s of strips) s.strip.classList.add('paper-arriving');
+    // Under the loading drawing (pencil/) the paper simply appears: the drawing's crossfade reveals it.
+    const fade = !document.documentElement.classList.contains('pencil');
+    if (fade) for (const s of strips) s.strip.classList.add('paper-arriving');
     pending.push(
       loadPaper(baked.urls)
         .then((url) => {
           if (!el.isConnected) return;
           apply(url, width, height);
+          if (!fade) return;
           // Settled once faded up: when the fades themselves finish (a timer started alongside can run out a frame early).
           return new Promise((done) =>
             requestAnimationFrame(() => {
@@ -170,6 +173,7 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
   const room = roomFromConfig(c), ppc = pxPerCm(room, a.tile), map = wallMap(c, a, topExtra);
   const ledge = (style.ledgeCm ?? 0) * ppc, h = style.profile.heightCm * ppc + ledge, seg = a.tile, dpr = Math.min(TRIM_MAX_DPR, devicePixelRatio || 1);
   const strip = el('div', 'trim-strip');
+  const lengths: Promise<unknown>[] = [];
   const first = Math.floor(-a.originX / seg), last = Math.ceil((vp.width - a.originX) / seg);
   for (let k = first; k <= last; k++) {
     const left = a.originX + k * seg;
@@ -182,10 +186,11 @@ function paintedStrip(trim: string, c: Config, vp: Viewport, a: Anchor, topExtra
     const offScreen = left + seg < onScreen.x0 || left > onScreen.x1; // in the overscan margin: painted after what's on screen
     const urgent = !(deferred || offScreen);
     const length = trimLength(trim, k, seg, h, ppc, dpr, lit(left), lit(left + seg), style, urgent);
-    if (urgent) pending.push(length.done);
+    if (urgent) lengths.push(length.done);
     Object.assign(length.canvas.style, { left: `${left}px`, width: `${seg}px`, height: `${h}px` });
     strip.append(length.canvas);
   }
+  if (lengths.length) pending.push(Promise.all(lengths)); // one piece of loading progress per strip
   const settle = settleRows(style.profile, ledge, ppc);
   strip.append(trimDust(c, vp, a, settle.length, dust, lightsAt(room, wallPoint(map, { x: a.centreX, y: top })), map, top, settle));
   return { strip, h };
@@ -637,6 +642,9 @@ export function reflowProjects(visible: { anchor: Anchor; width: number }): Fram
 }
 
 let printed: Promise<unknown> = Promise.resolve(); // what data-printed waits on
+let loadProgress = (_share: number) => {};
+// Called with the share (0–1) of the current render's work that has settled.
+export const onLoadProgress = (fn: (share: number) => void) => (loadProgress = fn);
 const frameFor = (tile: number, shown: Columns, visible: { anchor: Anchor; width: number }): Frame => {
   const vis = visible.anchor, right = vis.originX + (shown.first + shown.count - 1) * vis.pitch;
   return { tile, columns: shown.full.length, peekLeft: vis.originX + shown.first * vis.pitch + vis.tile, peekRight: visible.width - right };
@@ -743,6 +751,10 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
   // Signals tests and screenshots that every visible print has settled.
   updateTileReflections(scrollY, vp.height); // viewport height passed in: reading it here would force a layout
   pending.push(soonSettled()); // the sampler and the paper's age, just after the first paint
+  // How far loading has got, for the pencil drawing shown meanwhile: each piece of work counts alike.
+  let settled = 0;
+  const tick = () => gen === generation && loadProgress(++settled / pending.length);
+  for (const p of pending) p.then(tick, tick);
   printed = Promise.all(pending);
   printed.then(() => gen === generation && (document.documentElement.dataset.printed = 'true'));
   return frameFor(a.tile, shown, visible);

@@ -258,8 +258,7 @@ export const CONFIG = {
   PENCIL_LIFT_MS: 40, // pen up between strokes (varies; shortens as a run of strokes finds its rhythm)
   PENCIL_PAUSE_MS: 200, // between parts: frame, rail, tiles, skirting
   PENCIL_OVERSHOOT: 0.03, // firm lines run past their corners by up to this; guides by several times it
-  PENCIL_HELD: 0.2, // share of the drawing (by time) held back until the page has loaded
-  PENCIL_FINISH_MS: 400, // loaded early: what's left of the drawing speeds up to finish within this
+  PENCIL_CATCH_UP_MS: 400, // when loading moves on, what earlier stages released hurries to finish within this
   PENCIL_FADE_MS: 600, // the finished scene crossfades in over the drawing
 
   // Work-in-progress notice, shown once per browser

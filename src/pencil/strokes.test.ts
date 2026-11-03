@@ -3,7 +3,7 @@ import { CONFIG } from '../config';
 import { initialAnchor } from '../layout';
 import { wallPlan } from '../plan';
 import { rng } from '../wood/noise';
-import { drawingMs, heldFrom, sketch } from './strokes';
+import { drawingMs, releaseAt, sketch } from './strokes';
 
 const view = { width: 1440, height: 900 };
 const anchor = initialAnchor({ ...view, tileMax: CONFIG.TILE_MAX_PX, grout: CONFIG.GROUT_PX, minPeek: CONFIG.MIN_PEEK });
@@ -36,13 +36,18 @@ describe('pencil sketch', () => {
     for (const s of strokes) expect(Math.min(s.y0, s.y1)).toBeLessThan(view.height);
   });
 
-  it('takes a few seconds unhurried, and holds back only the tail', () => {
+  it('takes a few seconds unhurried', () => {
     const ms = drawingMs(strokes);
     expect(ms).toBeGreaterThan(2000);
     expect(ms).toBeLessThan(9000);
-    const held = heldFrom(strokes, CONFIG.PENCIL_HELD);
-    expect(strokes.slice(held).every((s) => s.part !== 'frame')).toBe(true);
-    expect(drawingMs(strokes.slice(held))).toBeLessThanOrEqual(CONFIG.PENCIL_HELD * ms);
-    expect(held).toBeLessThan(strokes.length);
+  });
+
+  it('draws the frame at once, the rail when the script runs, the rest as loading gets on', () => {
+    const at = releaseAt(strokes);
+    strokes.forEach((s, i) => expect(at[i]).toBe(s.part === 'frame' ? -1 : s.part === 'rail' ? 0 : at[i]));
+    const rest = at.filter((x) => x > 0);
+    expect(rest).toEqual([...rest].sort((a, b) => a - b));
+    expect(rest.at(-1)).toBe(1);
+    expect(rest[0]).toBeLessThan(0.2);
   });
 });
