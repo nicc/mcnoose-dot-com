@@ -24,15 +24,17 @@ Every value that shapes the scene is a constant in `src/config.ts`, about 200 of
 
 ### Generating the site
 
-`npm run build` produces a single `index.html` with everything inlined, beside `projects.json` and `logos/`. The wallpaper is expensive to render, so it's baked at build time. The scanned pattern is recoloured ink by ink, embossed, and lit with the configured values.
+`npm run build` writes the site to `dist/`. `index.html` is small and has the styles and loading indicator inlined. The rest of the code is one script beside it (`index-<hash>.js`), along with `projects.json` and `logos/`. The script is kept separate so the page can start drawing while it downloads. The wallpaper is expensive to render, so it's baked at build time. The scanned pattern is recoloured ink by ink, embossed, and lit with the configured values, then saved as AVIF with a WebP fallback.
 
 ### Keeping the simulation in the page
 
-Only the wallpaper is baked. The room itself still runs in the browser. Lighting, clouds, the sunset and reflections are computed live on canvas. Heavy, per-pixel work (wood, paint, wear, scuffs) runs in worker threads to avoid blocking the main thread, so the wallpaper and tiles paint first and the trim fills in a moment behind them.
+Only the wallpaper is baked. The room itself still runs in the browser. Lighting, clouds, the sunset and reflections are computed live on canvas. Heavy, per-pixel work (wood, paint, wear, scuffs) runs in worker threads to avoid blocking the main thread.
 
 The wall isn't responsive. It stays in place, as if you're looking at it through a portal. Resizing or moving the window affects what you can see, but the wall keeps a fixed position and isn't rearranged. This is only evident on desktop.
 
 Projects appear on wall tiles and reflow onto what's visible as you look around the room.
+
+While the page loads, the wall is drawn in pencil, like an architect's elevation. The drawing follows the loading sequence. A slow connection or device results in a slow drawing. When everything is ready, the scene fades in over it.
 
 ### Interactions
 
@@ -59,6 +61,7 @@ npm run identity [-- <ref>]  # byte-compares surfaces from the working tree and 
 npm run shots                # screenshots of the wall and each tile, in shots/
 npm run readme:wall          # regenerate the picture at the top of this README
 npm run build
+node scripts/pencil-shots.ts [desktop|phone] [slow|fast|none]  # generates per-frame screenshots of the loading indicator on a throttled connection from latest build
 ```
 
 `?fixtures` in dev swaps in a set of test logos (fine lines, tone, small text, colour, moiré).
@@ -79,7 +82,9 @@ The note on the back of the embroidery frame is real handwriting, cut from a pho
 
 ## Deployment
 
-Build, then upload the contents of `dist/` (`index.html`, `projects.json`, `logos/`, `wallpaper-*.avif` and `wallpaper-*.webp`) to any static host. It has to be served over http(s). Opening `index.html` from disk won't load the projects.
+Build, then upload the contents of `dist/` to any static host: `index.html`, `index-*.js`, `projects.json`, `logos/`, `wallpaper-*.avif` and `wallpaper-*.webp`. It has to be served over http(s). Opening `index.html` from disk won't load the projects.
+
+The script and wallpaper files are named by a hash of their contents, so they can be cached indefinitely. `index.html` shouldn't be cached for long, because it names the current script. When you deploy, leave the previous `index-*.js` in place for a while, so a visitor holding an older `index.html` doesn't get a missing script.
 
 ## Acknowledgements / built with
 
