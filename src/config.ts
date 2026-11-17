@@ -260,11 +260,6 @@ export const CONFIG = {
   PENCIL_OVERSHOOT: 0.03, // firm lines run past their corners by up to this; guides by several times it
   PENCIL_CATCH_UP_MS: 400, // when loading moves on, what earlier stages released hurries to finish within this
   PENCIL_FADE_MS: 600, // the finished scene crossfades in over the drawing
-
-  // Work-in-progress notice, shown once per browser
-  NOTICE_SHOW: false, // the "still being built" notice, once per browser
-  NOTICE_COLOR: '#f7f1e3', // soft cream card
-  NOTICE_INK: '#4a4237',
 };
 
 export type Config = { -readonly [K in keyof typeof CONFIG]: (typeof CONFIG)[K] };

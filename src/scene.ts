@@ -718,8 +718,6 @@ export function renderScene(root: HTMLElement, c: Config, vp: Viewport, a: Ancho
     '--wallpaper-color': baked?.colour ?? c.WALLPAPER_GROUND, // shown until the pattern is ready: the baked pattern's average
     '--skirting-color': c.SKIRTING_COLOR,
     '--rail-color': c.RAIL_COLOR, // the rail shows as plain paint until its lengths are drawn
-    '--notice-color': c.NOTICE_COLOR,
-    '--notice-ink': c.NOTICE_INK,
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
   document.documentElement.toggleAttribute('data-reveal', c.PRINT_HOVER_REVEAL);

@@ -19,7 +19,6 @@ for (const r of runs) {
     const context = await browser.newContext(r.mobile ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
     const page = await context.newPage();
     await page.addInitScript(() => {
-      localStorage.setItem('mcnoose-wip-seen', '1');
       (window as any).__long = 0;
       new PerformanceObserver((l) => l.getEntries().forEach((e) => ((window as any).__long += Math.max(0, e.duration - 50)))).observe({ type: 'longtask', buffered: true });
     });

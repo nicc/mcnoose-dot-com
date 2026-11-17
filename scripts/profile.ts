@@ -10,7 +10,6 @@ const browser = await chromium.launch();
 const context = await browser.newContext(mobile ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 const page = await context.newPage();
 await page.addInitScript(() => {
-  localStorage.setItem('mcnoose-wip-seen', '1');
   let x = 100;
   Object.defineProperty(window, 'screenX', { get: () => x });
   (window as any).__moveBy = (d: number) => (x += d);

@@ -6,7 +6,6 @@ import { PinFilter, zoomScale, type Point } from './pin';
 import { embroideryLost, resetReflection, skyInGlass, updateReflection } from './embroidery';
 import { reapplyClouds, startClouds } from './clouds';
 import { onFrameTurned } from './frame';
-import { showNotice } from './notice';
 import { startWiping } from './wipe';
 import { forgetCanvases, onLoadProgress, reflowProjects, renderScene, slideStage, updateTileReflections, type Frame, type Viewport } from './scene';
 import { lengthCounts } from './trim/length';
@@ -175,7 +174,6 @@ const watchDensity = () =>
   }, { once: true });
 watchDensity();
 startWiping(() => state);
-if (state.NOTICE_SHOW) showNotice();
 
 // No event fires when a window moves, so watch its screen position each frame.
 // data-pin tells tests when the smoothed position has caught up.

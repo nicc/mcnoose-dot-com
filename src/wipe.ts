@@ -109,7 +109,7 @@ export function startWiping(config: () => Config): void {
   addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const t = e.target as Element;
-    if (t.closest('.frame, .lil-gui, dialog')) return; // the frame has its own drag; the panel and notice are UI
+    if (t.closest('.frame, .lil-gui')) return; // the frame has its own drag; the panel is UI
     e.preventDefault(); // no text selection or image drag
     moved = 0;
     startX = e.clientX;

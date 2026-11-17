@@ -19,7 +19,6 @@ const server = spawn('npx', ['vite', 'preview', '--port', '4176', '--strictPort'
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch();
 const context = await browser.newContext(phone ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-await context.addInitScript(() => localStorage.setItem('mcnoose-wip-seen', '1'));
 const page = await context.newPage();
 const cdp = await context.newCDPSession(page);
 if (phone) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });

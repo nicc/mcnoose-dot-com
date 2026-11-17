@@ -9,7 +9,6 @@ const server = await createServer({ server: { port: 0 }, logLevel: 'error' });
 await server.listen();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
-await page.addInitScript(() => localStorage.setItem('mcnoose-wip-seen', '1')); // no notice
 await page.goto(server.resolvedUrls!.local[0]);
 await page.waitForSelector('html[data-printed="true"]');
 await page.waitForSelector('html[data-pencil="done"]'); // the loading drawing has crossfaded away
